@@ -1,0 +1,65 @@
+name: Update spread scanner
+
+on:
+  schedule:
+    # 21:30 UTC on weekdays — ~30 min after the US market close (4pm ET).
+    # GitHub cron is always UTC; adjust if you follow a different market.
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch:          # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write             # commit the refreshed report back to the repo
+  pages: write                # deploy the dashboard to GitHub Pages
+  id-token: write             # required by the Pages deploy action
+
+concurrency:
+  group: spread-scanner
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run scanner
+        env:
+          # Optional: create this repo secret to enable Slack/Discord alerts.
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: python run.py
+
+      - name: Commit refreshed report
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add output
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Update spread scan ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+            git push
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: output           # serves output/index.html as the site root
+
+  deploy:
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

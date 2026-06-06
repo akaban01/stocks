@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halal Spread Scanner</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #0d1117; color: #e6edf3;
+    font: 15px/1.5 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .meta { color: #8b949e; font-size: .85rem; margin-bottom: 18px; }
+  .lede { color: #c9d1d9; background: #161b22; border: 1px solid #30363d;
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  thead th { position: sticky; top: 0; background: #161b22; text-align: left;
+    padding: 9px 10px; border-bottom: 2px solid #30363d; font-size: .78rem;
+    text-transform: uppercase; letter-spacing: .03em; color: #8b949e; }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid #21262d; }
+  tbody tr:hover { background: #161b22; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tkr { font-weight: 700; }
+  .score { display: inline-block; min-width: 34px; text-align: center;
+    padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #fff; }
+  .down { color: #f0816f; } .up { color: #5fd07a; }
+  .lean { font-weight: 600; }
+  .bull { color: #5fd07a; } .bear { color: #f0816f; } .neut { color: #8b949e; }
+  .legend { color: #8b949e; font-size: .82rem; margin-top: 18px; }
+  .legend code { background: #161b22; padding: 1px 6px; border-radius: 4px; }
+  .warn { margin-top: 22px; padding: 12px 16px; border-radius: 10px;
+    background: #2d1d12; border: 1px solid #5a3a1a; color: #f0c992; font-size: .85rem; }
+  a { color: #58a6ff; }
+</style></head>
+<body><div class="wrap">
+  <h1>📈 Halal Spread Scanner</h1>
+  <div class="meta">Updated <b>2026-06-06 19:29 UTC</b> · horizon <b>10 trading days (~2 weeks)</b> · 31 halal-screened tickers</div>
+  <div class="lede">
+    Ranked by <b>Setup Score</b> — how coiled each name is now. High score = volatility
+    compressed, a move loading. The <b>±</b> column and 1σ targets show how far price
+    could travel <b>up or down</b> over the horizon (~68% within ±1σ). A <b>both-ways</b>
+    (straddle-style) setup tool — direction is a weak hint only.
+  </div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>Ticker</th><th>Price</th><th>Score</th><th>Squeeze</th>
+      <th>±10d</th><th>Down 1σ</th><th>Up 1σ</th><th>Lean</th><th>HV%</th>
+    </tr></thead>
+    <tbody>
+<tr>
+  <td class="num">1</td>
+  <td class="tkr">META</td>
+  <td class="num">593.00</td>
+  <td class="num"><span class="score" style="background:hsl(96 70% 42%)">66</span></td>
+  <td>🔒 1d</td>
+  <td class="num">±7.2%</td>
+  <td class="num down">550.33</td>
+  <td class="num up">635.67</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">36</td>
+</tr>
+<tr>
+  <td class="num">2</td>
+  <td class="tkr">UBER</td>
+  <td class="num">70.71</td>
+  <td class="num"><span class="score" style="background:hsl(65 70% 42%)">44</span></td>
+  <td>—</td>
+  <td class="num">±5.4%</td>
+  <td class="num down">66.89</td>
+  <td class="num up">74.53</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">27</td>
+</tr>
+<tr>
+  <td class="num">3</td>
+  <td class="tkr">AAPL</td>
+  <td class="num">307.34</td>
+  <td class="num"><span class="score" style="background:hsl(55 70% 42%)">36</span></td>
+  <td>—</td>
+  <td class="num">±3.6%</td>
+  <td class="num down">296.29</td>
+  <td class="num up">318.39</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">18</td>
+</tr>
+<tr>
+  <td class="num">4</td>
+  <td class="tkr">CVX</td>
+  <td class="num">187.31</td>
+  <td class="num"><span class="score" style="background:hsl(53 70% 42%)">34</span></td>
+  <td>—</td>
+  <td class="num">±4.9%</td>
+  <td class="num down">178.15</td>
+  <td class="num up">196.47</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">25</td>
+</tr>
+<tr>
+  <td class="num">5</td>
+  <td class="tkr">TXN</td>
+  <td class="num">285.06</td>
+  <td class="num"><span class="score" style="background:hsl(49 70% 42%)">31</span></td>
+  <td>—</td>
+  <td class="num">±9.5%</td>
+  <td class="num down">257.96</td>
+  <td class="num up">312.16</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">48</td>
+</tr>
+<tr>
+  <td class="num">6</td>
+  <td class="tkr">INTC</td>
+  <td class="num">99.17</td>
+  <td class="num"><span class="score" style="background:hsl(45 70% 42%)">28</span></td>
+  <td>—</td>
+  <td class="num">±16.8%</td>
+  <td class="num down">82.47</td>
+  <td class="num up">115.87</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">84</td>
+</tr>
+<tr>
+  <td class="num">7</td>
+  <td class="tkr">GOOGL</td>
+  <td class="num">368.53</td>
+  <td class="num"><span class="score" style="background:hsl(39 70% 42%)">24</span></td>
+  <td>—</td>
+  <td class="num">±6.0%</td>
+  <td class="num down">346.60</td>
+  <td class="num up">390.46</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">30</td>
+</tr>
+<tr>
+  <td class="num">8</td>
+  <td class="tkr">TSLA</td>
+  <td class="num">391.00</td>
+  <td class="num"><span class="score" style="background:hsl(39 70% 42%)">23</span></td>
+  <td>—</td>
+  <td class="num">±9.3%</td>
+  <td class="num down">354.71</td>
+  <td class="num up">427.29</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">47</td>
+</tr>
+<tr>
+  <td class="num">9</td>
+  <td class="tkr">AMZN</td>
+  <td class="num">246.03</td>
+  <td class="num"><span class="score" style="background:hsl(38 70% 42%)">23</span></td>
+  <td>—</td>
+  <td class="num">±5.4%</td>
+  <td class="num down">232.78</td>
+  <td class="num up">259.28</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">27</td>
+</tr>
+<tr>
+  <td class="num">10</td>
+  <td class="tkr">AMD</td>
+  <td class="num">466.38</td>
+  <td class="num"><span class="score" style="background:hsl(37 70% 42%)">22</span></td>
+  <td>—</td>
+  <td class="num">±15.4%</td>
+  <td class="num down">394.46</td>
+  <td class="num up">538.30</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">77</td>
+</tr>
+<tr>
+  <td class="num">11</td>
+  <td class="tkr">XOM</td>
+  <td class="num">149.92</td>
+  <td class="num"><span class="score" style="background:hsl(36 70% 42%)">22</span></td>
+  <td>—</td>
+  <td class="num">±6.3%</td>
+  <td class="num down">140.47</td>
+  <td class="num up">159.37</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">32</td>
+</tr>
+<tr>
+  <td class="num">12</td>
+  <td class="tkr">NVDA</td>
+  <td class="num">205.10</td>
+  <td class="num"><span class="score" style="background:hsl(32 70% 42%)">18</span></td>
+  <td>—</td>
+  <td class="num">±9.0%</td>
+  <td class="num down">186.68</td>
+  <td class="num up">223.52</td>
+  <td class="lean bear">Bearish</td>
+  <td class="num">45</td>
+</tr>
+<tr>
+  <td class="num">13</td>
+  <td class="tkr">LRCX</td>
+  <td class="num">303.28</td>
+  <td class="num"><span class="score" style="background:hsl(32 70% 42%)">18</span></td>
+  <td>—</td>
+  <td class="num">±12.0%</td>
+  <td class="num down">266.99</td>
+  <td class="num up">339.57</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">60</td>
+</tr>
+<tr>
+  <td class="num">14</td>
+  <td class="tkr">SHOP</td>
+  <td class="num">109.54</td>
+  <td class="num"><span class="score" style="background:hsl(32 70% 42%)">18</span></td>
+  <td>—</td>
+  <td class="num">±12.3%</td>
+  <td class="num down">96.07</td>
+  <td class="num up">123.01</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">62</td>
+</tr>
+<tr>
+  <td class="num">15</td>
+  <td class="tkr">SPUS</td>
+  <td class="num">56.64</td>
+  <td class="num"><span class="score" style="background:hsl(31 70% 42%)">18</span></td>
+  <td>—</td>
+  <td class="num">±3.8%</td>
+  <td class="num down">54.51</td>
+  <td class="num up">58.77</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">19</td>
+</tr>
+<tr>
+  <td class="num">16</td>
+  <td class="tkr">ADBE</td>
+  <td class="num">251.44</td>
+  <td class="num"><span class="score" style="background:hsl(31 70% 42%)">17</span></td>
+  <td>—</td>
+  <td class="num">±9.5%</td>
+  <td class="num down">227.44</td>
+  <td class="num up">275.44</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">48</td>
+</tr>
+<tr>
+  <td class="num">17</td>
+  <td class="tkr">JNJ</td>
+  <td class="num">232.77</td>
+  <td class="num"><span class="score" style="background:hsl(30 70% 42%)">17</span></td>
+  <td>—</td>
+  <td class="num">±4.0%</td>
+  <td class="num down">223.49</td>
+  <td class="num up">242.05</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">20</td>
+</tr>
+<tr>
+  <td class="num">18</td>
+  <td class="tkr">MSFT</td>
+  <td class="num">416.67</td>
+  <td class="num"><span class="score" style="background:hsl(30 70% 42%)">17</span></td>
+  <td>—</td>
+  <td class="num">±7.0%</td>
+  <td class="num down">387.38</td>
+  <td class="num up">445.96</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">35</td>
+</tr>
+<tr>
+  <td class="num">19</td>
+  <td class="tkr">PLTR</td>
+  <td class="num">135.53</td>
+  <td class="num"><span class="score" style="background:hsl(29 70% 42%)">16</span></td>
+  <td>—</td>
+  <td class="num">±11.9%</td>
+  <td class="num down">119.43</td>
+  <td class="num up">151.63</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">60</td>
+</tr>
+<tr>
+  <td class="num">20</td>
+  <td class="tkr">HLAL</td>
+  <td class="num">70.53</td>
+  <td class="num"><span class="score" style="background:hsl(27 70% 42%)">15</span></td>
+  <td>—</td>
+  <td class="num">±3.5%</td>
+  <td class="num down">68.04</td>
+  <td class="num up">73.02</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">18</td>
+</tr>
+<tr>
+  <td class="num">21</td>
+  <td class="tkr">AMAT</td>
+  <td class="num">453.01</td>
+  <td class="num"><span class="score" style="background:hsl(24 70% 42%)">12</span></td>
+  <td>—</td>
+  <td class="num">±12.0%</td>
+  <td class="num down">398.81</td>
+  <td class="num up">507.21</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">60</td>
+</tr>
+<tr>
+  <td class="num">22</td>
+  <td class="tkr">LLY</td>
+  <td class="num">1,131.42</td>
+  <td class="num"><span class="score" style="background:hsl(24 70% 42%)">12</span></td>
+  <td>—</td>
+  <td class="num">±6.6%</td>
+  <td class="num down">1,057.11</td>
+  <td class="num up">1,205.73</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">33</td>
+</tr>
+<tr>
+  <td class="num">23</td>
+  <td class="tkr">AVGO</td>
+  <td class="num">385.73</td>
+  <td class="num"><span class="score" style="background:hsl(23 70% 42%)">11</span></td>
+  <td>—</td>
+  <td class="num">±13.7%</td>
+  <td class="num down">332.91</td>
+  <td class="num up">438.55</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">69</td>
+</tr>
+<tr>
+  <td class="num">24</td>
+  <td class="tkr">CRM</td>
+  <td class="num">185.66</td>
+  <td class="num"><span class="score" style="background:hsl(20 70% 42%)">9</span></td>
+  <td>—</td>
+  <td class="num">±11.6%</td>
+  <td class="num down">164.04</td>
+  <td class="num up">207.28</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">58</td>
+</tr>
+<tr>
+  <td class="num">25</td>
+  <td class="tkr">SMCI</td>
+  <td class="num">41.64</td>
+  <td class="num"><span class="score" style="background:hsl(19 70% 42%)">9</span></td>
+  <td>—</td>
+  <td class="num">±17.9%</td>
+  <td class="num down">34.17</td>
+  <td class="num up">49.11</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">90</td>
+</tr>
+<tr>
+  <td class="num">26</td>
+  <td class="tkr">QCOM</td>
+  <td class="num">215.94</td>
+  <td class="num"><span class="score" style="background:hsl(18 70% 42%)">7</span></td>
+  <td>—</td>
+  <td class="num">±20.6%</td>
+  <td class="num down">171.54</td>
+  <td class="num up">260.34</td>
+  <td class="lean neut">Neutral</td>
+  <td class="num">103</td>
+</tr>
+<tr>
+  <td class="num">27</td>
+  <td class="tkr">MU</td>
+  <td class="num">864.01</td>
+  <td class="num"><span class="score" style="background:hsl(15 70% 42%)">6</span></td>
+  <td>—</td>
+  <td class="num">±22.9%</td>
+  <td class="num down">665.94</td>
+  <td class="num up">1,062.08</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">115</td>
+</tr>
+<tr>
+  <td class="num">28</td>
+  <td class="tkr">NOW</td>
+  <td class="num">112.45</td>
+  <td class="num"><span class="score" style="background:hsl(12 70% 42%)">3</span></td>
+  <td>—</td>
+  <td class="num">±17.1%</td>
+  <td class="num down">93.26</td>
+  <td class="num up">131.64</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">86</td>
+</tr>
+<tr>
+  <td class="num">29</td>
+  <td class="tkr">ORCL</td>
+  <td class="num">213.68</td>
+  <td class="num"><span class="score" style="background:hsl(11 70% 42%)">2</span></td>
+  <td>—</td>
+  <td class="num">±14.9%</td>
+  <td class="num down">181.86</td>
+  <td class="num up">245.50</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">75</td>
+</tr>
+<tr>
+  <td class="num">30</td>
+  <td class="tkr">ARM</td>
+  <td class="num">342.93</td>
+  <td class="num"><span class="score" style="background:hsl(9 70% 42%)">1</span></td>
+  <td>—</td>
+  <td class="num">±23.3%</td>
+  <td class="num down">262.92</td>
+  <td class="num up">422.94</td>
+  <td class="lean bull">Bullish</td>
+  <td class="num">117</td>
+</tr>
+    </tbody>
+  </table>
+  <div class="legend">
+    <b>Score</b> = compression (low Bollinger bandwidth %ile) + room to expand (low HV %ile)
+    + active TTM squeeze. <b>🔒</b> = Bollinger Bands inside Keltner Channels.
+    Data: <a href="signals.csv">signals.csv</a> · <a href="signals.json">signals.json</a>.
+  </div>
+  <div class="warn">
+    ⚠️ Educational tool, <b>not financial advice</b>, and <b>not a fatwa</b>. The watchlist
+    is an industry-exclusion (Shariah) screen only — full compliance depends on financial
+    ratios that change quarterly; re-verify each name (Zoya / Musaffa) before trading.
+  </div>
+</div></body></html>

@@ -1,0 +1,82 @@
+# Spread scanner configuration.
+# Edit the watchlist and tune the parameters, then run `python run.py`.
+
+# -------------------------------------------------------------------------
+# HALAL WATCHLIST
+# Curated from the industry-exclusion methodology of Shariah-compliant ETFs
+# (e.g. SPUS / HLAL): no conventional banks, insurance, brokerages, alcohol,
+# tobacco, gambling, pork, adult content, or weapons. SPUS & HLAL themselves
+# are included as halal market benchmarks.
+#
+# ⚠️ This is an INDUSTRY screen only. Full Shariah compliance also depends on
+#    financial ratios (debt, interest income, cash) that change EVERY quarter.
+#    Re-verify each name with a dedicated screener (Zoya, Musaffa) before
+#    trading, and purify incidental impure income. Not a fatwa.
+# -------------------------------------------------------------------------
+tickers:
+  # Halal market benchmarks (Shariah-screened ETFs)
+  - SPUS
+  - HLAL
+  # Semiconductors
+  - NVDA
+  - AMD
+  - AVGO
+  - QCOM
+  - MU
+  - AMAT
+  - LRCX
+  - MRVL
+  - ARM
+  - TXN
+  - INTC
+  # Software / platforms
+  - AAPL
+  - MSFT
+  - ORCL
+  - ADBE
+  - CRM
+  - NOW
+  - PLTR
+  - AMZN
+  - GOOGL
+  - META
+  - UBER
+  - SHOP
+  # High-beta movers
+  - TSLA
+  - SMCI
+  # Healthcare / pharma
+  - LLY
+  - JNJ
+  # Energy
+  - XOM
+  - CVX
+
+params:
+  horizon_days: 10          # ~2 weeks of trading days (the "short term" window)
+  history_period: 1y        # how much history to download (yfinance period string)
+  bb_length: 20             # Bollinger Bands lookback
+  bb_mult: 2.0              # Bollinger Bands stdev multiplier
+  kc_length: 20             # Keltner Channel lookback
+  kc_mult: 1.5              # Keltner Channel ATR multiplier
+  atr_length: 14            # ATR lookback
+  vol_lookback: 20          # window for the expected-move volatility estimate
+  percentile_lookback: 120  # window for bandwidth / HV percentile ranks (~6mo)
+
+halal_screen:
+  # Secondary safety net: drop any configured ticker whose Yahoo sector/industry
+  # matches a prohibited category. Fail-open (keeps the ticker, logs a warning)
+  # if Yahoo doesn't return sector data. The curated list above is the real
+  # guarantee; this just catches accidental additions.
+  live_sector_filter: true
+
+alerts:
+  # POST a summary to a Slack/Discord webhook when a ticker's Setup Score
+  # crosses the threshold (only fires on a NEW crossing vs the previous run).
+  # Set the webhook URL in the ALERT_WEBHOOK_URL env var / GitHub secret.
+  enabled: true
+  score_threshold: 60
+
+output:
+  dir: output               # where report files go
+  top: 30                   # how many rows to show in the report
