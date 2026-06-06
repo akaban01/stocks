@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config(args.config)
     params = {**DEFAULT_PARAMS, **(cfg.get("params") or {})}
     out_cfg = cfg.get("output") or {}
-    outdir = args.outdir or out_cfg.get("dir", "output")
+    outdir = args.outdir or out_cfg.get("dir", "public")
     top = int(out_cfg.get("top", 25))
 
     if args.tickers:

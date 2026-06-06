@@ -40,7 +40,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add output
+          git add public
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
@@ -51,7 +51,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: output           # serves output/index.html as the site root
+          path: public           # serves public/index.html as the site root
 
   deploy:
     needs: scan

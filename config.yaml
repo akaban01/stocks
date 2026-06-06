@@ -78,5 +78,5 @@ alerts:
   score_threshold: 60
 
 output:
-  dir: output               # where report files go
+  dir: public               # where report files go (served as the Pages site root)
   top: 30                   # how many rows to show in the report

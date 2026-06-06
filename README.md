@@ -9,7 +9,7 @@ reports how far each could travel **up _and_ down** over the next ~2 weeks. That
 the "spread both ways" idea: a straddle-style, market-neutral setup list.
 
 Fresh data is pulled automatically every weekday by a GitHub Action, which
-rewrites [`output/report.md`](output/report.md), publishes an HTML dashboard to
+rewrites [`public/report.md`](public/report.md), publishes an HTML dashboard to
 **GitHub Pages**, and can ping a **Slack/Discord** webhook when a setup fires.
 
 ## What it measures
@@ -33,7 +33,7 @@ python run.py                          # scans the watchlist in config.yaml
 python run.py --tickers AAPL,MSFT,NVDA # ad-hoc one-off scan
 ```
 
-Outputs land in `output/`:
+Outputs land in `public/`:
 - `report.md` — ranked, human-readable table
 - `index.html` — styled dashboard (served by GitHub Pages)
 - `signals.csv` / `signals.json` — full machine-readable results
@@ -103,7 +103,7 @@ Read and write**, so the Action can commit. Trigger it once by hand from the
 
 ## GitHub Pages dashboard
 
-The workflow regenerates `output/index.html` and deploys it to Pages on every run.
+The workflow regenerates `public/index.html` and deploys it to Pages on every run.
 To turn it on: **Settings → Pages → Build and deployment → Source = GitHub Actions**.
 Your dashboard will be live at `https://<you>.github.io/<repo>/`. The workflow
 already requests the `pages`/`id-token` permissions it needs.

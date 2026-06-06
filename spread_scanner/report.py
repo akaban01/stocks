@@ -1,4 +1,4 @@
-"""Render scan results to Markdown, CSV and JSON in the output directory."""
+"""Render scan results to Markdown, CSV and JSON in the public/ directory."""
 
 from __future__ import annotations
 
