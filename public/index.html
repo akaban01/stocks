@@ -55,7 +55,7 @@
 </style></head>
 <body><div class="wrap">
   <h1>📈 Halal Spread Scanner</h1>
-  <div class="meta">Updated <b>2026-06-06 23:43 UTC</b> · horizon <b>10 trading days (~2 weeks)</b> · 31 halal-screened tickers</div>
+  <div class="meta">Updated <b><span id="updated" data-utc="2026-06-07T00:31:41Z">2026-06-07 00:31 UTC</span></b> · horizon <b>10 trading days (~2 weeks)</b> · 31 halal-screened tickers</div>
   <div class="lede">
     Ranked by <b>Setup Score</b> — how coiled each name is now. High score = volatility
     compressed, a move loading. The <b>±</b> column and 1σ targets show how far price
@@ -489,4 +489,19 @@ Expected move (1σ) = price × daily σ × √(horizon days)</div>
     is an industry-exclusion (Shariah) screen only — full compliance depends on financial
     ratios that change quarterly; re-verify each name (Zoya / Musaffa) before trading.
   </div>
-</div></body></html>
+</div>
+<script>
+(function(){
+  var el = document.getElementById('updated');
+  if (!el) return;
+  var d = new Date(el.getAttribute('data-utc'));
+  if (isNaN(d.getTime())) return;
+  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time';
+  el.textContent = d.toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }) + ' (' + tz + ')';
+  el.title = el.getAttribute('data-utc');
+})();
+</script>
+</body></html>

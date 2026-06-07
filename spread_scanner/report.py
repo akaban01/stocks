@@ -42,7 +42,9 @@ def _md_table(df: pd.DataFrame) -> str:
 def write_reports(df: pd.DataFrame, outdir: str | Path, params: dict, top: int = 25) -> Path:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    now = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now_dt = dt.datetime.now(dt.timezone.utc)
+    now = now_dt.strftime("%Y-%m-%d %H:%M UTC")           # static fallback text
+    now_iso = now_dt.strftime("%Y-%m-%dT%H:%M:%SZ")       # parsed by the browser into local time
     horizon = params["horizon_days"]
 
     # Machine-readable copies (full set).
@@ -85,12 +87,12 @@ Full machine-readable output: [`signals.csv`](signals.csv) · [`signals.json`](s
     report_path.write_text(md, encoding="utf-8")
 
     # GitHub Pages dashboard (self-contained, no external assets).
-    (outdir / "index.html").write_text(_html_page(ranked, now, horizon, len(df)), encoding="utf-8")
+    (outdir / "index.html").write_text(_html_page(ranked, now_iso, now, horizon, len(df)), encoding="utf-8")
 
     return report_path
 
 
-def _html_page(df: pd.DataFrame, now: str, horizon: int, scanned: int) -> str:
+def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scanned: int) -> str:
     if df.empty:
         rows_html = '<tr><td colspan="10">No signals — no tickers returned usable data.</td></tr>'
     else:
@@ -171,7 +173,7 @@ def _html_page(df: pd.DataFrame, now: str, horizon: int, scanned: int) -> str:
 </style></head>
 <body><div class="wrap">
   <h1>📈 Halal Spread Scanner</h1>
-  <div class="meta">Updated <b>{now}</b> · horizon <b>{horizon} trading days (~2 weeks)</b> · {scanned} halal-screened tickers</div>
+  <div class="meta">Updated <b><span id="updated" data-utc="{now_iso}">{now_utc}</span></b> · horizon <b>{horizon} trading days (~2 weeks)</b> · {scanned} halal-screened tickers</div>
   <div class="lede">
     Ranked by <b>Setup Score</b> — how coiled each name is now. High score = volatility
     compressed, a move loading. The <b>±</b> column and 1σ targets show how far price
@@ -246,4 +248,19 @@ Expected move (1σ) = price × daily σ × √(horizon days)</div>
     is an industry-exclusion (Shariah) screen only — full compliance depends on financial
     ratios that change quarterly; re-verify each name (Zoya / Musaffa) before trading.
   </div>
-</div></body></html>"""
+</div>
+<script>
+(function(){{
+  var el = document.getElementById('updated');
+  if (!el) return;
+  var d = new Date(el.getAttribute('data-utc'));
+  if (isNaN(d.getTime())) return;
+  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time';
+  el.textContent = d.toLocaleString(undefined, {{
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }}) + ' (' + tz + ')';
+  el.title = el.getAttribute('data-utc');
+}})();
+</script>
+</body></html>"""
