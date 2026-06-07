@@ -38,34 +38,57 @@ Outputs land in `public/`:
 - `index.html` — styled dashboard (served by GitHub Pages)
 - `signals.csv` / `signals.json` — full machine-readable results
 
-## Halal watchlist & screening
+## Halal universe & screening
 
-The default watchlist in [`config.yaml`](config.yaml) is curated from the
-**industry-exclusion** methodology used by Shariah-compliant ETFs (e.g. SPUS,
-HLAL): no conventional banks, insurance, brokerages, alcohol, tobacco, gambling,
-pork, adult content, or weapons. SPUS & HLAL are included as halal benchmarks.
+The scanner builds its universe in two automated stages, so you never hand-pick
+tickers:
 
-A secondary automated guard ([`spread_scanner/halal.py`](spread_scanner/halal.py))
-checks each ticker's Yahoo sector/industry and drops anything in a prohibited
-category — so an accidental `JPM`/`BUD`/`MO` can't slip in. Toggle it via
-`halal_screen.live_sector_filter` in the config.
+**1. Fetch — pre-screened ETF holdings.** Each run pulls the current top holdings
+of Shariah-compliant ETFs (default **SPUS** + **HLAL**) and unions them by weight
+([`spread_scanner/universe.py`](spread_scanner/universe.py)). These funds are
+screened by professionals *and* a Shariah board, so it's an authoritative starting
+list. If the fetch fails, it falls back to the curated `tickers:` list in the config.
 
-> ⚠️ **This is an industry screen, not a fatwa.** Full Shariah compliance also
-> depends on **financial ratios** (interest-bearing debt, interest income, cash)
-> that change **every quarter**. Re-verify each name with a dedicated screener
-> (Zoya, Musaffa) before trading, and purify incidental impure income.
+**2. Verify — the financial-ratio formula.** Every fetched name is re-checked
+([`spread_scanner/halal.py`](spread_scanner/halal.py)) against the recognized
+quantitative methodology (AAOIFI / S&P Dow Jones Islamic style). Using market cap
+as the denominator, a name passes when:
+
+```
+permissible industry  (no banks, insurance, alcohol, tobacco, gambling, weapons…)
+AND  interest-bearing debt / market cap  < 33%
+AND  cash & equivalents / market cap     < 33%
+AND  accounts receivable / market cap    < 33%   (optional)
+```
+
+The resulting **Debt%** and **Cash%** show in every report so you can see the
+verification. Set `halal_screen.financial_formula.mode: annotate` to keep names
+that fail (just flagging the ratios) instead of dropping them.
+
+> ⚠️ **Approximation, not a fatwa.** The standards use a trailing-average market
+> cap and a precise definition of "interest-bearing securities"; we use spot
+> values. The **non-compliant-income < 5%** purification rule isn't automated.
+> Re-verify each name with a dedicated screener (Zoya, Musaffa) before trading.
 
 ## Configure
 
 Edit [`config.yaml`](config.yaml):
 
 ```yaml
-tickers: [SPY, QQQ, AAPL, NVDA, ...]   # any Yahoo Finance symbol
+universe:
+  source: etf            # 'etf' = auto-fetch holdings; 'config' = use tickers: below
+  etfs: [SPUS, HLAL]     # Shariah ETFs to pull from
+  max_holdings: 30
+halal_screen:
+  financial_formula:
+    enabled: true
+    mode: filter         # 'filter' drops failures; 'annotate' keeps + reports ratios
+    max_debt_ratio: 0.33
+    max_cash_ratio: 0.33
 params:
-  horizon_days: 10        # ~2 weeks of trading days — the short-term window
-  history_period: 6mo
-  bb_length: 20
-  percentile_lookback: 120
+  horizon_days: 10       # ~2 weeks of trading days — the short-term window
+  history_period: 1y
+tickers: [AAPL, NVDA, ...]   # fallback list if the ETF fetch fails
 ```
 
 ## Automated data refresh (GitHub Actions)

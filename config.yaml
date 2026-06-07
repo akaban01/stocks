@@ -2,16 +2,14 @@
 # Edit the watchlist and tune the parameters, then run `python run.py`.
 
 # -------------------------------------------------------------------------
-# HALAL WATCHLIST
-# Curated from the industry-exclusion methodology of Shariah-compliant ETFs
-# (e.g. SPUS / HLAL): no conventional banks, insurance, brokerages, alcohol,
-# tobacco, gambling, pork, adult content, or weapons. SPUS & HLAL themselves
-# are included as halal market benchmarks.
+# FALLBACK HALAL WATCHLIST
+# Only used when `universe.source` is 'config', or when the ETF fetch fails.
+# By default the universe is auto-fetched from the ETFs in `universe.etfs` and
+# re-verified by the financial-ratio formula (see below) — you don't need to
+# maintain this list. It's a curated industry-clean set as a safety net.
 #
-# ⚠️ This is an INDUSTRY screen only. Full Shariah compliance also depends on
-#    financial ratios (debt, interest income, cash) that change EVERY quarter.
-#    Re-verify each name with a dedicated screener (Zoya, Musaffa) before
-#    trading, and purify incidental impure income. Not a fatwa.
+# ⚠️ Not a fatwa. Re-verify each name with a dedicated screener (Zoya, Musaffa)
+#    before trading, and purify incidental impure income.
 # -------------------------------------------------------------------------
 tickers:
   # Halal market benchmarks (Shariah-screened ETFs)
@@ -63,12 +61,28 @@ params:
   vol_lookback: 20          # window for the expected-move volatility estimate
   percentile_lookback: 120  # window for bandwidth / HV percentile ranks (~6mo)
 
+# Where the scan universe comes from.
+universe:
+  source: etf               # 'etf' = auto-fetch Shariah ETF holdings; 'config' = use the `tickers:` list above
+  etfs:                     # Shariah-compliant ETFs to pull holdings from (union, by weight)
+    - SPUS                  #   SP Funds S&P 500 Sharia
+    - HLAL                  #   Wahed FTSE USA Shariah
+  max_holdings: 30          # cap the universe after merging the funds
+  fallback_to_config: true  # if the fetch fails, fall back to the `tickers:` list
+
 halal_screen:
-  # Secondary safety net: drop any configured ticker whose Yahoo sector/industry
-  # matches a prohibited category. Fail-open (keeps the ticker, logs a warning)
-  # if Yahoo doesn't return sector data. The curated list above is the real
-  # guarantee; this just catches accidental additions.
+  # Industry-only safety net: drop any ticker whose Yahoo sector/industry matches
+  # a prohibited category. Fail-open if Yahoo returns no sector data.
   live_sector_filter: true
+
+  # Financial-ratio formula (AAOIFI / S&P Dow Jones Islamic style) — re-verifies
+  # each name's balance sheet. Approximation; not a fatwa. See spread_scanner/halal.py.
+  financial_formula:
+    enabled: true
+    mode: filter            # 'filter' = drop names that fail; 'annotate' = keep all, just report ratios
+    max_debt_ratio: 0.33    # interest-bearing debt / market cap
+    max_cash_ratio: 0.33    # cash & equivalents / market cap
+    max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
 
 alerts:
   # POST a summary to a Slack/Discord webhook when a ticker's Setup Score

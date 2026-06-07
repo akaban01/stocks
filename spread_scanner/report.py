@@ -8,34 +8,48 @@ from pathlib import Path
 import pandas as pd
 
 
+def _pct(v) -> str:
+    """Format a fraction (0.02) as a percent ('2%'), or '—' if missing."""
+    try:
+        if v is None or pd.isna(v):
+            return "—"
+        return f"{float(v) * 100:.0f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
 def _md_table(df: pd.DataFrame) -> str:
     if df.empty:
         return "_No signals — no tickers returned usable data._\n"
 
+    has_halal = "debt_ratio" in df.columns
     headers = [
         "#", "Ticker", "Price", "Score", "Squeeze",
         f"±{int(df['horizon_days'].iloc[0])}d", "Down (1σ)", "Up (1σ)", "Lean", "HV%",
     ]
+    if has_halal:
+        headers += ["Debt%", "Cash%"]
     lines = ["| " + " | ".join(headers) + " |",
              "|" + "|".join(["---"] * len(headers)) + "|"]
 
     for _, r in df.iterrows():
         squeeze = f"🔒 {int(r['squeeze_days'])}d" if r["squeeze_on"] else "—"
         lean = {"Bullish": "▲ Bull", "Bearish": "▼ Bear", "Neutral": "• Neut"}[r["lean"]]
-        lines.append(
-            "| " + " | ".join([
-                str(int(r["rank"])),
-                str(r["ticker"]),
-                f"{r['price']:,.2f}",
-                f"**{r['score']:.0f}**",
-                squeeze,
-                f"{r['em_pct']:.1f}%",
-                f"{r['down_1sigma']:,.2f}",
-                f"{r['up_1sigma']:,.2f}",
-                lean,
-                f"{r['hv_annual']:.0f}",
-            ]) + " |"
-        )
+        cells = [
+            str(int(r["rank"])),
+            str(r["ticker"]),
+            f"{r['price']:,.2f}",
+            f"**{r['score']:.0f}**",
+            squeeze,
+            f"{r['em_pct']:.1f}%",
+            f"{r['down_1sigma']:,.2f}",
+            f"{r['up_1sigma']:,.2f}",
+            lean,
+            f"{r['hv_annual']:.0f}",
+        ]
+        if has_halal:
+            cells += [_pct(r["debt_ratio"]), _pct(r["cash_ratio"])]
+        lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
 
@@ -93,8 +107,12 @@ Full machine-readable output: [`signals.csv`](signals.csv) · [`signals.json`](s
 
 
 def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scanned: int) -> str:
+    has_halal = (not df.empty) and ("debt_ratio" in df.columns)
+    ncols = 10 + (2 if has_halal else 0)
+    halal_head = "<th>Debt%</th><th>Cash%</th>" if has_halal else ""
+
     if df.empty:
-        rows_html = '<tr><td colspan="10">No signals — no tickers returned usable data.</td></tr>'
+        rows_html = f'<tr><td colspan="{ncols}">No signals — no tickers returned usable data.</td></tr>'
     else:
         cells = []
         for _, r in df.iterrows():
@@ -102,6 +120,10 @@ def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scann
             lean_cls = {"Bullish": "bull", "Bearish": "bear", "Neutral": "neut"}[r["lean"]]
             # Score heat: 0..100 -> hue green(140) at high, red(8) at low.
             hue = 8 + (r["score"] / 100) * 132
+            halal_cells = (
+                f'\n  <td class="num">{_pct(r["debt_ratio"])}</td>'
+                f'\n  <td class="num">{_pct(r["cash_ratio"])}</td>' if has_halal else ""
+            )
             cells.append(f"""<tr>
   <td class="num">{int(r['rank'])}</td>
   <td class="tkr">{r['ticker']}</td>
@@ -112,7 +134,7 @@ def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scann
   <td class="num down">{r['down_1sigma']:,.2f}</td>
   <td class="num up">{r['up_1sigma']:,.2f}</td>
   <td class="lean {lean_cls}">{r['lean']}</td>
-  <td class="num">{r['hv_annual']:.0f}</td>
+  <td class="num">{r['hv_annual']:.0f}</td>{halal_cells}
 </tr>""")
         rows_html = "\n".join(cells)
 
@@ -183,7 +205,7 @@ def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scann
   <table>
     <thead><tr>
       <th>#</th><th>Ticker</th><th>Price</th><th>Score</th><th>Squeeze</th>
-      <th>±{horizon}d</th><th>Down 1σ</th><th>Up 1σ</th><th>Lean</th><th>HV%</th>
+      <th>±{horizon}d</th><th>Down 1σ</th><th>Up 1σ</th><th>Lean</th><th>HV%</th>{halal_head}
     </tr></thead>
     <tbody>
 {rows_html}
@@ -220,13 +242,18 @@ def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scann
       <li><b>Down 1σ / Up 1σ</b> — price targets one standard deviation either side. ~68% of moves land inside ±1σ, ~95% inside ±2σ.</li>
       <li><b>Lean</b> — a faint directional hint from squeeze momentum. A tiebreaker only — do <b>not</b> trade on it alone.</li>
       <li><b>HV%</b> — annualised historical volatility (how jumpy the name has been).</li>
+      <li><b>Debt% / Cash%</b> — the Shariah financial-ratio check: interest-bearing debt and cash as a share of market cap. Both must stay under ~33%. Every name shown has passed.</li>
     </ul></div>
   </div>
   <div class="formula">Score = compression (low Bollinger-bandwidth %ile, ≤35)
       + room to expand (low historical-vol %ile, ≤20)
       + active TTM squeeze, longer = more (≤45)
 
-Expected move (1σ) = price × daily σ × √(horizon days)</div>
+Expected move (1σ) = price × daily σ × √(horizon days)
+
+Halal screen = permissible industry
+      AND interest-bearing debt / market cap < 33%
+      AND cash & equivalents / market cap   < 33%   (AAOIFI / S&P Islamic style)</div>
 
   <h2>How to use these signals</h2>
   <ol class="steps">
@@ -236,7 +263,7 @@ Expected move (1σ) = price × daily σ × √(horizon days)</div>
     <li><b>Wait for the squeeze to <i>release</i>.</b> 🔒 with rising days means energy is building — not yet a trigger. The signal is the <i>fire</i>: when the bands expand back out. Many traders enter on the release, in the direction it breaks.</li>
     <li><b>Check the calendar first.</b> A big expected move <i>into earnings</i> is normal, not edge. Know the catalyst (earnings, Fed, product event) before assuming the squeeze tells the whole story.</li>
     <li><b>Manage risk.</b> The band is a probability, not a promise — roughly 1 move in 3 breaks outside ±1σ. Size positions so a 2σ move against you is survivable.</li>
-    <li><b>Re-verify halal compliance.</b> The watchlist is an industry screen only; confirm each name’s financial ratios (Zoya / Musaffa) before trading, and purify incidental impure income.</li>
+    <li><b>Re-verify halal compliance.</b> The universe is fetched from Shariah ETFs and re-checked on industry + debt/cash ratios — but the 5%-income purification rule isn’t automated. Confirm each name and purify incidental impure income (Zoya / Musaffa).</li>
   </ol>
 
   <div class="legend">
@@ -244,9 +271,11 @@ Expected move (1σ) = price × daily σ × √(horizon days)</div>
     · auto-refreshed each weekday after the US close.
   </div>
   <div class="warn">
-    ⚠️ Educational tool, <b>not financial advice</b>, and <b>not a fatwa</b>. The watchlist
-    is an industry-exclusion (Shariah) screen only — full compliance depends on financial
-    ratios that change quarterly; re-verify each name (Zoya / Musaffa) before trading.
+    ⚠️ Educational tool, <b>not financial advice</b>, and <b>not a fatwa</b>. The universe is
+    pulled from Shariah-compliant ETFs and re-screened on industry + debt/cash ratios
+    (an <i>approximation</i> of AAOIFI / S&P Islamic methodology). It does not automate the
+    5%-income purification rule, and ratios change quarterly — re-verify each name (Zoya /
+    Musaffa) before trading.
   </div>
 </div>
 <script>

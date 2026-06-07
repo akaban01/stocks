@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import alerts, data, halal, report, scanner
+from spread_scanner import alerts, data, halal, report, scanner, universe
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -55,8 +55,21 @@ def main(argv: list[str] | None = None) -> int:
     outdir = args.outdir or out_cfg.get("dir", "public")
     top = int(out_cfg.get("top", 25))
 
+    # ---- Determine the scan universe ----------------------------------------
+    uni_cfg = cfg.get("universe") or {}
+    screen_details: dict = {}
+
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
+    elif uni_cfg.get("source") == "etf":
+        etfs = uni_cfg.get("etfs") or ["SPUS"]
+        cap = int(uni_cfg.get("max_holdings", 30))
+        print(f"Fetching halal universe from {', '.join(etfs)} (top {cap})...")
+        tickers = universe.fetch_halal_universe(etfs, max_holdings=cap)
+        print(f"  got {len(tickers)} holdings: {', '.join(tickers) or '(none)'}")
+        if not tickers and uni_cfg.get("fallback_to_config", True):
+            print("  fetch empty — falling back to config tickers.")
+            tickers = cfg.get("tickers") or []
     else:
         tickers = cfg.get("tickers") or []
 
@@ -64,12 +77,32 @@ def main(argv: list[str] | None = None) -> int:
         print("No tickers to scan. Add some to config.yaml or pass --tickers.", file=sys.stderr)
         return 2
 
-    # Halal safety-net screen: drop any prohibited-industry names before scanning.
-    if (cfg.get("halal_screen") or {}).get("live_sector_filter"):
+    # ---- Halal screening ----------------------------------------------------
+    hs = cfg.get("halal_screen") or {}
+    formula = hs.get("financial_formula") or {}
+    if formula.get("enabled"):
+        recv = formula.get("max_receivables_ratio", None)
+        print("Running halal financial-ratio formula (industry + debt/cash ratios)...")
+        kept, dropped, screen_details = halal.screen_universe(
+            tickers,
+            max_debt=float(formula.get("max_debt_ratio", 0.33)),
+            max_cash=float(formula.get("max_cash_ratio", 0.33)),
+            max_receivables=(float(recv) if recv is not None else None),
+        )
+        for t, reason in dropped:
+            print(f"  rejected {t}: {reason}")
+        if str(formula.get("mode", "filter")) == "filter":
+            tickers = kept
+            print(f"  {len(kept)} compliant, {len(dropped)} rejected.")
+    elif hs.get("live_sector_filter"):
         print("Running halal sector screen...")
         tickers, dropped = halal.filter_tickers(tickers)
         for t, reason in dropped:
             print(f"  excluded {t}: {reason}")
+
+    if not tickers:
+        print("No halal-compliant tickers left to scan.", file=sys.stderr)
+        return 2
 
     # Snapshot previous scores (for "newly crossed" alert detection) before overwriting.
     prev_scores: dict[str, float] = {}
@@ -90,6 +123,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"No data for: {', '.join(missing)}")
 
     df = scanner.scan(raw, params)
+
+    # Attach the halal financial-ratio columns from the screen (if it ran).
+    if not df.empty and screen_details:
+        df["debt_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "debt_ratio", None))
+        df["cash_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "cash_ratio", None))
+
     report_path = report.write_reports(df, outdir, params, top=top)
 
     print(f"\nWrote {report_path}")
