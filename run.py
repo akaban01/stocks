@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import alerts, data, halal, report, scanner, universe
+from spread_scanner import alerts, data, halal, options, report, scanner, universe
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -54,6 +54,13 @@ def main(argv: list[str] | None = None) -> int:
     out_cfg = cfg.get("output") or {}
     outdir = args.outdir or out_cfg.get("dir", "public")
     top = int(out_cfg.get("top", 25))
+
+    # Load daily-calibrated score weights (written by calibrate.py); falls back
+    # to the hardcoded scanner.SCORE_WEIGHTS if the file is missing/invalid.
+    cal_cfg = cfg.get("calibration") or {}
+    weights_meta = scanner.apply_weights_file(cal_cfg.get("weights_file", "weights.json"))
+    if weights_meta:
+        print(f"Score weights (calibrated {weights_meta.get('as_of', '?')}): {scanner.SCORE_WEIGHTS}")
 
     # ---- Determine the scan universe ----------------------------------------
     uni_cfg = cfg.get("universe") or {}
@@ -124,12 +131,27 @@ def main(argv: list[str] | None = None) -> int:
 
     df = scanner.scan(raw, params)
 
-    # Attach the halal financial-ratio columns from the screen (if it ran).
+    # Attach the halal financial-ratio + earnings columns from the screen (if it ran).
     if not df.empty and screen_details:
         df["debt_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "debt_ratio", None))
         df["cash_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "cash_ratio", None))
+        df["earnings_in_days"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "earnings_in_days", None))
 
-    report_path = report.write_reports(df, outdir, params, top=top)
+    # Options layer: price the most coiled names — implied move vs historical (cheap/rich).
+    opt_cfg = cfg.get("options") or {}
+    if opt_cfg.get("enabled") and not df.empty:
+        head = df.head(int(opt_cfg.get("top_n", 15)))
+        rows = list(zip(head["ticker"], head["price"], head["em_pct"]))
+        print(f"Pricing options for top {len(rows)} names (implied vs historical move)...")
+        views = options.screen_options(rows, horizon_days=int(params["horizon_days"]),
+                                        margin=float(opt_cfg.get("margin", 0.15)))
+        df["implied_move_pct"] = df["ticker"].map(lambda t: getattr(views.get(t), "implied_move_pct", None))
+        df["vol_verdict"] = df["ticker"].map(lambda t: getattr(views.get(t), "verdict", None))
+        print(f"  priced {sum(1 for t in df['ticker'] if t in views)} names.")
+
+    report_path = report.write_reports(df, outdir, params, top=top,
+                                       weights=scanner.SCORE_WEIGHTS,
+                                       weights_as_of=(weights_meta or {}).get("as_of"))
 
     print(f"\nWrote {report_path}")
     if not df.empty:

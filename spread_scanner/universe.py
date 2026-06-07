@@ -24,17 +24,8 @@ def _valid_ticker(t: str) -> bool:
     return bool(t) and len(t) <= 6 and all(c.isalpha() or c in ".-" for c in t)
 
 
-def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]]:
-    """Return [(ticker, weight_pct)] for one ETF — best-effort, [] on failure."""
-    url = _ENDPOINT.format(sym=symbol.upper())
-    try:
-        req = urllib.request.Request(url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            payload = json.load(resp)
-    except Exception as exc:
-        print(f"  ! could not fetch {symbol} holdings: {type(exc).__name__}")
-        return []
-
+def _parse_holdings(payload: dict) -> list[tuple[str, float]]:
+    """Pure: extract [(ticker, weight_pct)] from the endpoint's JSON payload."""
     holdings = ((payload.get("data") or {}).get("holdings")) or []
     out: list[tuple[str, float]] = []
     for h in holdings:
@@ -47,6 +38,19 @@ def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]
             weight = 0.0
         out.append((ticker, weight))
     return out
+
+
+def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]]:
+    """Return [(ticker, weight_pct)] for one ETF — best-effort, [] on failure."""
+    url = _ENDPOINT.format(sym=symbol.upper())
+    try:
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            payload = json.load(resp)
+    except Exception as exc:
+        print(f"  ! could not fetch {symbol} holdings: {type(exc).__name__}")
+        return []
+    return _parse_holdings(payload)
 
 
 def fetch_halal_universe(symbols: list[str], max_holdings: int = 30) -> list[str]:

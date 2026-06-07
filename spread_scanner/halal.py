@@ -51,6 +51,7 @@ class ScreenResult:
     receivables_ratio: float | None # accounts receivable / market cap (optional)
     industry: str
     reasons: list[str]
+    earnings_in_days: int | None = None  # calendar days to next earnings (from same info call)
 
 
 # ---------------------------------------------------------------- industry only
@@ -92,12 +93,27 @@ def filter_tickers(tickers: list[str]) -> tuple[list[str], list[tuple[str, str]]
 # ------------------------------------------------------------ financial formula
 
 def _ratio(numer, denom) -> float | None:
+    """numer/denom, or None when inputs are missing/invalid. 0 numerator -> 0.0."""
     try:
-        if not numer or not denom or denom <= 0:
+        if numer is None or not denom or float(denom) <= 0:
             return None
         return float(numer) / float(denom)
     except (TypeError, ValueError):
         return None
+
+
+def _days_to_earnings(info: dict) -> int | None:
+    """Calendar days until the next earnings date, from a yfinance info dict.
+    Uses whichever earnings timestamp is in the future; None if unknown/past."""
+    import time
+    now = time.time()
+    candidates = [
+        info.get("earningsTimestamp"),
+        info.get("earningsTimestampStart"),
+        info.get("earningsTimestampEnd"),
+    ]
+    future = [t for t in candidates if isinstance(t, (int, float)) and t > now]
+    return int((min(future) - now) // 86400) if future else None
 
 
 def _receivables(tk: "yf.Ticker") -> float | None:
@@ -155,7 +171,8 @@ def financial_screen(
                        (recv_ratio, max_receivables if max_receivables is not None else 1.0)]
     )
     return ScreenResult(ticker, compliant, industry_ok, debt_ratio, cash_ratio,
-                        recv_ratio, industry, reasons or ["ok"])
+                        recv_ratio, industry, reasons or ["ok"],
+                        earnings_in_days=_days_to_earnings(info))
 
 
 def screen_universe(

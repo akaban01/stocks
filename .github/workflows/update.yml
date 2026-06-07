@@ -28,13 +28,19 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: python -m pytest -q
 
       - name: Run scanner
         env:
           # Optional: create this repo secret to enable Slack/Discord alerts.
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
         run: python run.py
+
+      - name: Refresh backtest
+        run: python backtest.py --years 5
 
       - name: Commit refreshed report
         run: |

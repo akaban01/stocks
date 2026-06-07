@@ -20,23 +20,46 @@ rewrites [`public/report.md`](public/report.md), publishes an HTML dashboard to
 | Squeeze | **TTM Squeeze** (Bollinger inside Keltner) | Classic "big move loading" trigger |
 | Room to move | Historical-volatility percentile | Low vol mean-reverts → expansion |
 | The spread | **Expected move** = price × σ_daily × √(horizon) | ± range up & down over the horizon |
+| Trigger | **Squeeze fired** (released + break direction) | The actual entry signal, vs. the build-up |
+| Calendar | **Earnings** inside the horizon | A big move into earnings is normal, not edge |
+| Cheap/rich | **Implied vs historical** move (options) | Is the market under/over-pricing the move? |
 | Lean (weak) | Squeeze momentum | Faint directional hint only |
 
 Each ticker gets a **Setup Score (0–100)** — higher means more coiled — and a
 1σ / 2σ expected-move band. ~68% of moves land inside ±1σ, ~95% inside ±2σ.
 
+> **Does the score actually work?** Yes, in the way that matters. The
+> [backtest](public/backtest.md) (5y, the live universe) shows coiled names break
+> out of their *own* compressed ±1σ band **~44%** of the time vs **~30%** for calm
+> names — a real *expansion* edge. (They don't move more in raw % — the score
+> targets low-vol names — so the edge is relative, which is exactly what a
+> both-ways straddle trader wants.) Re-runs each day; see the dashboard link.
+
 ## Quick start (local)
 
 ```bash
 pip install -r requirements.txt
-python run.py                          # scans the watchlist in config.yaml
+python run.py                          # scan (fetch halal universe, screen, rank)
 python run.py --tickers AAPL,MSFT,NVDA # ad-hoc one-off scan
+python backtest.py --years 5           # validate the score on history
+python -m pytest -q                    # run the test suite
 ```
 
 Outputs land in `public/`:
 - `report.md` — ranked, human-readable table
 - `index.html` — styled dashboard (served by GitHub Pages)
+- `backtest.md` / `backtest.html` — does the score work? validation report
 - `signals.csv` / `signals.json` — full machine-readable results
+
+## Reading the signals
+
+- **Squeeze** — `🔒 Nd` building for N days; **`🔥 ▲/▼`** just *fired* (released) —
+  that release is the entry trigger, with the arrow showing the break direction.
+- **Implied / Vol** — option-implied move and whether it's **cheap / fair / rich**
+  vs. the historical band. *Cheap* = the market is underpricing the move (favours
+  buying a straddle). Priced for the top-ranked names only.
+- **Earnings** — `⚠ Nd` means earnings land inside the horizon; treat any expected
+  move there as priced-in, not edge.
 
 ## Halal universe & screening
 
@@ -147,15 +170,41 @@ No webhook configured = the step quietly does nothing.
 
 ## How the score is built
 
+A weighted blend of three normalized "coiled spring" signals, scaled to 0–100:
+
 ```
-score = compression(≤35) + vol_room(≤20) + squeeze(≤45)
-  compression = (1 − bollinger_bandwidth_percentile) × 35
-  vol_room    = (1 − historical_vol_percentile)      × 20
-  squeeze     = 30 + min(days_in_squeeze, 15)/15 × 15   (only if squeeze is on)
+score = 100 × [ w_compression × (1 − bandwidth_percentile)
+              + w_vol_room    × (1 − hv_percentile)
+              + w_squeeze     × squeeze_signal ]        # squeeze_signal = 0 off, 0.6–1.0 on (rises with duration)
 ```
 
-All indicator math lives in [`spread_scanner/indicators.py`](spread_scanner/indicators.py)
-and is computed without look-ahead.
+The weights are **data-calibrated**, not hand-picked. [`calibrate.py`](calibrate.py)
+sets each weight ∝ how much that feature lifts the band-break (expansion) rate,
+measured on a **train** split and validated **out-of-sample**:
+
+| Feature | weight | OOS check (test split) |
+|---|---|---|
+| compression | 29% | calibrated weights separate high- vs low-score band-break rate by **+19 pts** |
+| vol room | 48% | vs **+14 pts** for the old hand-set heuristic — |
+| squeeze | 23% | the calibration holds up out of sample. |
+
+Re-run `python calibrate.py` after changing the universe or horizon; it rewrites
+[`public/calibration.md`](public/calibration.md) and prints the weights to paste into
+`scanner.SCORE_WEIGHTS`. All indicator math lives in
+[`spread_scanner/indicators.py`](spread_scanner/indicators.py), computed without look-ahead.
+
+## Development
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q          # 27 network-free tests
+```
+
+Tests cover the indicator math (incl. the rolling-percentile NaN edge case), the
+Shariah screen (incl. the "Non-Alcoholic" regression), the expected-move scaling,
+squeeze-fired detection, holdings parsing, and the backtest stats. CI runs them
+**before** generating or deploying anything ([`.github/workflows/update.yml`](.github/workflows/update.yml)),
+so a broken change never reaches the dashboard.
 
 ---
 

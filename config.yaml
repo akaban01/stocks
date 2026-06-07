@@ -84,6 +84,14 @@ halal_screen:
     max_cash_ratio: 0.33    # cash & equivalents / market cap
     max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
 
+options:
+  # Compare the option-implied move to the historical expected move and flag
+  # CHEAP / FAIR / RICH. Adds 1-2 network calls per ticker, so it only prices
+  # the most coiled names (top of the ranking).
+  enabled: true
+  top_n: 15                 # how many top-ranked names to price
+  margin: 0.15              # ± band around the historical move for cheap/rich
+
 alerts:
   # POST a summary to a Slack/Discord webhook when a ticker's Setup Score
   # crosses the threshold (only fires on a NEW crossing vs the previous run).

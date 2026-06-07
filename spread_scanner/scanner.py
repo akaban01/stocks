@@ -15,8 +15,10 @@ That band is the "spread both ways" the scanner is built around.
 
 from __future__ import annotations
 
+import json
 import math
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -31,6 +33,8 @@ class Signal:
     score: float            # 0..100, higher = more coiled / move more imminent
     squeeze_on: bool
     squeeze_days: int       # consecutive days the squeeze has been on
+    squeeze_fired: bool     # squeeze released within the last few bars (the entry trigger)
+    fired_dir: str          # "up" / "down" / "" — which way it broke on release
     bandwidth_pctile: float # 0..1, where today's BB width sits in its history
     hv_annual: float        # annualized historical volatility (%)
     hv_pctile: float        # 0..1, where today's HV sits in its history
@@ -52,19 +56,54 @@ def _nz(x, default=0.5):
     return default if x is None or (isinstance(x, float) and math.isnan(x)) else x
 
 
-def _setup_score(squeeze_on: bool, squeeze_days: int, bw_pctile, hv_pctile) -> float:
-    """Blend three "coiled spring" signals into a 0..100 score.
+# Score weights (sum to 1.0). Calibrated on 5y of history against the *expansion*
+# outcome (does the realized move break the stock's own ±1σ band?), measured on a
+# train split and validated out-of-sample — see `calibrate.py`. The weights are
+# proportional to each feature's measured exceed-rate lift. backtest.py reuses
+# these so the live score and the backtest score never drift apart.
+SCORE_WEIGHTS = {"compression": 0.29, "vol_room": 0.48, "squeeze": 0.23}
+SQUEEZE_FLOOR = 0.6  # an active squeeze contributes 0.6..1.0 of its weight (more with duration)
+_WEIGHT_KEYS = ("compression", "vol_room", "squeeze")
 
-    * compression  — low Bollinger bandwidth percentile (tight range)   max 35
-    * vol room     — low historical-vol percentile (room to expand)     max 20
-    * squeeze      — squeeze on, longer = more stored energy            max 45
+
+def apply_weights_file(path: str | Path = "weights.json") -> dict | None:
+    """Override SCORE_WEIGHTS from a calibration file written by calibrate.py.
+    Returns the file payload if applied, else None (missing/invalid -> keep
+    the hardcoded defaults). Validates keys and that the weights ~sum to 1."""
+    global SCORE_WEIGHTS
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError, OSError):
+        return None
+    w = payload.get("weights", payload)
+    try:
+        if set(_WEIGHT_KEYS) <= set(w) and abs(sum(float(w[k]) for k in _WEIGHT_KEYS) - 1.0) < 0.05:
+            SCORE_WEIGHTS = {k: float(w[k]) for k in _WEIGHT_KEYS}
+            return payload
+    except (TypeError, ValueError):
+        pass
+    return None
+
+
+def _squeeze_signal(squeeze_on: bool, squeeze_days: int) -> float:
+    """0 when off; 0.6..1.0 when on, rising with how long it has been building."""
+    if not squeeze_on:
+        return 0.0
+    return SQUEEZE_FLOOR + (1 - SQUEEZE_FLOOR) * min(squeeze_days, 15) / 15
+
+
+def _setup_score(squeeze_on: bool, squeeze_days: int, bw_pctile, hv_pctile) -> float:
+    """Weighted blend of three "coiled spring" signals, scaled to 0..100.
+
+    * compression — low Bollinger bandwidth percentile (tight range)
+    * vol room    — low historical-vol percentile (room to expand)
+    * squeeze     — squeeze on, longer = more stored energy
     """
-    compression = (1 - _nz(bw_pctile)) * 35
-    vol_room = (1 - _nz(hv_pctile)) * 20
-    squeeze = 0.0
-    if squeeze_on:
-        squeeze = 30 + min(squeeze_days, 15) / 15 * 15
-    return round(min(compression + vol_room + squeeze, 100), 1)
+    w = SCORE_WEIGHTS
+    raw = (w["compression"] * (1 - _nz(bw_pctile))
+           + w["vol_room"] * (1 - _nz(hv_pctile))
+           + w["squeeze"] * _squeeze_signal(squeeze_on, squeeze_days))
+    return round(min(raw * 100, 100), 1)
 
 
 def _lean(momentum: float, price: float, sma20: float) -> str:
@@ -100,6 +139,18 @@ def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
     squeeze_on = bool(squeeze.iloc[-1])
     squeeze_days = ind.trailing_true_count(squeeze)
 
+    # Squeeze "fired" = it was on and released within the last RELEASE_WINDOW bars.
+    # That release is the actual entry trigger (vs. the build-up while it's on).
+    sq = squeeze.fillna(False)
+    off_streak = ind.trailing_true_count(~sq)          # consecutive OFF days at the tail
+    release_window = int(p.get("release_window", 2))
+    squeeze_fired = (not squeeze_on) and (0 < off_streak <= release_window) and (off_streak < len(sq))
+    fired_dir = ""
+    if squeeze_fired:
+        ref_price = float(close.iloc[-off_streak - 1])  # close on the last day it was on
+        change = price / ref_price - 1 if ref_price else 0.0
+        fired_dir = "up" if change > 0 else ("down" if change < 0 else "")
+
     # Expected move: 1-sigma daily move scaled by sqrt(time) over the horizon.
     logret = np.log(close / close.shift(1))
     sigma_d = float(logret.tail(p["vol_lookback"]).std(ddof=0))
@@ -117,6 +168,8 @@ def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
         score=_setup_score(squeeze_on, squeeze_days, bw_pctile, hv_pctile),
         squeeze_on=squeeze_on,
         squeeze_days=squeeze_days,
+        squeeze_fired=squeeze_fired,
+        fired_dir=fired_dir,
         bandwidth_pctile=round(_nz(bw_pctile), 3),
         hv_annual=round(float(hv.iloc[-1]) * 100, 1),
         hv_pctile=round(_nz(hv_pctile), 3),
