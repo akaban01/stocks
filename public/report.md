@@ -1,6 +1,6 @@
 # Short-Term Spread Scanner
 
-_Last updated: **2026-06-06 20:02 UTC** · horizon: **10 trading days (~2 weeks)** · 31 tickers scanned_
+_Last updated: **2026-06-06 23:43 UTC** · horizon: **10 trading days (~2 weeks)** · 31 tickers scanned_
 
 Ranked by **Setup Score** — how coiled each name is right now. A high score means
 volatility is compressed and a move is loading; the **±** column and the 1σ

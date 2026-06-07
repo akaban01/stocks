@@ -30,11 +30,32 @@
   .legend code { background: #161b22; padding: 1px 6px; border-radius: 4px; }
   .warn { margin-top: 22px; padding: 12px 16px; border-radius: 10px;
     background: #2d1d12; border: 1px solid #5a3a1a; color: #f0c992; font-size: .85rem; }
+  h2 { font-size: 1.1rem; margin: 30px 0 12px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    padding: 14px 16px; }
+  .card h3 { margin: 0 0 8px; font-size: .95rem; }
+  .card p { margin: 0; font-size: .88rem; color: #c9d1d9; }
+  .card ul { margin: 0; padding-left: 18px; }
+  .card li { margin: 5px 0; font-size: .88rem; color: #c9d1d9; }
+  .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .82rem; background: #0d1117; border: 1px solid #30363d;
+    border-radius: 8px; padding: 11px 13px; color: #9fb4d0; white-space: pre-wrap;
+    margin: 12px 0 0; }
+  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+  ol.steps li { position: relative; padding: 11px 13px 11px 46px; margin: 9px 0;
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    font-size: .9rem; color: #c9d1d9; }
+  ol.steps li::before { counter-increment: step; content: counter(step);
+    position: absolute; left: 12px; top: 10px; width: 24px; height: 24px;
+    background: #1f6feb; color: #fff; border-radius: 50%; text-align: center;
+    line-height: 24px; font-size: .82rem; font-weight: 700; }
   a { color: #58a6ff; }
 </style></head>
 <body><div class="wrap">
   <h1>📈 Halal Spread Scanner</h1>
-  <div class="meta">Updated <b>2026-06-06 20:02 UTC</b> · horizon <b>10 trading days (~2 weeks)</b> · 31 halal-screened tickers</div>
+  <div class="meta">Updated <b>2026-06-06 23:43 UTC</b> · horizon <b>10 trading days (~2 weeks)</b> · 31 halal-screened tickers</div>
   <div class="lede">
     Ranked by <b>Setup Score</b> — how coiled each name is now. High score = volatility
     compressed, a move loading. The <b>±</b> column and 1σ targets show how far price
@@ -409,10 +430,59 @@
 </tr>
     </tbody>
   </table>
+
+  <h2>How it works</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>The idea — volatility cycles</h3>
+      <p>Volatility breathes: it contracts, then expands. When a stock <b>coils</b>
+      — its trading range squeezes tight and recent volatility drops to the low end
+      of its own range — an outsized move usually follows within days. The catch is
+      the <i>direction</i> isn't knowable in advance. So this tool ranks <b>how
+      coiled</b> each name is and shows how far it could travel <b>both ways</b>.</p>
+    </div>
+    <div class="card">
+      <h3>Where the numbers come from</h3>
+      <p>Each weekday after the US close a GitHub Action pulls ~1 year of daily
+      prices for every halal-screened ticker, recomputes the indicators (Bollinger
+      Bands, Keltner Channels, TTM squeeze, ATR, historical volatility) with no
+      look-ahead, and redeploys this page. Nothing to run by hand — just refresh.</p>
+    </div>
+  </div>
+
+  <h2>What each column means</h2>
+  <div class="cols">
+    <div class="card"><ul>
+      <li><b>Score (0–100)</b> — how coiled the name is right now; higher = a move is more imminent. The chip shades green→red with the score.</li>
+      <li><b>Squeeze 🔒</b> — Bollinger Bands have closed <i>inside</i> the Keltner Channels (the “TTM squeeze”). The number is how many days it has been building — longer = more stored energy.</li>
+      <li><b>±10d</b> — the 1-sigma expected move over the horizon, as a % of price.</li>
+    </ul></div>
+    <div class="card"><ul>
+      <li><b>Down 1σ / Up 1σ</b> — price targets one standard deviation either side. ~68% of moves land inside ±1σ, ~95% inside ±2σ.</li>
+      <li><b>Lean</b> — a faint directional hint from squeeze momentum. A tiebreaker only — do <b>not</b> trade on it alone.</li>
+      <li><b>HV%</b> — annualised historical volatility (how jumpy the name has been).</li>
+    </ul></div>
+  </div>
+  <div class="formula">Score = compression (low Bollinger-bandwidth %ile, ≤35)
+      + room to expand (low historical-vol %ile, ≤20)
+      + active TTM squeeze, longer = more (≤45)
+
+Expected move (1σ) = price × daily σ × √(horizon days)</div>
+
+  <h2>How to use these signals</h2>
+  <ol class="steps">
+    <li><b>Start at the top.</b> The highest scores are the most coiled — where a move is most likely to fire soon. Treat the list as a watchlist, not buy orders.</li>
+    <li><b>Trade the move, not a guess at direction.</b> This is a <b>both-ways</b> setup. It pairs naturally with non-directional option plays (a straddle / strangle), or with waiting for the breakout and trading whichever way it resolves.</li>
+    <li><b>Use the ± band as your expected move.</b> Compare it to what options are pricing: if a straddle costs less than the 1σ band implies, the expected move may be “cheap”; if more, it’s “rich”. The Down / Up targets are your reference levels.</li>
+    <li><b>Wait for the squeeze to <i>release</i>.</b> 🔒 with rising days means energy is building — not yet a trigger. The signal is the <i>fire</i>: when the bands expand back out. Many traders enter on the release, in the direction it breaks.</li>
+    <li><b>Check the calendar first.</b> A big expected move <i>into earnings</i> is normal, not edge. Know the catalyst (earnings, Fed, product event) before assuming the squeeze tells the whole story.</li>
+    <li><b>Manage risk.</b> The band is a probability, not a promise — roughly 1 move in 3 breaks outside ±1σ. Size positions so a 2σ move against you is survivable.</li>
+    <li><b>Re-verify halal compliance.</b> The watchlist is an industry screen only; confirm each name’s financial ratios (Zoya / Musaffa) before trading, and purify incidental impure income.</li>
+  </ol>
+
   <div class="legend">
-    <b>Score</b> = compression (low Bollinger bandwidth %ile) + room to expand (low HV %ile)
-    + active TTM squeeze. <b>🔒</b> = Bollinger Bands inside Keltner Channels.
-    Data: <a href="signals.csv">signals.csv</a> · <a href="signals.json">signals.json</a>.
+    Raw data: <a href="signals.csv">signals.csv</a> · <a href="signals.json">signals.json</a>
+    · auto-refreshed each weekday after the US close.
   </div>
   <div class="warn">
     ⚠️ Educational tool, <b>not financial advice</b>, and <b>not a fatwa</b>. The watchlist
