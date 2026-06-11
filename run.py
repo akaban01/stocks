@@ -19,7 +19,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import alerts, data, halal, options, report, scanner, universe
+from spread_scanner import alerts, charts, data, halal, options, report, scanner, universe
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -158,6 +158,21 @@ def main(argv: list[str] | None = None) -> int:
         cols = ["rank", "ticker", "price", "score", "squeeze_days", "em_pct", "lean"]
         print("\nTop setups:")
         print(df[cols].head(min(top, 10)).to_string(index=False))
+
+    # Year-to-year price charts page (a per-ticker line chart). Best-effort: a
+    # failure here must never break the main scan/report.
+    charts_cfg = cfg.get("charts") or {}
+    if charts_cfg.get("enabled", True):
+        cperiod = str(charts_cfg.get("history_period", "5y"))
+        try:
+            print(f"Building year-to-year charts ({cperiod})...")
+            craw = data.download(tickers, period=cperiod)
+            if not craw:                       # reuse the scan download if the fetch came back empty
+                craw = raw
+            charts_path = charts.write_charts(craw, outdir, period_label=cperiod)
+            print(f"Wrote {charts_path}")
+        except Exception as exc:               # noqa: BLE001 — page is optional, log and move on
+            print(f"Charts skipped ({type(exc).__name__}: {exc})", file=sys.stderr)
 
     alert_cfg = cfg.get("alerts") or {}
     if alert_cfg.get("enabled") and not df.empty:

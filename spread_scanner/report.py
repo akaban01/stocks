@@ -347,7 +347,8 @@ Halal screen = permissible industry
   </ol>
 
   <div class="legend">
-    🔬 <a href="backtest.html">Does the score work? — backtest</a>
+    📈 <a href="charts.html">Year-to-year price charts</a>
+    · 🔬 <a href="backtest.html">Does the score work? — backtest</a>
     · Raw data: <a href="signals.csv">signals.csv</a> · <a href="signals.json">signals.json</a>
     · auto-refreshed each weekday after the US close.
   </div>

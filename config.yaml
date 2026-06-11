@@ -99,6 +99,13 @@ alerts:
   enabled: true
   score_threshold: 60
 
+charts:
+  # Build charts.html — a year-to-year closing-price line chart for every
+  # screened ticker. Uses its own (longer) download so the chart shows several
+  # years; falls back to the scan's history if that fetch comes back empty.
+  enabled: true
+  history_period: 5y        # how much history to chart (yfinance period string)
+
 output:
   dir: public               # where report files go (served as the Pages site root)
   top: 30                   # how many rows to show in the report

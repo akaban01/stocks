@@ -1,6 +1,6 @@
 # Short-Term Spread Scanner
 
-_Last updated: **2026-06-11 23:06 UTC** · horizon: **10 trading days (~2 weeks)** · 30 tickers scanned_
+_Last updated: **2026-06-11 23:34 UTC** · horizon: **10 trading days (~2 weeks)** · 30 tickers scanned_
 
 _Score weights: compression 29% · vol-room 48% · squeeze 23% (default)_
 
