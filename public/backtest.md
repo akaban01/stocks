@@ -14,7 +14,7 @@ the stock's *own* compressed expected band? That's the **Expand** column
 |---|---|---|---|---|
 | ≥ 60 (coiled) | 6,581 | 5.2% | 1.16× | 47% |
 | 30 – 60 | 13,984 | 5.3% | 0.96× | 38% |
-| < 30 | 13,992 | 5.7% | 0.75× | 27% |
+| < 30 | 13,992 | 5.7% | 0.76× | 27% |
 
 **✅ coiled names expand beyond their own band more often — the squeeze thesis holds.**
 Coiled bars broke their ±1σ band **47%** of the time vs **27%** for calm
@@ -27,7 +27,7 @@ since the score targets quiet names.
 | State | bars | avg \|move\| | Expand (×) | Broke band |
 |---|---|---|---|---|
 | squeeze ON | 2,839 | 5.2% | 1.09× | 44% |
-| squeeze OFF | 31,718 | 5.4% | 0.90× | 34% |
+| squeeze OFF | 31,718 | 5.5% | 0.90× | 34% |
 
 ## Expected-move calibration
 
