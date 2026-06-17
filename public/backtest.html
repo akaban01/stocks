@@ -17,7 +17,7 @@
 </style></head><body><div class="wrap">
   <h1>🔬 Setup-Score Backtest</h1>
   <div class="meta">30 tickers · 5y history · horizon 10 trading days
-    · 34,563 signal-bars · <a href="index.html">← back to scanner</a></div>
+    · 34,565 signal-bars · <a href="index.html">← back to scanner</a></div>
   
   <p class="lede">The honest test isn't "do high scores move more in absolute %" — the score
   deliberately picks <b>low-volatility</b> names, which always move less in raw terms. The thesis is
@@ -25,13 +25,13 @@
   That's <b>Expand</b> (realized ÷ expected) and <b>Broke band</b> (% exceeding ±1σ).</p>
   <h2>By Setup Score</h2>
   <table><thead><tr><th>Score bucket</th><th>bars</th><th>avg |move|</th><th>Expand</th><th>Broke band</th></tr></thead>
-  <tbody><tr><td>≥ 60 (coiled)</td><td class='n'>6,575</td><td class='n'>5.2%</td><td class='n'>1.16×</td><td class='n'>47%</td></tr><tr><td>30 – 60</td><td class='n'>13,995</td><td class='n'>5.3%</td><td class='n'>0.96×</td><td class='n'>38%</td></tr><tr><td>&lt; 30</td><td class='n'>13,993</td><td class='n'>5.7%</td><td class='n'>0.75×</td><td class='n'>27%</td></tr></tbody></table>
+  <tbody><tr><td>≥ 60 (coiled)</td><td class='n'>6,562</td><td class='n'>5.2%</td><td class='n'>1.16×</td><td class='n'>47%</td></tr><tr><td>30 – 60</td><td class='n'>14,003</td><td class='n'>5.3%</td><td class='n'>0.96×</td><td class='n'>38%</td></tr><tr><td>&lt; 30</td><td class='n'>14,000</td><td class='n'>5.7%</td><td class='n'>0.75×</td><td class='n'>27%</td></tr></tbody></table>
   <p class="good"><b>✅ coiled names expand beyond their own band more often — the squeeze thesis holds.</b> Coiled bars broke their ±1σ band
   <b>47%</b> of the time vs <b>27%</b> for calm bars (Δ +20 pts).
   Raw absolute size barely differs (5.2% vs 5.7%; r = -0.04).</p>
   <h2>Squeeze on vs off</h2>
   <table><thead><tr><th>State</th><th>bars</th><th>avg |move|</th><th>Expand</th><th>Broke band</th></tr></thead>
-  <tbody><tr><td>squeeze ON</td><td class='n'>2,869</td><td class='n'>5.2%</td><td class='n'>1.08×</td><td class='n'>44%</td></tr><tr><td>squeeze OFF</td><td class='n'>31,694</td><td class='n'>5.4%</td><td class='n'>0.90×</td><td class='n'>34%</td></tr></tbody></table>
+  <tbody><tr><td>squeeze ON</td><td class='n'>2,846</td><td class='n'>5.2%</td><td class='n'>1.09×</td><td class='n'>44%</td></tr><tr><td>squeeze OFF</td><td class='n'>31,719</td><td class='n'>5.4%</td><td class='n'>0.90×</td><td class='n'>34%</td></tr></tbody></table>
   <h2>Calibration</h2>
   <p>Realized move landed inside the ±1σ band <b>65%</b> of the time (theory ≈ 68%).</p>
   <p class="fine">Overlapping forward windows make these autocorrelated — descriptive, not
