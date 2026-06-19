@@ -21,8 +21,8 @@
     "note":"",
     "debt_ratio":0.0442713539,
     "cash_ratio":0.005391775,
-    "earnings_in_days":47,
-    "implied_move_pct":6.71,
+    "earnings_in_days":46,
+    "implied_move_pct":6.94,
     "vol_verdict":"fair"
   },
   {
@@ -47,8 +47,8 @@
     "note":"",
     "debt_ratio":0.1313703015,
     "cash_ratio":0.0154048081,
-    "earnings_in_days":42,
-    "implied_move_pct":6.02,
+    "earnings_in_days":41,
+    "implied_move_pct":6.23,
     "vol_verdict":"rich"
   },
   {
@@ -73,9 +73,9 @@
     "note":"",
     "debt_ratio":0.0834379057,
     "cash_ratio":0.014766764,
-    "earnings_in_days":42,
-    "implied_move_pct":6.16,
-    "vol_verdict":"fair"
+    "earnings_in_days":41,
+    "implied_move_pct":6.38,
+    "vol_verdict":"rich"
   },
   {
     "rank":4,
@@ -99,8 +99,8 @@
     "note":"",
     "debt_ratio":0.1111401198,
     "cash_ratio":0.0167193726,
-    "earnings_in_days":42,
-    "implied_move_pct":4.88,
+    "earnings_in_days":41,
+    "implied_move_pct":4.97,
     "vol_verdict":"rich"
   },
   {
@@ -125,8 +125,8 @@
     "note":"",
     "debt_ratio":0.1906231046,
     "cash_ratio":0.0245520822,
-    "earnings_in_days":41,
-    "implied_move_pct":5.54,
+    "earnings_in_days":40,
+    "implied_move_pct":5.74,
     "vol_verdict":"rich"
   },
   {
@@ -151,8 +151,8 @@
     "note":"",
     "debt_ratio":0.000639799,
     "cash_ratio":0.0115441997,
-    "earnings_in_days":66,
-    "implied_move_pct":19.75,
+    "earnings_in_days":65,
+    "implied_move_pct":20.45,
     "vol_verdict":"fair"
   },
   {
@@ -177,9 +177,9 @@
     "note":"",
     "debt_ratio":0.0044177604,
     "cash_ratio":0.0140909549,
-    "earnings_in_days":46,
-    "implied_move_pct":13.31,
-    "vol_verdict":"cheap"
+    "earnings_in_days":45,
+    "implied_move_pct":13.77,
+    "vol_verdict":"fair"
   },
   {
     "rank":8,
@@ -203,8 +203,8 @@
     "note":"",
     "debt_ratio":0.070042158,
     "cash_ratio":0.0353171563,
-    "earnings_in_days":54,
-    "implied_move_pct":7.45,
+    "earnings_in_days":53,
+    "implied_move_pct":7.71,
     "vol_verdict":"fair"
   },
   {
@@ -229,8 +229,8 @@
     "note":"",
     "debt_ratio":0.0213488897,
     "cash_ratio":0.0282437019,
-    "earnings_in_days":34,
-    "implied_move_pct":5.89,
+    "earnings_in_days":33,
+    "implied_move_pct":6.1,
     "vol_verdict":"fair"
   },
   {
@@ -255,8 +255,8 @@
     "note":"",
     "debt_ratio":0.0213820046,
     "cash_ratio":0.0282875115,
-    "earnings_in_days":34,
-    "implied_move_pct":5.93,
+    "earnings_in_days":33,
+    "implied_move_pct":6.14,
     "vol_verdict":"fair"
   },
   {
@@ -281,8 +281,8 @@
     "note":"",
     "debt_ratio":0.0592187465,
     "cash_ratio":0.0554043245,
-    "earnings_in_days":40,
-    "implied_move_pct":6.58,
+    "earnings_in_days":39,
+    "implied_move_pct":6.81,
     "vol_verdict":"cheap"
   },
   {
@@ -307,8 +307,8 @@
     "note":"",
     "debt_ratio":0.1912028478,
     "cash_ratio":0.0048032472,
-    "earnings_in_days":60,
-    "implied_move_pct":6.14,
+    "earnings_in_days":59,
+    "implied_move_pct":6.36,
     "vol_verdict":"rich"
   },
   {
@@ -333,8 +333,8 @@
     "note":"",
     "debt_ratio":0.0193537591,
     "cash_ratio":0.015651663,
-    "earnings_in_days":41,
-    "implied_move_pct":4.42,
+    "earnings_in_days":40,
+    "implied_move_pct":4.58,
     "vol_verdict":"fair"
   },
   {
@@ -359,8 +359,8 @@
     "note":"",
     "debt_ratio":0.0668677446,
     "cash_ratio":0.0486892715,
-    "earnings_in_days":34,
-    "implied_move_pct":16.46,
+    "earnings_in_days":33,
+    "implied_move_pct":17.03,
     "vol_verdict":"fair"
   },
   {
@@ -385,8 +385,8 @@
     "note":"",
     "debt_ratio":0.0478163483,
     "cash_ratio":0.0173670342,
-    "earnings_in_days":33,
-    "implied_move_pct":10.62,
+    "earnings_in_days":32,
+    "implied_move_pct":10.46,
     "vol_verdict":"fair"
   },
   {
@@ -411,7 +411,7 @@
     "note":"",
     "debt_ratio":0.1746450955,
     "cash_ratio":0.0202745763,
-    "earnings_in_days":46,
+    "earnings_in_days":45,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -437,7 +437,7 @@
     "note":"",
     "debt_ratio":0.0025110116,
     "cash_ratio":0.0104195024,
-    "earnings_in_days":68,
+    "earnings_in_days":67,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -463,7 +463,7 @@
     "note":"",
     "debt_ratio":0.0105642475,
     "cash_ratio":0.0297467671,
-    "earnings_in_days":33,
+    "earnings_in_days":32,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -489,7 +489,7 @@
     "note":"",
     "debt_ratio":0.0125919404,
     "cash_ratio":0.0327692258,
-    "earnings_in_days":33,
+    "earnings_in_days":32,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -515,7 +515,7 @@
     "note":"",
     "debt_ratio":0.0084435956,
     "cash_ratio":0.0114080026,
-    "earnings_in_days":5,
+    "earnings_in_days":4,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -541,7 +541,7 @@
     "note":"",
     "debt_ratio":0.0445055009,
     "cash_ratio":0.0277566831,
-    "earnings_in_days":40,
+    "earnings_in_days":39,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -567,7 +567,7 @@
     "note":"",
     "debt_ratio":0.1307095568,
     "cash_ratio":0.040459744,
-    "earnings_in_days":32,
+    "earnings_in_days":31,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -593,7 +593,7 @@
     "note":"",
     "debt_ratio":0.1000155992,
     "cash_ratio":0.0401084608,
-    "earnings_in_days":26,
+    "earnings_in_days":25,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -619,7 +619,7 @@
     "note":"",
     "debt_ratio":0.1057357845,
     "cash_ratio":0.0351424545,
-    "earnings_in_days":40,
+    "earnings_in_days":39,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -645,7 +645,7 @@
     "note":"",
     "debt_ratio":0.0076758664,
     "cash_ratio":0.009765097,
-    "earnings_in_days":40,
+    "earnings_in_days":39,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -671,7 +671,7 @@
     "note":"",
     "debt_ratio":0.29813932,
     "cash_ratio":0.0503277214,
-    "earnings_in_days":33,
+    "earnings_in_days":32,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -697,7 +697,7 @@
     "note":"",
     "debt_ratio":0.2946814757,
     "cash_ratio":0.0601743458,
-    "earnings_in_days":82,
+    "earnings_in_days":81,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -723,7 +723,7 @@
     "note":"",
     "debt_ratio":0.0331660629,
     "cash_ratio":0.0100294797,
-    "earnings_in_days":76,
+    "earnings_in_days":75,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -749,7 +749,7 @@
     "note":"",
     "debt_ratio":0.0148338551,
     "cash_ratio":0.0168197308,
-    "earnings_in_days":55,
+    "earnings_in_days":54,
     "implied_move_pct":null,
     "vol_verdict":null
   },
@@ -775,7 +775,7 @@
     "note":"",
     "debt_ratio":0.018124869,
     "cash_ratio":0.0146227368,
-    "earnings_in_days":41,
+    "earnings_in_days":40,
     "implied_move_pct":null,
     "vol_verdict":null
   }
