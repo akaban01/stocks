@@ -270,8 +270,19 @@ def _html_page(df: pd.DataFrame, now_iso: str, now_utc: str, horizon: int, scann
     background: #1f6feb; color: #fff; border-radius: 50%; text-align: center;
     line-height: 24px; font-size: .82rem; font-weight: 700; }}
   a {{ color: #58a6ff; }}
+  .topnav {{ display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }}
+  .topnav a {{ padding: 6px 12px; border-radius: 8px; background: #161b22;
+    border: 1px solid #30363d; color: #58a6ff; text-decoration: none;
+    font-size: .85rem; font-weight: 600; }}
+  .topnav a:hover {{ border-color: #58a6ff; }}
+  .topnav a.active {{ background: #1f6feb; border-color: #1f6feb; color: #fff; }}
 </style></head>
 <body><div class="wrap">
+  <nav class="topnav">
+    <a href="index.html" class="active">📈 Scanner</a>
+    <a href="charts.html">📊 Charts</a>
+    <a href="backtest.html">🔬 Backtest</a>
+  </nav>
   <h1>📈 Halal Spread Scanner</h1>
   <div class="meta">Updated <b><span id="updated" data-utc="{now_iso}">{now_utc}</span></b> · horizon <b>{horizon} trading days (~2 weeks)</b> · {scanned} halal-screened tickers</div>
   <div class="lede">
