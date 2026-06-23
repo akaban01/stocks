@@ -1,6 +1,6 @@
 # Spread Scanner Backtest
 
-_30 tickers · 5y history · horizon 10 trading days · 34,541 signal-bars_
+_30 tickers · 5y history · horizon 10 trading days · 34,543 signal-bars_
 
 The honest test isn't "do high scores move more in absolute %" — the score
 deliberately selects **low-volatility** names, which always move less in raw
@@ -12,9 +12,9 @@ the stock's *own* compressed expected band? That's the **Expand** column
 
 | Score bucket | bars | avg \|move\| | Expand (×) | Broke band |
 |---|---|---|---|---|
-| ≥ 60 (coiled) | 6,603 | 5.4% | 1.14× | 46% |
-| 30 – 60 | 13,925 | 5.4% | 0.95× | 37% |
-| < 30 | 14,013 | 5.9% | 0.75× | 27% |
+| ≥ 60 (coiled) | 6,592 | 5.4% | 1.14× | 46% |
+| 30 – 60 | 13,930 | 5.4% | 0.95× | 37% |
+| < 30 | 14,021 | 5.9% | 0.75× | 27% |
 
 **✅ coiled names expand beyond their own band more often — the squeeze thesis holds.**
 Coiled bars broke their ±1σ band **46%** of the time vs **27%** for calm
@@ -26,8 +26,8 @@ since the score targets quiet names.
 
 | State | bars | avg \|move\| | Expand (×) | Broke band |
 |---|---|---|---|---|
-| squeeze ON | 2,852 | 5.3% | 1.08× | 44% |
-| squeeze OFF | 31,689 | 5.6% | 0.89× | 34% |
+| squeeze ON | 2,849 | 5.3% | 1.08× | 44% |
+| squeeze OFF | 31,694 | 5.6% | 0.89× | 34% |
 
 ## Expected-move calibration
 
