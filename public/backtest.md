@@ -12,22 +12,22 @@ the stock's *own* compressed expected band? That's the **Expand** column
 
 | Score bucket | bars | avg \|move\| | Expand (×) | Broke band |
 |---|---|---|---|---|
-| ≥ 60 (coiled) | 6,399 | 5.4% | 1.17× | 47% |
-| 30 – 60 | 14,016 | 5.5% | 0.97× | 38% |
-| < 30 | 14,142 | 5.8% | 0.75× | 27% |
+| ≥ 60 (coiled) | 6,446 | 5.5% | 1.16× | 47% |
+| 30 – 60 | 13,996 | 5.5% | 0.96× | 38% |
+| < 30 | 14,115 | 6.0% | 0.75× | 27% |
 
 **✅ coiled names expand beyond their own band more often — the squeeze thesis holds.**
 Coiled bars broke their ±1σ band **47%** of the time vs **27%** for calm
 bars (Δ +20 pts). In raw absolute size the buckets barely differ
-(5.4% vs 5.8%, Δ -0.5 pts; score↔|move| r = -0.03) — as expected,
+(5.5% vs 6.0%, Δ -0.5 pts; score↔|move| r = -0.04) — as expected,
 since the score targets quiet names.
 
 ## Squeeze on vs off
 
 | State | bars | avg \|move\| | Expand (×) | Broke band |
 |---|---|---|---|---|
-| squeeze ON | 2,696 | 5.4% | 1.10× | 44% |
-| squeeze OFF | 31,861 | 5.6% | 0.90× | 34% |
+| squeeze ON | 2,721 | 5.5% | 1.09× | 44% |
+| squeeze OFF | 31,836 | 5.7% | 0.90× | 34% |
 
 ## Expected-move calibration
 
