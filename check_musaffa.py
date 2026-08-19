@@ -27,6 +27,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import sys
@@ -57,8 +58,20 @@ def load_tickers(config_path: str, limit: int) -> list[str]:
     return tickers[:limit]
 
 
+def _as_of(html: str) -> str:
+    """Month the verdict is stated as of, e.g. 'August 2026' ('' if absent).
+
+    Deliberately reads the page's own "As of <Month> <Year>, ... is classified
+    as ..." prose, which is scoped to the *compliance* call. The date fields in
+    the state blob (`priceLastUpdated`, `datetime`) are price timestamps and
+    would be misleading here — a stale verdict on a freshly-priced stock would
+    still show today's date."""
+    m = re.search(r"As of ([A-Z][a-z]+ \d{4}), [^<]{0,120}?classified as", html)
+    return m.group(1) if m else ""
+
+
 def _extract(html: str, ticker: str) -> dict:
-    """Pull (status, ranking, name) for `ticker` out of the page's state blob.
+    """Pull (status, ranking, name, as_of) for `ticker` out of the page.
 
     Anchors on the ``stock-overview:<TICKER>`` object so we read the subject
     stock's fields, not a related name the page also embeds. Returns whatever
@@ -77,6 +90,7 @@ def _extract(html: str, ticker: str) -> dict:
         "status": _STATUS_LABEL.get(status, status or "unknown"),
         "ranking": int(rank_m.group(1)) if rank_m else None,
         "name": name_m.group(1) if name_m else "",
+        "as_of": _as_of(html),
     }
 
 
@@ -89,8 +103,22 @@ def check_ticker(ticker: str, timeout: int = 30) -> dict:
             html = resp.read().decode("utf-8", errors="replace")
     except Exception as exc:  # noqa: BLE001 — one bad name shouldn't abort the batch
         return {"ticker": ticker.upper(), "status_raw": None,
-                "status": f"error ({type(exc).__name__})", "ranking": None, "name": ""}
+                "status": f"error ({type(exc).__name__})", "ranking": None,
+                "name": "", "as_of": ""}
     return _extract(html, ticker)
+
+
+def _stale_months(as_of: str, months: int = 2) -> bool:
+    """True when `as_of` ('August 2026') is more than `months` behind today.
+
+    Compliance is restated as financials land, so a verdict that stops moving
+    is the signal that something is off — worth flagging, not just printing."""
+    try:
+        d = dt.datetime.strptime(as_of, "%B %Y")
+    except (ValueError, TypeError):
+        return False
+    now = dt.date.today()
+    return (now.year - d.year) * 12 + (now.month - d.month) > months
 
 
 def check_all(tickers: list[str], delay: float = 1.0) -> list[dict]:
@@ -101,7 +129,12 @@ def check_all(tickers: list[str], delay: float = 1.0) -> list[dict]:
             time.sleep(delay)
         res = check_ticker(t)
         rank = "-" if res["ranking"] is None else f"{res['ranking']}/5"
-        print(f"  {res['ticker']:<6} {res['status']:<11} {rank:<5} {res['name']}")
+        as_of = res.get("as_of") or "—"
+        res["stale"] = _stale_months(res.get("as_of", ""))
+        if res["stale"]:
+            as_of = f"⚠ {as_of}"
+        print(f"  {res['ticker']:<6} {res['status']:<11} {rank:<5} "
+              f"{as_of:<16} {res['name']}")
         results.append(res)
     return results
 
@@ -129,9 +162,14 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Checking {len(tickers)} tickers on Musaffa (free public pages): "
           f"{', '.join(tickers)}\n")
-    print(f"  {'Ticker':<6} {'Status':<11} {'Rank':<5} Company")
-    print("  " + "-" * 56)
+    print(f"  {'Ticker':<6} {'Status':<11} {'Rank':<5} {'As of':<16} Company")
+    print("  " + "-" * 72)
     results = check_all(tickers, delay=args.delay)
+
+    stale = [r["ticker"] for r in results if r.get("stale")]
+    if stale:
+        print(f"\n  ⚠ Verdict not restated in over 2 months: {', '.join(stale)} "
+              f"— re-check on musaffa.com before relying on it.")
 
     if args.json:
         print("\n" + json.dumps(results, indent=2))
