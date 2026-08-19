@@ -1,49 +1,52 @@
 #!/usr/bin/env python3
-"""Check the first N tickers from ``config.yaml`` against the Musaffa API.
+"""Check the first N tickers from ``config.yaml`` against Musaffa's free screener.
 
 Musaffa (https://musaffa.com) is a dedicated Shariah-compliance stock screener.
 The scanner already runs a *quantitative* AAOIFI-style formula
-(see ``spread_scanner/halal.py``), but it is an approximation — the README
-recommends re-verifying each name with a dedicated screener before trading.
-This script does exactly that: it takes the top-of-watchlist names and asks
-Musaffa's B2B API for their compliance verdict.
+(see ``spread_scanner/halal.py``), but the README flags it as an approximation
+to re-verify against a dedicated screener before trading. This script does that
+for the top-of-watchlist names.
+
+It uses Musaffa's **free, public** per-stock pages
+(``https://musaffa.com/stock/<TICKER>/``) — the same verdict any visitor sees
+without logging in — rather than the paid B2B API. Each page embeds the
+compliance status and 0–5 ranking in a JSON state blob, which we parse. No API
+key or account is required; robots.txt permits ``/stock/`` paths.
+
+This is a courtesy read of a handful of public pages once in a while — keep it
+that way (small watchlist, not a bulk crawler) and leave the polite delay in.
 
 Usage
 -----
-    export MUSAFFA_CLIENT_ID=...       # from Musaffa B2B credentials
-    export MUSAFFA_SECRET_KEY=...
     python check_musaffa.py            # first 15 from config.yaml
     python check_musaffa.py -n 25      # first 25
     python check_musaffa.py --tickers AAPL,MSFT,NVDA
-    python check_musaffa.py --json     # dump raw response instead of a table
-
-Endpoint
---------
-POST ``https://platform.musaffa.com/b2b/api/v2/musaffa/stocks/screening-list``
-with ``{"stocks": [...]}``. Auth is a per-request token
-(``base64(sha512(secretKey + time + json_body))``) plus ``clientId`` and
-``time`` (``yyyyMMddHHmmss`` in UTC+5). See https://api.musaffa.com/ for the
-full contract.
+    python check_musaffa.py --json     # machine-readable results
 """
 
 from __future__ import annotations
 
 import argparse
-import base64
-import hashlib
 import json
-import os
+import re
 import sys
-import urllib.error
+import time
 import urllib.request
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
 
-BULK_URL = "https://platform.musaffa.com/b2b/api/v2/musaffa/stocks/screening-list"
-MUSAFFA_TZ = timezone(timedelta(hours=5))  # Musaffa server clock, per the docs
-MAX_BULK = 100                              # API cap per request
+STOCK_URL = "https://musaffa.com/stock/{ticker}/"
+_HEADERS = {"User-Agent": "Mozilla/5.0 (spread-scanner halal-check)"}
+# Musaffa's status enum -> a short human label.
+_STATUS_LABEL = {
+    "COMPLIANT": "Halal",
+    "NON_COMPLIANT": "Not Halal",
+    "DOUBTFUL": "Doubtful",
+    "QUESTIONABLE": "Doubtful",
+    "NON_RATED": "Unrated",
+    "NOT_RATED": "Unrated",
+}
 
 
 def load_tickers(config_path: str, limit: int) -> list[str]:
@@ -54,88 +57,53 @@ def load_tickers(config_path: str, limit: int) -> list[str]:
     return tickers[:limit]
 
 
-def _sign(secret_key: str, body: str) -> tuple[str, str]:
-    """Return ``(time_header, token_header)`` for a given JSON body.
+def _extract(html: str, ticker: str) -> dict:
+    """Pull (status, ranking, name) for `ticker` out of the page's state blob.
 
-    The token is ``base64(sha512(secretKey + time + body))`` and is only valid
-    for a few seconds server-side, so build it right before the request."""
-    time_hdr = datetime.now(MUSAFFA_TZ).strftime("%Y%m%d%H%M%S")
-    digest = hashlib.sha512((secret_key + time_hdr + body).encode("utf-8")).digest()
-    return time_hdr, base64.b64encode(digest).decode("ascii")
+    Anchors on the ``stock-overview:<TICKER>`` object so we read the subject
+    stock's fields, not a related name the page also embeds. Returns whatever
+    it can find; missing fields come back as None."""
+    anchor = re.search(re.escape(f"stock-overview:{ticker.upper()}"), html)
+    window = html[anchor.start(): anchor.start() + 6000] if anchor else html
+
+    status_m = re.search(r'"shariahCompliantStatus"\s*:\s*"([A-Z_]+)"', window)
+    rank_m = re.search(r'"compliantRanking"\s*:\s*(\d+)', window)
+    name_m = re.search(r'"name"\s*:\s*"([^"]+)"', window)
+
+    status = status_m.group(1) if status_m else None
+    return {
+        "ticker": ticker.upper(),
+        "status_raw": status,
+        "status": _STATUS_LABEL.get(status, status or "unknown"),
+        "ranking": int(rank_m.group(1)) if rank_m else None,
+        "name": name_m.group(1) if name_m else "",
+    }
 
 
-def call_musaffa(tickers: list[str], client_id: str, secret_key: str,
-                 timeout: int = 30) -> dict:
-    """POST the bulk-screening request and return the parsed JSON payload."""
-    body = json.dumps({"stocks": tickers}, separators=(",", ":"))
-    time_hdr, token_hdr = _sign(secret_key, body)
-    req = urllib.request.Request(
-        BULK_URL,
-        data=body.encode("utf-8"),
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "clientId": client_id,
-            "time": time_hdr,
-            "token": token_hdr,
-        },
-    )
+def check_ticker(ticker: str, timeout: int = 30) -> dict:
+    """Fetch and parse one ticker's public Musaffa page. Fails soft."""
+    url = STOCK_URL.format(ticker=ticker.upper())
+    req = urllib.request.Request(url, headers=_HEADERS)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Musaffa API error {exc.code}: {detail}") from exc
+            html = resp.read().decode("utf-8", errors="replace")
+    except Exception as exc:  # noqa: BLE001 — one bad name shouldn't abort the batch
+        return {"ticker": ticker.upper(), "status_raw": None,
+                "status": f"error ({type(exc).__name__})", "ranking": None, "name": ""}
+    return _extract(html, ticker)
 
 
-def _iter_results(payload: dict):
-    """Yield per-stock result dicts regardless of top-level envelope shape.
-
-    The API has wrapped its list under ``data``, ``result``, or ``stocks`` in
-    different versions of the docs; try each so a schema tweak doesn't break
-    us silently."""
-    if isinstance(payload, list):
-        yield from payload
-        return
-    for key in ("data", "result", "results", "stocks"):
-        val = payload.get(key)
-        if isinstance(val, list):
-            yield from val
-            return
-        if isinstance(val, dict):
-            for inner in ("stocks", "list", "items"):
-                if isinstance(val.get(inner), list):
-                    yield from val[inner]
-                    return
-
-
-def _row(item: dict) -> tuple[str, str, str, str]:
-    """(ticker, status, ranking, note) tuple pulled out of a result item."""
-    ticker = str(item.get("stockName") or item.get("symbol")
-                 or item.get("ticker") or "?").upper()
-    status = str(item.get("shariahComplianceStatus")
-                 or item.get("status") or "unknown")
-    ranking = item.get("complianceRanking") or item.get("ranking")
-    ranking_str = "-" if ranking in (None, "") else f"{ranking}/5"
-    note = str(item.get("companyName") or item.get("name") or "")
-    return ticker, status, ranking_str, note
-
-
-def print_table(payload: dict, requested: list[str]) -> None:
-    """Render the response as a two-column status table, one row per ticker."""
-    by_ticker: dict[str, tuple[str, str, str, str]] = {}
-    for item in _iter_results(payload):
-        row = _row(item)
-        by_ticker[row[0]] = row
-
-    print(f"\n{'Ticker':<8} {'Status':<12} {'Rank':<6} Company")
-    print("-" * 60)
-    for t in requested:
-        if t in by_ticker:
-            _, status, rank, note = by_ticker[t]
-            print(f"{t:<8} {status:<12} {rank:<6} {note}")
-        else:
-            print(f"{t:<8} {'no data':<12} {'-':<6}")
+def check_all(tickers: list[str], delay: float = 1.0) -> list[dict]:
+    """Check each ticker in turn, pausing between requests to stay polite."""
+    results = []
+    for i, t in enumerate(tickers):
+        if i:
+            time.sleep(delay)
+        res = check_ticker(t)
+        rank = "-" if res["ranking"] is None else f"{res['ranking']}/5"
+        print(f"  {res['ticker']:<6} {res['status']:<11} {rank:<5} {res['name']}")
+        results.append(res)
+    return results
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -144,8 +112,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("-n", "--limit", type=int, default=15,
                     help="how many tickers from the top of the list (default 15)")
     ap.add_argument("--tickers", help="comma-separated tickers, overrides --config/-n")
+    ap.add_argument("--delay", type=float, default=1.0,
+                    help="seconds to wait between page requests (default 1.0)")
     ap.add_argument("--json", action="store_true",
-                    help="print the raw API JSON instead of a formatted table")
+                    help="print results as JSON instead of a table")
     args = ap.parse_args(argv)
 
     if args.tickers:
@@ -156,24 +126,15 @@ def main(argv: list[str] | None = None) -> int:
     if not tickers:
         print("No tickers to check.", file=sys.stderr)
         return 2
-    if len(tickers) > MAX_BULK:
-        print(f"Musaffa bulk cap is {MAX_BULK}; truncating.", file=sys.stderr)
-        tickers = tickers[:MAX_BULK]
 
-    client_id = os.environ.get("MUSAFFA_CLIENT_ID")
-    secret_key = os.environ.get("MUSAFFA_SECRET_KEY")
-    if not client_id or not secret_key:
-        print("Set MUSAFFA_CLIENT_ID and MUSAFFA_SECRET_KEY (B2B credentials from "
-              "https://musaffa.com/for-business/) before running.", file=sys.stderr)
-        return 2
-
-    print(f"Checking {len(tickers)} tickers with Musaffa: {', '.join(tickers)}")
-    payload = call_musaffa(tickers, client_id, secret_key)
+    print(f"Checking {len(tickers)} tickers on Musaffa (free public pages): "
+          f"{', '.join(tickers)}\n")
+    print(f"  {'Ticker':<6} {'Status':<11} {'Rank':<5} Company")
+    print("  " + "-" * 56)
+    results = check_all(tickers, delay=args.delay)
 
     if args.json:
-        print(json.dumps(payload, indent=2))
-    else:
-        print_table(payload, tickers)
+        print("\n" + json.dumps(results, indent=2))
     return 0
 
 
