@@ -6,7 +6,8 @@ Discord wants {"content": ...}, Slack wants {"text": ...}.
 
 To avoid spamming the same names every run, alerts fire only on a *new*
 crossing — a ticker at or above the threshold now that was below it (or absent)
-on the previous run.
+on the previous run. Each alert carries the strategy engine's actual
+recommendation, so the message says what to do rather than just what moved.
 """
 
 from __future__ import annotations
@@ -26,17 +27,36 @@ def _newly_crossed(df: pd.DataFrame, threshold: float, prev_scores: dict[str, fl
     return at_or_above[mask]
 
 
-def _format_message(rows: pd.DataFrame, threshold: float) -> str:
+_VERB = {"BUY_PREMIUM": "🟢 BUY premium", "SELL_PREMIUM": "🔴 SELL premium",
+         "NEUTRAL_INCOME": "🟡 Collect decay", "STAND_ASIDE": "⚪ Stand aside",
+         "NO_DATA": "⚪ Not priced"}
+
+
+def _format_message(rows: pd.DataFrame, threshold: float,
+                    recs: dict[str, dict] | None = None) -> str:
+    """The alert says what to *do*, not just that something is coiled."""
     horizon = int(rows["horizon_days"].iloc[0])
+    recs = recs or {}
     lines = [f"📈 *Spread Scanner* — {len(rows)} ticker(s) crossed score ≥ {threshold:g}:"]
     for _, r in rows.iterrows():
         squeeze = f" · 🔒{int(r['squeeze_days'])}d" if r["squeeze_on"] else ""
         lines.append(
             f"• *{r['ticker']}*  score {r['score']:.0f}{squeeze}  "
             f"price {r['price']:,.2f}  ±{r['em_pct']:.1f}%/{horizon}d  "
-            f"[{r['down_1sigma']:,.2f} ↔ {r['up_1sigma']:,.2f}]  {r['lean']}"
+            f"[{r['down_1sigma']:,.2f} ↔ {r['up_1sigma']:,.2f}]"
         )
-    lines.append("_Not financial advice. Both-ways volatility setup._")
+        rec = recs.get(r["ticker"])
+        if rec:
+            plan = rec.get("plan") or {}
+            verb = _VERB.get(rec.get("action", ""), rec.get("action", ""))
+            iv = f" · IV rank {rec['premium_score']:.0f}/100 {rec['premium_state']}" \
+                if rec.get("premium_score") is not None else ""
+            lines.append(f"   ↳ {verb}: *{plan.get('name', '—')}*{iv}")
+            if plan.get("legs"):
+                lines.append(f"   ↳ {rec.get('detail', '')}")
+        else:
+            lines.append(f"   ↳ lean {r['lean']} (no IV read this run)")
+    lines.append("_Not financial advice, and not a fatwa. Price it in your broker before trading._")
     return "\n".join(lines)
 
 
@@ -48,7 +68,8 @@ def _post(url: str, message: str) -> None:
         resp.read()
 
 
-def maybe_alert(df: pd.DataFrame, threshold: float, prev_scores: dict[str, float] | None = None) -> int:
+def maybe_alert(df: pd.DataFrame, threshold: float, prev_scores: dict[str, float] | None = None,
+                recommendations: dict[str, dict] | None = None) -> int:
     """Send an alert if any ticker newly crossed the threshold. Returns the
     number of tickers alerted (0 if none / no webhook configured)."""
     url = os.environ.get("ALERT_WEBHOOK_URL", "").strip()
@@ -62,7 +83,7 @@ def maybe_alert(df: pd.DataFrame, threshold: float, prev_scores: dict[str, float
         return 0
 
     try:
-        _post(url, _format_message(crossed, threshold))
+        _post(url, _format_message(crossed, threshold, recommendations))
         print(f"Alerts: notified for {len(crossed)} ticker(s): {', '.join(crossed['ticker'])}")
         return len(crossed)
     except Exception as exc:

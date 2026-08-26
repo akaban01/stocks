@@ -1,0 +1,156 @@
+"""The JSON payload — the backend's only output."""
+
+import json
+import math
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from spread_scanner import report, strategy
+from conftest import make_row, make_view
+
+PARAMS = {"horizon_days": 10, "vol_lookback": 20, "percentile_lookback": 120}
+
+
+def _frame(n=3):
+    rows = []
+    for i, t in enumerate(["AAA", "BBB", "CCC"][:n]):
+        row = make_row(t, rank=i + 1, score=80 - i * 20)
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+# ------------------------------------------------------------- the payload
+
+def test_scan_payload_has_the_documented_shape(tmp_path):
+    df = _frame()
+    views = {"AAA": make_view("AAA", iv=58, hv=28, iv_rank=88)}
+    recs = strategy.recommend_all(df.to_dict("records"), views)
+    path = report.write_scan(df, tmp_path, PARAMS, recommendations=recs,
+                             option_views=views, playbook=strategy.PLAYBOOK)
+
+    assert path == tmp_path / "data" / "scan.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == report.SCHEMA_VERSION
+    assert payload["horizon_days"] == 10
+    assert len(payload["signals"]) == 3
+    assert payload["counts"]["SELL_PREMIUM"] == 1
+    assert payload["counts"]["NO_DATA"] == 2
+    for key in ("actions", "premium_states", "glossary", "playbook"):
+        assert payload["reference"][key], f"reference.{key} is empty"
+    assert payload["disclaimer"]["compliance"]
+
+
+def test_signals_carry_their_own_options_block_and_recommendation(tmp_path):
+    df = _frame()
+    views = {"AAA": make_view("AAA", iv=18, hv=30, iv_rank=8)}
+    recs = strategy.recommend_all(df.to_dict("records"), views)
+    payload = json.loads(
+        report.write_scan(df, tmp_path, PARAMS, recommendations=recs,
+                          option_views=views).read_text(encoding="utf-8"))
+
+    priced = payload["signals"][0]
+    assert priced["ticker"] == "AAA"
+    assert priced["options"]["iv_rank"] == 8
+    assert "chain" not in priced["options"]           # never serialize the raw chain
+    assert priced["recommendation"]["action"] == "BUY_PREMIUM"
+
+    unpriced = payload["signals"][1]
+    assert unpriced["options"] is None
+    assert unpriced["recommendation"]["action"] == "NO_DATA"
+
+
+def test_top_actions_lists_only_tradable_names_best_first(tmp_path):
+    df = _frame()
+    views = {"AAA": make_view("AAA", iv=58, hv=28, iv_rank=88),
+             "BBB": make_view("BBB", iv=31, hv=30, iv_rank=45)}
+    recs = strategy.recommend_all(df.to_dict("records"), views)
+    payload = report.build_scan(df, PARAMS, recommendations=recs, option_views=views)
+
+    tops = payload["top_actions"]
+    assert all(t["action"] != "NO_DATA" for t in tops)
+    assert all(t["action"] != "STAND_ASIDE" for t in tops)
+    confs = [t["confidence"] for t in tops]
+    assert confs == sorted(confs, reverse=True)
+
+
+def test_empty_scan_still_writes_a_valid_payload(tmp_path):
+    path = report.write_scan(pd.DataFrame(), tmp_path, PARAMS)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["signals"] == []
+    assert payload["counts"] == {}
+    assert payload["top_actions"] == []
+    assert not (tmp_path / "data" / "signals.csv").exists()   # nothing to tabulate
+
+
+def test_csv_is_written_alongside_the_json(tmp_path):
+    report.write_scan(_frame(), tmp_path, PARAMS)
+    csv = pd.read_csv(tmp_path / "data" / "signals.csv")
+    assert list(csv["ticker"]) == ["AAA", "BBB", "CCC"]
+
+
+def test_weights_block_records_provenance(tmp_path):
+    payload = report.build_scan(_frame(), PARAMS,
+                                weights={"compression": 0.3, "vol_room": 0.5, "squeeze": 0.2},
+                                weights_as_of="2026-08-01")
+    assert payload["weights"]["source"] == "auto-calibrated"
+    assert payload["weights"]["as_of"] == "2026-08-01"
+    assert report.build_scan(_frame(), PARAMS)["weights"]["source"] == "default"
+
+
+# ----------------------------------------------------------- serialization
+
+def test_clean_maps_missing_values_to_null():
+    assert report._clean(float("nan")) is None
+    assert report._clean(float("inf")) is None
+    assert report._clean(np.float64("nan")) is None
+    assert report._clean(pd.NA) is None
+    assert report._clean(pd.NaT) is None
+
+
+def test_clean_unwraps_numpy_and_pandas_scalars():
+    assert report._clean(np.int64(7)) == 7
+    assert report._clean(np.float64(1.5)) == 1.5
+    assert report._clean(np.bool_(True)) is True
+    assert report._clean(pd.Timestamp("2026-01-02")) == "2026-01-02T00:00:00"
+
+
+def test_clean_recurses_through_containers():
+    out = report._clean({"a": [1, float("nan"), {"b": np.int64(3)}]})
+    assert out == {"a": [1, None, {"b": 3}]}
+
+
+def test_nan_columns_survive_the_round_trip(tmp_path):
+    df = _frame()
+    df["earnings_in_days"] = [5.0, float("nan"), None]
+    df["debt_ratio"] = [0.1, np.nan, 0.3]
+    payload = json.loads(
+        report.write_scan(df, tmp_path, PARAMS).read_text(encoding="utf-8"))
+    assert payload["signals"][0]["earnings_in_days"] == 5.0
+    assert payload["signals"][1]["earnings_in_days"] is None
+    assert payload["signals"][1]["debt_ratio"] is None
+    # No literal NaN in the file — JSON.parse in the browser would choke on it.
+    assert "NaN" not in (tmp_path / "data" / "scan.json").read_text(encoding="utf-8")
+
+
+def test_write_json_creates_missing_directories(tmp_path):
+    path = report.write_json(tmp_path / "deep" / "nested" / "x.json", {"ok": True})
+    assert json.loads(path.read_text(encoding="utf-8")) == {"ok": True}
+
+
+# --------------------------------------------------- the copy ships with data
+
+def test_every_action_the_engine_emits_has_reference_copy():
+    emitted = {"BUY_PREMIUM", "SELL_PREMIUM", "NEUTRAL_INCOME", "STAND_ASIDE", "NO_DATA"}
+    assert emitted <= set(report.ACTIONS)
+    for meta in report.ACTIONS.values():
+        assert meta["label"] and meta["blurb"] and meta["tone"]
+
+
+def test_every_premium_state_has_a_rule_the_ui_can_show():
+    from spread_scanner import options
+    states = {options.premium_state(s) for s in (0, 50, 100)} | {"unknown"}
+    assert states <= set(report.PREMIUM_STATES)
+    for meta in report.PREMIUM_STATES.values():
+        assert meta["label"] and meta["rule"] and meta["detail"]

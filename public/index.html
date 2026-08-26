@@ -1,666 +1,132 @@
 <!doctype html>
-<html lang="en"><head>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Halal Spread Scanner</title>
-<style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0d1117; color: #e6edf3;
-    font: 15px/1.5 -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 60px; }
-  h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .meta { color: #8b949e; font-size: .85rem; margin-bottom: 18px; }
-  .lede { color: #c9d1d9; background: #161b22; border: 1px solid #30363d;
-    border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
-  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-  thead th { position: sticky; top: 0; background: #161b22; text-align: left;
-    padding: 9px 10px; border-bottom: 2px solid #30363d; font-size: .78rem;
-    text-transform: uppercase; letter-spacing: .03em; color: #8b949e; }
-  tbody td { padding: 9px 10px; border-bottom: 1px solid #21262d; }
-  tbody tr:hover { background: #161b22; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .tkr { font-weight: 700; }
-  .score { display: inline-block; min-width: 34px; text-align: center;
-    padding: 2px 8px; border-radius: 6px; font-weight: 700; color: #fff; }
-  .down { color: #f0816f; } .up { color: #5fd07a; }
-  td.fired { font-weight: 700; color: #ffb454; }
-  td.warn-cell { text-align: right; color: #f0c992; font-weight: 600; }
-  td[class^="vd-"] { font-weight: 600; }
-  .vd-cheap { color: #5fd07a; } .vd-rich { color: #f0816f; } .vd-fair { color: #8b949e; }
-  .lean { font-weight: 600; }
-  .bull { color: #5fd07a; } .bear { color: #f0816f; } .neut { color: #8b949e; }
-  .legend { color: #8b949e; font-size: .82rem; margin-top: 18px; }
-  .legend code { background: #161b22; padding: 1px 6px; border-radius: 4px; }
-  .warn { margin-top: 22px; padding: 12px 16px; border-radius: 10px;
-    background: #2d1d12; border: 1px solid #5a3a1a; color: #f0c992; font-size: .85rem; }
-  h2 { font-size: 1.1rem; margin: 30px 0 12px; }
-  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  @media (max-width: 720px) { .cols { grid-template-columns: 1fr; } }
-  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-    padding: 14px 16px; }
-  .card h3 { margin: 0 0 8px; font-size: .95rem; }
-  .card p { margin: 0; font-size: .88rem; color: #c9d1d9; }
-  .card ul { margin: 0; padding-left: 18px; }
-  .card li { margin: 5px 0; font-size: .88rem; color: #c9d1d9; }
-  .formula { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: .82rem; background: #0d1117; border: 1px solid #30363d;
-    border-radius: 8px; padding: 11px 13px; color: #9fb4d0; white-space: pre-wrap;
-    margin: 12px 0 0; }
-  ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
-  ol.steps li { position: relative; padding: 11px 13px 11px 46px; margin: 9px 0;
-    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-    font-size: .9rem; color: #c9d1d9; }
-  ol.steps li::before { counter-increment: step; content: counter(step);
-    position: absolute; left: 12px; top: 10px; width: 24px; height: 24px;
-    background: #1f6feb; color: #fff; border-radius: 50%; text-align: center;
-    line-height: 24px; font-size: .82rem; font-weight: 700; }
-  a { color: #58a6ff; }
-  .topnav { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-  .topnav a { padding: 6px 12px; border-radius: 8px; background: #161b22;
-    border: 1px solid #30363d; color: #58a6ff; text-decoration: none;
-    font-size: .85rem; font-weight: 600; }
-  .topnav a:hover { border-color: #58a6ff; }
-  .topnav a.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-</style></head>
-<body><div class="wrap">
-  <nav class="topnav">
-    <a href="index.html" class="active">📈 Scanner</a>
-    <a href="charts.html">📊 Charts</a>
-    <a href="backtest.html">🔬 Backtest</a>
+<meta name="description" content="Volatility-squeeze scanner over a Shariah-screened universe, with an explicit options strategy per name: buy premium when IV is cheap, sell it when IV is rich.">
+<link rel="stylesheet" href="assets/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Halal Spread Scanner</h1>
+  <div class="meta">
+    Updated <b><span id="updated">—</span></b>
+    · horizon <b><span id="horizon">—</span></b>
+    · <span id="scanned">—</span>
+    <br><span class="faint" id="weights"></span>
+  </div>
+
+  <div class="notice" id="schema-warning" hidden></div>
+
+  <nav class="tabs" role="tablist">
+    <button data-tab="playbook" role="tab" aria-selected="true">What to do</button>
+    <button data-tab="scanner" role="tab" aria-selected="false">Scanner</button>
+    <button data-tab="charts" role="tab" aria-selected="false">Charts</button>
+    <button data-tab="validation" role="tab" aria-selected="false">Does it work?</button>
+    <button data-tab="reference" role="tab" aria-selected="false">Reference</button>
   </nav>
-  <h1>📈 Halal Spread Scanner</h1>
-  <div class="meta">Updated <b><span id="updated" data-utc="2026-08-24T21:53:42Z">2026-08-24 21:53 UTC</span></b> · horizon <b>10 trading days (~2 weeks)</b> · 29 halal-screened tickers</div>
-  <div class="lede">
-    Ranked by <b>Setup Score</b> — how coiled each name is now. High score = volatility
-    compressed, a move loading. The <b>±</b> column and 1σ targets show how far price
-    could travel <b>up or down</b> over the horizon (~68% within ±1σ). A <b>both-ways</b>
-    (straddle-style) setup tool — direction is a weak hint only.
-  </div>
-  <table>
-    <thead><tr>
-      <th>#</th><th>Ticker</th><th>Price</th><th>Score</th><th>Squeeze</th>
-      <th>±10d</th><th>Implied</th><th>Vol</th><th>Down 1σ</th><th>Up 1σ</th><th>Lean</th><th>HV%</th><th>Earnings</th><th>Debt%</th><th>Cash%</th>
-    </tr></thead>
-    <tbody>
-<tr>
-  <td class="num">1</td>
-  <td class="tkr">TXN</td>
-  <td class="num">258.94</td>
-  <td class="num"><span class="score" style="background:hsl(111 70% 42%)">78</span></td>
-  <td>🔒 12d</td>
-  <td class="num">±6.8%</td>
-  <td class="num">8.3%</td>
-  <td class="vd-rich">🔴 rich</td>
-  <td class="num down">241.23</td>
-  <td class="num up">276.65</td>
-  <td class="lean bear">Bearish</td>
-  <td class="num">34</td>
-  <td class="num">63d</td>
-  <td class="num">6%</td>
-  <td class="num">3%</td>
-</tr>
-<tr>
-  <td class="num">2</td>
-  <td class="tkr">NOW</td>
-  <td class="num">128.05</td>
-  <td class="num"><span class="score" style="background:hsl(89 70% 42%)">61</span></td>
-  <td>—</td>
-  <td class="num">±10.0%</td>
-  <td class="num">10.6%</td>
-  <td class="vd-fair">• fair</td>
-  <td class="num down">115.24</td>
-  <td class="num up">140.86</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">50</td>
-  <td class="num">64d</td>
-  <td class="num">6%</td>
-  <td class="num">4%</td>
-</tr>
-<tr>
-  <td class="num">3</td>
-  <td class="tkr">XOM</td>
-  <td class="num">164.05</td>
-  <td class="num"><span class="score" style="background:hsl(82 70% 42%)">56</span></td>
-  <td>—</td>
-  <td class="num">±4.7%</td>
-  <td class="num">5.7%</td>
-  <td class="vd-rich">🔴 rich</td>
-  <td class="num down">156.29</td>
-  <td class="num up">171.81</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">24</td>
-  <td class="num">66d</td>
-  <td class="num">6%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">4</td>
-  <td class="tkr">INTC</td>
-  <td class="num">87.26</td>
-  <td class="num"><span class="score" style="background:hsl(79 70% 42%)">54</span></td>
-  <td>—</td>
-  <td class="num">±14.4%</td>
-  <td class="num">11.7%</td>
-  <td class="vd-cheap">🟢 cheap</td>
-  <td class="num down">74.71</td>
-  <td class="num up">99.81</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">72</td>
-  <td class="num">58d</td>
-  <td class="num">11%</td>
-  <td class="num">6%</td>
-</tr>
-<tr>
-  <td class="num">5</td>
-  <td class="tkr">QCOM</td>
-  <td class="num">158.53</td>
-  <td class="num"><span class="score" style="background:hsl(75 70% 42%)">51</span></td>
-  <td>—</td>
-  <td class="num">±9.1%</td>
-  <td class="num">9.7%</td>
-  <td class="vd-fair">• fair</td>
-  <td class="num down">144.11</td>
-  <td class="num up">172.95</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">46</td>
-  <td class="num">65d</td>
-  <td class="num">9%</td>
-  <td class="num">5%</td>
-</tr>
-<tr>
-  <td class="num">6</td>
-  <td class="tkr">ARM</td>
-  <td class="num">238.78</td>
-  <td class="num"><span class="score" style="background:hsl(69 70% 42%)">46</span></td>
-  <td>—</td>
-  <td class="num">±17.0%</td>
-  <td class="num">13.2%</td>
-  <td class="vd-cheap">🟢 cheap</td>
-  <td class="num down">198.19</td>
-  <td class="num up">279.37</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">85</td>
-  <td class="num">71d</td>
-  <td class="num">0%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">7</td>
-  <td class="tkr">NVDA</td>
-  <td class="num">208.48</td>
-  <td class="num"><span class="score" style="background:hsl(69 70% 42%)">46</span></td>
-  <td>—</td>
-  <td class="num">±6.8%</td>
-  <td class="num">9.9%</td>
-  <td class="vd-rich">🔴 rich</td>
-  <td class="num down">194.35</td>
-  <td class="num up">222.61</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">34</td>
-  <td class="warn-cell">⚠ 1d</td>
-  <td class="num">0%</td>
-  <td class="num">1%</td>
-</tr>
-<tr>
-  <td class="num">8</td>
-  <td class="tkr">MU</td>
-  <td class="num">910.43</td>
-  <td class="num"><span class="score" style="background:hsl(67 70% 42%)">45</span></td>
-  <td>—</td>
-  <td class="num">±19.3%</td>
-  <td class="num">12.5%</td>
-  <td class="vd-cheap">🟢 cheap</td>
-  <td class="num down">734.84</td>
-  <td class="num up">1,086.02</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">97</td>
-  <td class="num">29d</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-</tr>
-<tr>
-  <td class="num">9</td>
-  <td class="tkr">AMD</td>
-  <td class="num">456.74</td>
-  <td class="num"><span class="score" style="background:hsl(67 70% 42%)">44</span></td>
-  <td>—</td>
-  <td class="num">±15.2%</td>
-  <td class="num">10.6%</td>
-  <td class="vd-cheap">🟢 cheap</td>
-  <td class="num down">387.32</td>
-  <td class="num up">526.17</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">76</td>
-  <td class="num">70d</td>
-  <td class="num">1%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">10</td>
-  <td class="tkr">TSLA</td>
-  <td class="num">348.95</td>
-  <td class="num"><span class="score" style="background:hsl(61 70% 42%)">40</span></td>
-  <td>—</td>
-  <td class="num">±7.8%</td>
-  <td class="num">8.2%</td>
-  <td class="vd-fair">• fair</td>
-  <td class="num down">321.91</td>
-  <td class="num up">375.99</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">39</td>
-  <td class="num">57d</td>
-  <td class="num">1%</td>
-  <td class="num">3%</td>
-</tr>
-<tr>
-  <td class="num">11</td>
-  <td class="tkr">CRM</td>
-  <td class="num">209.06</td>
-  <td class="num"><span class="score" style="background:hsl(59 70% 42%)">39</span></td>
-  <td>—</td>
-  <td class="num">±8.5%</td>
-  <td class="num">12.3%</td>
-  <td class="vd-rich">🔴 rich</td>
-  <td class="num down">191.38</td>
-  <td class="num up">226.74</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">42</td>
-  <td class="warn-cell">⚠ 1d</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-</tr>
-<tr>
-  <td class="num">12</td>
-  <td class="tkr">META</td>
-  <td class="num">559.02</td>
-  <td class="num"><span class="score" style="background:hsl(57 70% 42%)">37</span></td>
-  <td>—</td>
-  <td class="num">±9.3%</td>
-  <td class="num">7.1%</td>
-  <td class="vd-cheap">🟢 cheap</td>
-  <td class="num down">507.24</td>
-  <td class="num up">610.80</td>
-  <td class="lean bear">Bearish</td>
-  <td class="num">46</td>
-  <td class="num">64d</td>
-  <td class="num">8%</td>
-  <td class="num">6%</td>
-</tr>
-<tr>
-  <td class="num">13</td>
-  <td class="tkr">HLAL</td>
-  <td class="num">71.71</td>
-  <td class="num"><span class="score" style="background:hsl(57 70% 42%)">37</span></td>
-  <td>—</td>
-  <td class="num">±3.4%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">69.30</td>
-  <td class="num up">74.12</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">17</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-</tr>
-<tr>
-  <td class="num">14</td>
-  <td class="tkr">ADBE</td>
-  <td class="num">276.27</td>
-  <td class="num"><span class="score" style="background:hsl(56 70% 42%)">36</span></td>
-  <td>—</td>
-  <td class="num">±9.5%</td>
-  <td class="num">10.2%</td>
-  <td class="vd-fair">• fair</td>
-  <td class="num down">250.07</td>
-  <td class="num up">302.47</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">48</td>
-  <td class="num">16d</td>
-  <td class="num">6%</td>
-  <td class="num">5%</td>
-</tr>
-<tr>
-  <td class="num">15</td>
-  <td class="tkr">SPUS</td>
-  <td class="num">58.08</td>
-  <td class="num"><span class="score" style="background:hsl(54 70% 42%)">35</span></td>
-  <td>—</td>
-  <td class="num">±3.3%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">56.16</td>
-  <td class="num up">60.00</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">17</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-  <td class="num">—</td>
-</tr>
-<tr>
-  <td class="num">16</td>
-  <td class="tkr">AMAT</td>
-  <td class="num">484.19</td>
-  <td class="num"><span class="score" style="background:hsl(52 70% 42%)">33</span></td>
-  <td>—</td>
-  <td class="num">±15.9%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">407.24</td>
-  <td class="num up">561.14</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">80</td>
-  <td class="num">79d</td>
-  <td class="num">2%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">17</td>
-  <td class="tkr">CVX</td>
-  <td class="num">203.09</td>
-  <td class="num"><span class="score" style="background:hsl(50 70% 42%)">32</span></td>
-  <td>—</td>
-  <td class="num">±5.1%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">192.80</td>
-  <td class="num up">213.38</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">25</td>
-  <td class="num">66d</td>
-  <td class="num">9%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">18</td>
-  <td class="tkr">GOOGL</td>
-  <td class="num">348.06</td>
-  <td class="num"><span class="score" style="background:hsl(48 70% 42%)">31</span></td>
-  <td>—</td>
-  <td class="num">±7.5%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">322.12</td>
-  <td class="num up">374.00</td>
-  <td class="lean bear">Bearish</td>
-  <td class="num">37</td>
-  <td class="num">64d</td>
-  <td class="num">3%</td>
-  <td class="num">6%</td>
-</tr>
-<tr>
-  <td class="num">19</td>
-  <td class="tkr">MRVL</td>
-  <td class="num">229.29</td>
-  <td class="num"><span class="score" style="background:hsl(44 70% 42%)">27</span></td>
-  <td>—</td>
-  <td class="num">±18.8%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">186.23</td>
-  <td class="num up">272.35</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">94</td>
-  <td class="warn-cell">⚠ 2d</td>
-  <td class="num">3%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">20</td>
-  <td class="tkr">LRCX</td>
-  <td class="num">310.17</td>
-  <td class="num"><span class="score" style="background:hsl(44 70% 42%)">27</span></td>
-  <td>—</td>
-  <td class="num">±16.9%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">257.76</td>
-  <td class="num up">362.58</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">85</td>
-  <td class="num">57d</td>
-  <td class="num">1%</td>
-  <td class="num">1%</td>
-</tr>
-<tr>
-  <td class="num">21</td>
-  <td class="tkr">AVGO</td>
-  <td class="num">358.76</td>
-  <td class="num"><span class="score" style="background:hsl(39 70% 42%)">24</span></td>
-  <td>—</td>
-  <td class="num">±8.8%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">327.14</td>
-  <td class="num up">390.38</td>
-  <td class="lean bear">Bearish</td>
-  <td class="num">44</td>
-  <td class="warn-cell">⚠ 8d</td>
-  <td class="num">4%</td>
-  <td class="num">1%</td>
-</tr>
-<tr>
-  <td class="num">22</td>
-  <td class="tkr">JNJ</td>
-  <td class="num">273.04</td>
-  <td class="num"><span class="score" style="background:hsl(39 70% 42%)">24</span></td>
-  <td>—</td>
-  <td class="num">±4.4%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">261.14</td>
-  <td class="num up">284.94</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">22</td>
-  <td class="num">49d</td>
-  <td class="num">7%</td>
-  <td class="num">3%</td>
-</tr>
-<tr>
-  <td class="num">23</td>
-  <td class="tkr">AAPL</td>
-  <td class="num">310.34</td>
-  <td class="num"><span class="score" style="background:hsl(39 70% 42%)">23</span></td>
-  <td>—</td>
-  <td class="num">±6.4%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">290.52</td>
-  <td class="num up">330.16</td>
-  <td class="lean bear">Bearish</td>
-  <td class="num">32</td>
-  <td class="num">65d</td>
-  <td class="num">2%</td>
-  <td class="num">1%</td>
-</tr>
-<tr>
-  <td class="num">24</td>
-  <td class="tkr">LLY</td>
-  <td class="num">1,246.93</td>
-  <td class="num"><span class="score" style="background:hsl(37 70% 42%)">22</span></td>
-  <td>—</td>
-  <td class="num">±7.8%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">1,149.73</td>
-  <td class="num up">1,344.13</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">39</td>
-  <td class="num">65d</td>
-  <td class="num">5%</td>
-  <td class="num">1%</td>
-</tr>
-<tr>
-  <td class="num">25</td>
-  <td class="tkr">SHOP</td>
-  <td class="num">149.80</td>
-  <td class="num"><span class="score" style="background:hsl(33 70% 42%)">19</span></td>
-  <td>—</td>
-  <td class="num">±14.0%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">128.84</td>
-  <td class="num up">170.76</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">70</td>
-  <td class="num">70d</td>
-  <td class="num">0%</td>
-  <td class="num">3%</td>
-</tr>
-<tr>
-  <td class="num">26</td>
-  <td class="tkr">AMZN</td>
-  <td class="num">262.07</td>
-  <td class="num"><span class="score" style="background:hsl(25 70% 42%)">13</span></td>
-  <td>—</td>
-  <td class="num">±11.6%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">231.76</td>
-  <td class="num up">292.38</td>
-  <td class="lean neut">Neutral</td>
-  <td class="num">58</td>
-  <td class="num">65d</td>
-  <td class="num">9%</td>
-  <td class="num">4%</td>
-</tr>
-<tr>
-  <td class="num">27</td>
-  <td class="tkr">UBER</td>
-  <td class="num">79.29</td>
-  <td class="num"><span class="score" style="background:hsl(23 70% 42%)">11</span></td>
-  <td>—</td>
-  <td class="num">±8.4%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">72.59</td>
-  <td class="num up">85.99</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">42</td>
-  <td class="num">70d</td>
-  <td class="num">9%</td>
-  <td class="num">3%</td>
-</tr>
-<tr>
-  <td class="num">28</td>
-  <td class="tkr">MSFT</td>
-  <td class="num">487.31</td>
-  <td class="num"><span class="score" style="background:hsl(22 70% 42%)">10</span></td>
-  <td>—</td>
-  <td class="num">±11.0%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">433.57</td>
-  <td class="num up">541.05</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">55</td>
-  <td class="num">64d</td>
-  <td class="num">4%</td>
-  <td class="num">2%</td>
-</tr>
-<tr>
-  <td class="num">29</td>
-  <td class="tkr">PLTR</td>
-  <td class="num">175.89</td>
-  <td class="num"><span class="score" style="background:hsl(16 70% 42%)">6</span></td>
-  <td>—</td>
-  <td class="num">±20.4%</td>
-  <td class="num">—</td>
-  <td class="vd-nan">—</td>
-  <td class="num down">139.96</td>
-  <td class="num up">211.82</td>
-  <td class="lean bull">Bullish</td>
-  <td class="num">103</td>
-  <td class="num">69d</td>
-  <td class="num">0%</td>
-  <td class="num">2%</td>
-</tr>
-    </tbody>
-  </table>
 
-  <h2>How it works</h2>
-  <div class="cols">
-    <div class="card">
-      <h3>The idea — volatility cycles</h3>
-      <p>Volatility breathes: it contracts, then expands. When a stock <b>coils</b>
-      — its trading range squeezes tight and recent volatility drops to the low end
-      of its own range — an outsized move usually follows within days. The catch is
-      the <i>direction</i> isn't knowable in advance. So this tool ranks <b>how
-      coiled</b> each name is and shows how far it could travel <b>both ways</b>.</p>
-    </div>
-    <div class="card">
-      <h3>Where the numbers come from</h3>
-      <p>Each weekday after the US close a GitHub Action pulls ~1 year of daily
-      prices for every halal-screened ticker, recomputes the indicators (Bollinger
-      Bands, Keltner Channels, TTM squeeze, ATR, historical volatility) with no
-      look-ahead, and redeploys this page. Nothing to run by hand — just refresh.</p>
-    </div>
-  </div>
+  <div id="loading" class="loading">Loading the latest scan…</div>
 
-  <h2>What each column means</h2>
-  <div class="cols">
-    <div class="card"><ul>
-      <li><b>Score (0–100)</b> — how coiled the name is right now; higher = a move is more imminent. The chip shades green→red with the score.</li>
-      <li><b>Squeeze</b> — <b>🔒 Nd</b> = Bollinger Bands inside the Keltner Channels (the “TTM squeeze”) and building for N days. <b>🔥 ▲/▼</b> = the squeeze just <i>released</i> (the entry trigger) and which way it broke.</li>
-      <li><b>±10d</b> — the 1-sigma <i>historical</i> expected move over the horizon, as a % of price.</li>
-      <li><b>Implied / Vol</b> — the option-<i>implied</i> move and whether it's <span class="vd-cheap">cheap</span> / fair / <span class="vd-rich">rich</span> vs. history. Cheap = market underpricing the move (favours buying a straddle); rich = overpricing it. Priced for the top names only.</li>
-    </ul></div>
-    <div class="card"><ul>
-      <li><b>Down 1σ / Up 1σ</b> — price targets one standard deviation either side. ~68% of moves land inside ±1σ, ~95% inside ±2σ.</li>
-      <li><b>Earnings</b> — calendar days to the next report. <b>⚠</b> means it lands inside the horizon: a big expected move there is normal, not edge.</li>
-      <li><b>Lean</b> — a faint directional hint from squeeze momentum. A tiebreaker only — do <b>not</b> trade on it alone.</li>
-      <li><b>HV%</b> — annualised historical volatility (how jumpy the name has been).</li>
-      <li><b>Debt% / Cash%</b> — the Shariah financial-ratio check: interest-bearing debt and cash as a share of market cap. Both must stay under ~33%. Every name shown has passed.</li>
-    </ul></div>
-  </div>
-  <div class="formula">Score = compression (low Bollinger-bandwidth %ile, ≤35)
-      + room to expand (low historical-vol %ile, ≤20)
-      + active TTM squeeze, longer = more (≤45)
+  <div id="app" hidden>
 
-Expected move (1σ) = price × daily σ × √(horizon days)
+    <!-- ------------------------------------------------------ what to do -->
+    <section class="panel" data-tab="playbook" role="tabpanel">
+      <div class="lede" id="summary"></div>
 
-Halal screen = permissible industry
-      AND interest-bearing debt / market cap < 33%
-      AND cash & equivalents / market cap   < 33%   (AAOIFI / S&P Islamic style)</div>
+      <p class="dim" style="font-size:.87rem;margin:0 0 10px">
+        The scanner finds names whose volatility has <b>compressed</b> — coiled springs that tend to
+        release with an outsized move. The options layer then reads what the market <b>charges</b> for
+        that move, and that is what decides which side of the trade you want to be on:
+      </p>
+      <div class="rulebar" id="rulebar"></div>
 
-  <h2>How to use these signals</h2>
-  <ol class="steps">
-    <li><b>Start at the top.</b> The highest scores are the most coiled — where a move is most likely to fire soon. Treat the list as a watchlist, not buy orders.</li>
-    <li><b>Trade the move, not a guess at direction.</b> This is a <b>both-ways</b> setup. It pairs naturally with non-directional option plays (a straddle / strangle), or with waiting for the breakout and trading whichever way it resolves.</li>
-    <li><b>Use the ± band as your expected move.</b> Compare it to what options are pricing: if a straddle costs less than the 1σ band implies, the expected move may be “cheap”; if more, it’s “rich”. The Down / Up targets are your reference levels.</li>
-    <li><b>Wait for the squeeze to <i>release</i>.</b> 🔒 with rising days means energy is building — not yet a trigger. The signal is the <i>fire</i>: when the bands expand back out. Many traders enter on the release, in the direction it breaks.</li>
-    <li><b>Check the calendar first.</b> A big expected move <i>into earnings</i> is normal, not edge. Know the catalyst (earnings, Fed, product event) before assuming the squeeze tells the whole story.</li>
-    <li><b>Manage risk.</b> The band is a probability, not a promise — roughly 1 move in 3 breaks outside ±1σ. Size positions so a 2σ move against you is survivable.</li>
-    <li><b>Re-verify halal compliance.</b> The universe is fetched from Shariah ETFs and re-checked on industry + debt/cash ratios — but the 5%-income purification rule isn’t automated. Confirm each name and purify incidental impure income (Zoya / Musaffa).</li>
-  </ol>
+      <div class="filters" id="filters"></div>
+      <div class="cards" id="cards"></div>
 
-  <div class="legend">
-    📈 <a href="charts.html">Year-to-year price charts</a>
-    · 🔬 <a href="backtest.html">Does the score work? — backtest</a>
-    · Raw data: <a href="signals.csv">signals.csv</a> · <a href="signals.json">signals.json</a>
-    · auto-refreshed each weekday after the US close.
-  </div>
-  <div class="warn">
-    ⚠️ Educational tool, <b>not financial advice</b>, and <b>not a fatwa</b>. The universe is
-    pulled from Shariah-compliant ETFs and re-screened on industry + debt/cash ratios
-    (an <i>approximation</i> of AAOIFI / S&P Islamic methodology). It does not automate the
-    5%-income purification rule, and ratios change quarterly — re-verify each name (Zoya /
-    Musaffa) before trading.
+      <div class="disclaimer" id="disclaimer"></div>
+    </section>
+
+    <!-- -------------------------------------------------------- scanner -->
+    <section class="panel" data-tab="scanner" role="tabpanel" hidden>
+      <div class="lede">
+        The ranked table behind the cards. <b>Score</b> is how coiled the chart is; <b>Premium</b> is
+        how rich the options are. High score with a low premium score is the cleanest buy-premium
+        setup; high score with a high premium score is the cleanest sell-premium setup. Click any
+        header to sort.
+      </div>
+      <div id="scantable"></div>
+      <p class="faint" style="font-size:.82rem;margin-top:12px">
+        Raw data: <a href="data/scan.json">scan.json</a> · <a href="data/signals.csv">signals.csv</a>
+      </p>
+    </section>
+
+    <!-- --------------------------------------------------------- charts -->
+    <section class="panel" data-tab="charts" role="tabpanel" hidden>
+      <div class="lede">
+        Closing price for every screened name over the download window. Faint vertical lines mark each
+        <b>calendar-year boundary</b>, so you can read the move year to year. The badge is the trailing
+        twelve-month change.
+      </div>
+      <div class="meta" id="chartmeta"></div>
+      <div class="grid-cards" id="chartgrid"><p class="loading">Loading price history…</p></div>
+    </section>
+
+    <!-- ----------------------------------------------------- validation -->
+    <section class="panel" data-tab="validation" role="tabpanel" hidden>
+      <div id="validation-body">
+        <h2 style="margin-top:0">Does the Setup Score work?</h2>
+        <div id="backtest"><p class="loading">Loading backtest…</p></div>
+        <h2>How the weights were set</h2>
+        <div id="calibration"><p class="loading">Loading calibration…</p></div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------ reference -->
+    <section class="panel" data-tab="reference" role="tabpanel" hidden>
+      <div class="lede">
+        Every definition below ships inside <code>data/scan.json</code> alongside the numbers it
+        describes, so an explanation here can never drift from the field it explains.
+      </div>
+      <h2 style="margin-top:0">What the numbers mean</h2>
+      <div id="glossary"></div>
+      <h2>The strategies</h2>
+      <div id="playbook"></div>
+      <h2>How the pipeline works</h2>
+      <div class="cols">
+        <div class="panelcard">
+          <h3>Backend — data only</h3>
+          <p>Each weekday after the US close a GitHub Action fetches the Shariah ETF holdings,
+          re-screens them on industry plus debt and cash ratios, downloads daily prices, recomputes the
+          indicators without look-ahead, reads the option chains for the top-ranked names, runs the
+          strategy engine, and writes JSON:</p>
+          <ul>
+            <li><code>data/scan.json</code> — signals, IV read, recommendations, and this copy</li>
+            <li><code>data/charts.json</code> — downsampled price history</li>
+            <li><code>data/backtest.json</code> · <code>data/calibration.json</code></li>
+            <li><code>data/signals.csv</code> — the flat table, for spreadsheets</li>
+          </ul>
+          <p>Python renders no HTML at all. Deciding what to trade got complicated enough that it
+          needed to be data, not markup.</p>
+        </div>
+        <div class="panelcard">
+          <h3>Frontend — this page</h3>
+          <p>Hand-written, checked into <code>public/</code>, no build step and no external assets.
+          It fetches the JSON above and renders it. Nothing regenerates it, so you can restyle the
+          dashboard without touching the scanner — and read the same data from anything else that
+          speaks JSON.</p>
+          <p>Run it locally with <code>python run.py</code> then
+          <code>python -m http.server --directory public 8765</code>. Opening the file over
+          <code>file://</code> will not work: the browser blocks <code>fetch</code> there.</p>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>
-<script>
-(function(){
-  var el = document.getElementById('updated');
-  if (!el) return;
-  var d = new Date(el.getAttribute('data-utc'));
-  if (isNaN(d.getTime())) return;
-  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time';
-  el.textContent = d.toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
-  }) + ' (' + tz + ')';
-  el.title = el.getAttribute('data-utc');
-})();
-</script>
-</body></html>
+<script src="assets/app.js"></script>
+</body>
+</html>

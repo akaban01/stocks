@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Calibrate the Setup-Score weights against the expansion outcome.
 
-Measures each feature's exceed-rate lift on a train split, derives weights,
-and validates the separation out-of-sample. Prints the recommended weights to
-paste into spread_scanner/scanner.py:SCORE_WEIGHTS, and writes a report.
+Measures each feature's exceed-rate lift on a train split, derives weights, and
+validates the separation out-of-sample. Writes weights.json (the live "model"
+the scanner loads each run) and public/data/calibration.json.
 
     python calibrate.py            # config universe + params, 5y
     python calibrate.py --years 6
@@ -18,7 +18,7 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from spread_scanner import backtest, data, universe
+from spread_scanner import backtest, data, report, universe
 from run import DEFAULT_PARAMS, load_config
 
 
@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     c = backtest.calibrate_weights(recs, train_frac=args.train_frac)
-    report = backtest.format_calibration(c)
+    payload = backtest.calibration_payload(c, years=args.years, universe=len(raw))
 
     # weights.json is the live "model" the scanner loads each run.
     import datetime as dt
@@ -66,10 +66,13 @@ def main(argv: list[str] | None = None) -> int:
         "universe": len(raw),
     }, indent=2), encoding="utf-8")
 
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "calibration.md").write_text(report, encoding="utf-8")
-    print("\n" + report)
-    print(f"Wrote {weights_path} and {outdir / 'calibration.md'}")
+    cal_path = report.write_json(outdir / "data" / "calibration.json", payload)
+    print(f"Wrote {weights_path} and {cal_path}")
+    if payload.get("ok"):
+        sep = payload["separation"]
+        print(f"  heuristic separation  {sep['heuristic']['separation_pts']:+.0f} pts")
+        print(f"  calibrated separation {sep['calibrated']['separation_pts']:+.0f} pts (out-of-sample)")
+        print(f"  {payload['verdict']['text']}")
     print(f"Active weights -> {c['weights']}")
     return 0
 

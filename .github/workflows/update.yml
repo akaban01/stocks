@@ -34,6 +34,8 @@ jobs:
         run: python -m pytest -q
 
       - name: Run scanner
+        # Writes public/data/scan.json + signals.csv + charts.json. No HTML:
+        # public/index.html and public/assets/ are hand-written and stay put.
         env:
           # Optional: create this repo secret to enable Slack/Discord alerts.
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
@@ -42,7 +44,28 @@ jobs:
       - name: Refresh backtest
         run: python backtest.py --years 5
 
-      - name: Commit refreshed report
+      - name: Sanity-check the generated JSON
+        # A malformed payload would leave the dashboard blank with no error in
+        # the run log, so fail here rather than deploying it.
+        run: |
+          python - <<'PY'
+          import json, sys
+          from pathlib import Path
+          scan = json.loads(Path("public/data/scan.json").read_text(encoding="utf-8"))
+          assert scan["schema_version"].startswith("2."), scan["schema_version"]
+          assert scan["signals"], "scan.json has no signals"
+          assert scan["reference"]["actions"], "scan.json is missing UI reference copy"
+          missing = [s["ticker"] for s in scan["signals"] if not s.get("recommendation")]
+          assert not missing, f"no recommendation for: {missing}"
+          print(f"scan.json OK — {len(scan['signals'])} signals, counts {scan['counts']}")
+          for name in ("charts", "backtest"):
+              p = Path(f"public/data/{name}.json")
+              if p.exists():
+                  json.loads(p.read_text(encoding="utf-8"))
+                  print(f"{name}.json OK")
+          PY
+
+      - name: Commit refreshed data
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -57,7 +80,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: public           # serves public/index.html as the site root
+          path: public           # index.html + assets/ (checked in) + data/ (generated)
 
   deploy:
     needs: scan
