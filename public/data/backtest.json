@@ -1,0 +1,69 @@
+{
+  "schema_version": "2.0.0",
+  "generated_at": "2026-08-26T02:03:47Z",
+  "universe": 31,
+  "history_years": 5,
+  "horizon_days": 10,
+  "ok": true,
+  "bars": 36840,
+  "coverage_pct": 65.9,
+  "coverage_theory_pct": 68.0,
+  "coverage_ok": true,
+  "score_move_corr": -0.04,
+  "buckets": {
+    "high": {
+      "label": "Score ≥ 60 (coiled)",
+      "bars": 7009,
+      "avg_abs_move_pct": 6.5,
+      "median_abs_move_pct": 4.5,
+      "coverage_pct": 53.3,
+      "expansion": 1.18,
+      "broke_band_pct": 46.7
+    },
+    "mid": {
+      "label": "Score 30 – 60",
+      "bars": 14920,
+      "avg_abs_move_pct": 6.4,
+      "median_abs_move_pct": 4.5,
+      "coverage_pct": 63.0,
+      "expansion": 0.96,
+      "broke_band_pct": 37.0
+    },
+    "low": {
+      "label": "Score < 30 (calm)",
+      "bars": 14911,
+      "avg_abs_move_pct": 7.0,
+      "median_abs_move_pct": 5.0,
+      "coverage_pct": 74.8,
+      "expansion": 0.73,
+      "broke_band_pct": 25.2
+    }
+  },
+  "squeeze": {
+    "on": {
+      "label": "Squeeze ON",
+      "bars": 2555,
+      "avg_abs_move_pct": 6.8,
+      "median_abs_move_pct": 4.9,
+      "coverage_pct": 55.9,
+      "expansion": 1.09,
+      "broke_band_pct": 44.1
+    },
+    "off": {
+      "label": "Squeeze OFF",
+      "bars": 34285,
+      "avg_abs_move_pct": 6.6,
+      "median_abs_move_pct": 4.7,
+      "coverage_pct": 66.7,
+      "expansion": 0.89,
+      "broke_band_pct": 33.3
+    }
+  },
+  "verdict": {
+    "holds": true,
+    "edge_pts": 21.4,
+    "text": "Coiled bars broke their own ±1σ band 47% of the time against 25% for calm bars (+21 pts) — the squeeze thesis holds."
+  },
+  "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
+  "caveat": "Overlapping forward windows make these observations autocorrelated, so read the percentages as descriptive rather than as independent-sample statistics. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results."
+}
