@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 import pandas as pd
 
@@ -38,3 +40,53 @@ def test_no_lookahead_short_series_empty():
     recs, stats = backtest.run_backtest(short, PARAMS)
     assert recs.empty
     assert stats == {}
+
+
+def test_backtest_payload_shape():
+    data = {"A": _synth(0), "B": _synth(1)}
+    _, stats = backtest.run_backtest(data, PARAMS)
+    payload = backtest.backtest_payload(stats, PARAMS, n_tickers=2, years=5)
+
+    assert payload["ok"] is True
+    assert payload["universe"] == 2 and payload["history_years"] == 5
+    assert set(payload["buckets"]) == {"high", "mid", "low"}
+    assert set(payload["squeeze"]) == {"on", "off"}
+    for bucket in payload["buckets"].values():
+        assert bucket["label"]
+        assert isinstance(bucket["bars"], int)
+    assert isinstance(payload["verdict"]["holds"], bool)
+    assert payload["verdict"]["text"]
+    json.dumps(payload)                       # must survive serialization
+
+
+def test_backtest_payload_without_stats_says_so():
+    payload = backtest.backtest_payload({}, PARAMS, n_tickers=0, years=5)
+    assert payload["ok"] is False and payload["note"]
+    json.dumps(payload)
+
+
+def test_calibration_payload_shape():
+    data = {"A": _synth(0), "B": _synth(1), "C": _synth(2)}
+    recs, _ = backtest.run_backtest(data, PARAMS)
+    payload = backtest.calibration_payload(
+        backtest.calibrate_weights(recs), years=5, universe=3)
+
+    assert payload["ok"] is True
+    assert abs(sum(payload["weights"].values()) - 1.0) < 0.05
+    assert set(payload["separation"]) == {"heuristic", "calibrated"}
+    assert payload["bars"]["train"] + payload["bars"]["test"] == payload["bars"]["total"]
+    assert isinstance(payload["verdict"]["holds"], bool)
+    json.dumps(payload)
+
+
+def test_calibration_payload_without_a_run_says_so():
+    payload = backtest.calibration_payload({}, years=5, universe=0)
+    assert payload["ok"] is False and payload["note"]
+    json.dumps(payload)
+
+
+def test_round_helper_nulls_non_finite():
+    assert backtest._round(float("nan")) is None
+    assert backtest._round(float("inf")) is None
+    assert backtest._round(None) is None
+    assert backtest._round(1.234, 2) == 1.23

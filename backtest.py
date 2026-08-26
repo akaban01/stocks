@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the Setup-Score backtest and write public/backtest.md.
+"""Run the Setup-Score backtest and write public/data/backtest.json.
 
     python backtest.py                       # config universe + params, 5y
     python backtest.py --years 3
@@ -15,7 +15,7 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from spread_scanner import backtest, data, universe
+from spread_scanner import backtest, data, report, universe
 from run import DEFAULT_PARAMS, load_config
 
 
@@ -51,14 +51,19 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Got data for {len(raw)}/{len(tickers)} tickers.")
 
     recs, stats = backtest.run_backtest(raw, params)
-    report = backtest.format_report(stats, params, n_tickers=len(raw), years=args.years)
-    html = backtest.format_html(stats, params, n_tickers=len(raw), years=args.years)
+    payload = backtest.backtest_payload(stats, params, n_tickers=len(raw), years=args.years)
+    path = report.write_json(outdir / "data" / "backtest.json", payload)
+    print(f"\nWrote {path}\n")
 
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "backtest.md").write_text(report, encoding="utf-8")
-    (outdir / "backtest.html").write_text(html, encoding="utf-8")
-    print(f"\nWrote {outdir / 'backtest.md'} and backtest.html\n")
-    print(report)
+    if payload.get("ok"):
+        print(f"{payload['bars']:,} signal-bars · band coverage {payload['coverage_pct']:.0f}% "
+              f"(theory 68%)")
+        for key, b in payload["buckets"].items():
+            print(f"  {b['label']:<22} {b['bars']:>7,} bars · expand {b['expansion']:.2f}× "
+                  f"· broke band {b['broke_band_pct']:.0f}%")
+        print(f"\n{payload['verdict']['text']}")
+    else:
+        print(payload.get("note", "No results."))
     return 0
 
 

@@ -85,12 +85,25 @@ halal_screen:
     max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
 
 options:
-  # Compare the option-implied move to the historical expected move and flag
-  # CHEAP / FAIR / RICH. Adds 1-2 network calls per ticker, so it only prices
-  # the most coiled names (top of the ranking).
+  # Read the option chain for the top-ranked names: ATM implied volatility, IV
+  # rank/percentile, the IV-vs-realized risk premium, term structure, skew and
+  # liquidity. This is what decides BUY premium vs SELL premium, so without it
+  # the strategy engine can only say "not priced".
+  # Costs 2-3 network calls per ticker, so it only prices the most coiled names.
   enabled: true
   top_n: 15                 # how many top-ranked names to price
   margin: 0.15              # ± band around the historical move for cheap/rich
+
+strategy:
+  # Turns the scan + the IV read into ONE explicit instruction per ticker:
+  # buy premium / sell premium / stand aside, with the exact legs, net price,
+  # max loss, breakevens and management rules. See spread_scanner/strategy.py.
+  risk_budget_usd: 500      # max loss per position; sets the suggested contract count
+  allow_undefined_risk: false
+                            # true = allow naked short strangles as an alternative
+                            #        when the chain is deep and there's no earnings
+                            #        inside the expiry. Leave false unless you know
+                            #        exactly what an open-ended loss means for you.
 
 alerts:
   # POST a summary to a Slack/Discord webhook when a ticker's Setup Score
@@ -100,12 +113,16 @@ alerts:
   score_threshold: 60
 
 charts:
-  # Build charts.html — a year-to-year closing-price line chart for every
-  # screened ticker. Uses its own (longer) download so the chart shows several
-  # years; falls back to the scan's history if that fetch comes back empty.
+  # Write data/charts.json — the closing-price history for every screened ticker,
+  # downsampled, for the frontend to draw. Uses its own (longer) download so the
+  # chart shows several years; falls back to the scan's history if it comes back
+  # empty.
   enabled: true
   history_period: 5y        # how much history to chart (yfinance period string)
 
 output:
-  dir: public               # where report files go (served as the Pages site root)
-  top: 30                   # how many rows to show in the report
+  # The backend writes JSON only — <dir>/data/*.json. <dir>/index.html and
+  # <dir>/assets/ are the hand-written frontend that reads it; nothing
+  # regenerates them.
+  dir: public               # Pages site root; JSON lands in <dir>/data/
+  top: 30                   # how many ranked rows the console summary prints

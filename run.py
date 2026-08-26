@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Entry point: download data, scan, write reports.
+"""Entry point: screen the universe, scan it, read the option chains, decide.
+
+Writes JSON only — ``<outdir>/data/scan.json`` (signals + IV read + one explicit
+strategy per ticker), ``signals.csv`` and ``charts.json``. The dashboard in
+``public/`` is hand-written and reads those; nothing here generates HTML.
 
     python run.py                  # use config.yaml
     python run.py --config x.yaml  # use a different config
     python run.py --tickers AAPL,MSFT,NVDA   # ad-hoc one-off scan
+    python run.py --outdir /tmp/scan         # write somewhere else
 """
 
 from __future__ import annotations
@@ -19,7 +24,8 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import alerts, charts, data, halal, options, report, scanner, universe
+from spread_scanner import (alerts, charts, data, halal, indicators, options, report,
+                            scanner, strategy, universe)
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -40,6 +46,46 @@ def load_config(path: str) -> dict:
         return {"tickers": [], "params": {}, "output": {}}
     with cfg_path.open(encoding="utf-8") as fh:
         return yaml.safe_load(fh) or {}
+
+
+def _hv_context(raw: dict, params: dict) -> tuple[dict[str, float], dict[str, list[float]]]:
+    """Trailing realized volatility per ticker: today's reading and the last
+    year of readings. The options layer ranks implied vol against these, since
+    free data sources publish no implied-vol history."""
+    now: dict[str, float] = {}
+    hist: dict[str, list[float]] = {}
+    for ticker, df in raw.items():
+        if df is None or "Close" not in df:
+            continue
+        try:
+            hv = indicators.historical_volatility(df["Close"].dropna(), params["vol_lookback"]) * 100
+        except Exception:
+            continue
+        hv = hv.dropna()
+        if hv.empty:
+            continue
+        now[ticker] = float(hv.iloc[-1])
+        hist[ticker] = [float(v) for v in hv.tail(252)]
+    return now, hist
+
+
+def _headline_rows(df: pd.DataFrame, recs: dict[str, dict], limit: int) -> list[str]:
+    """The console version of the dashboard: the actual instruction per name."""
+    icons = {"BUY_PREMIUM": "BUY ", "SELL_PREMIUM": "SELL", "NEUTRAL_INCOME": "DCAY",
+             "STAND_ASIDE": "WAIT", "NO_DATA": "  - "}
+    out = []
+    for _, r in df.head(limit).iterrows():
+        rec = recs.get(r["ticker"]) or {}
+        action = rec.get("action", "NO_DATA")
+        plan = (rec.get("plan") or {}).get("name", "—")
+        extra = ""
+        if action in ("BUY_PREMIUM", "SELL_PREMIUM", "NEUTRAL_INCOME"):
+            net = (rec.get("plan") or {}).get("net")
+            if net is not None:
+                extra = f"  {'debit' if net > 0 else 'credit'} ${abs(net):,.0f}"
+        out.append(f"[{icons.get(action, '    ')}] {r['ticker']:<6} score {r['score']:>5.1f}  "
+                   f"{plan}{extra}")
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -113,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Snapshot previous scores (for "newly crossed" alert detection) before overwriting.
     prev_scores: dict[str, float] = {}
-    prev_csv = Path(outdir) / "signals.csv"
+    prev_csv = Path(outdir) / "data" / "signals.csv"
     if prev_csv.exists():
         try:
             prev = pd.read_csv(prev_csv)
@@ -137,46 +183,79 @@ def main(argv: list[str] | None = None) -> int:
         df["cash_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "cash_ratio", None))
         df["earnings_in_days"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "earnings_in_days", None))
 
-    # Options layer: price the most coiled names — implied move vs historical (cheap/rich).
+    # ---- Options / IV layer -------------------------------------------------
+    # Read the option chain for the most coiled names: IV rank, the IV-vs-HV
+    # risk premium, term structure, skew and liquidity. This is what decides
+    # whether you should be buying or selling premium.
     opt_cfg = cfg.get("options") or {}
+    views: dict[str, options.OptionView] = {}
     if opt_cfg.get("enabled") and not df.empty:
         head = df.head(int(opt_cfg.get("top_n", 15)))
         rows = list(zip(head["ticker"], head["price"], head["em_pct"]))
-        print(f"Pricing options for top {len(rows)} names (implied vs historical move)...")
+        hv_now, hv_hist = _hv_context(raw, params)
+        print(f"Reading option chains for the top {len(rows)} names (IV rank, term structure, skew)...")
         views = options.screen_options(rows, horizon_days=int(params["horizon_days"]),
-                                        margin=float(opt_cfg.get("margin", 0.15)))
-        df["implied_move_pct"] = df["ticker"].map(lambda t: getattr(views.get(t), "implied_move_pct", None))
-        df["vol_verdict"] = df["ticker"].map(lambda t: getattr(views.get(t), "verdict", None))
-        print(f"  priced {sum(1 for t in df['ticker'] if t in views)} names.")
+                                       margin=float(opt_cfg.get("margin", 0.15)),
+                                       hv_annual=hv_now, hv_history=hv_hist)
+        for col, attr in (("implied_move_pct", "implied_move_pct"), ("vol_verdict", "verdict"),
+                          ("iv_annual", "iv_annual"), ("iv_rank", "iv_rank"),
+                          ("premium_score", "premium_score"), ("premium_state", "premium_state"),
+                          ("liquidity", "liquidity")):
+            df[col] = df["ticker"].map(lambda t, a=attr: getattr(views.get(t), a, None))
+        print(f"  priced {len(views)} names.")
 
-    report_path = report.write_reports(df, outdir, params, top=top,
-                                       weights=scanner.SCORE_WEIGHTS,
-                                       weights_as_of=(weights_meta or {}).get("as_of"))
+    # ---- Strategy engine ----------------------------------------------------
+    # One explicit instruction per ticker: buy premium, sell premium or stand
+    # aside — with the exact legs, net price, risk and management rules.
+    strat_cfg = cfg.get("strategy") or {}
+    recs = strategy.recommend_all(
+        df.to_dict("records") if not df.empty else [],
+        views,
+        risk_budget=float(strat_cfg.get("risk_budget_usd", 500)),
+        allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
+    )
+    if recs:
+        df["action"] = df["ticker"].map(lambda t: (recs.get(t) or {}).get("action"))
+        df["strategy"] = df["ticker"].map(
+            lambda t: ((recs.get(t) or {}).get("plan") or {}).get("name"))
 
-    print(f"\nWrote {report_path}")
+    scan_path = report.write_scan(
+        df, outdir, params,
+        weights=scanner.SCORE_WEIGHTS,
+        weights_as_of=(weights_meta or {}).get("as_of"),
+        recommendations=recs,
+        option_views=views,
+        universe={"scanned": int(len(df)), "requested": len(tickers),
+                  "source": (uni_cfg.get("source") if not args.tickers else "cli"),
+                  "etfs": uni_cfg.get("etfs") or [], "top": top},
+        playbook=strategy.PLAYBOOK,
+    )
+    print(f"\nWrote {scan_path}")
+
     if not df.empty:
-        cols = ["rank", "ticker", "price", "score", "squeeze_days", "em_pct", "lean"]
-        print("\nTop setups:")
-        print(df[cols].head(min(top, 10)).to_string(index=False))
+        print("\nWhat to do:")
+        for rec in _headline_rows(df, recs, limit=min(top, 12)):
+            print(f"  {rec}")
 
-    # Year-to-year price charts page (a per-ticker line chart). Best-effort: a
-    # failure here must never break the main scan/report.
+    # Per-ticker price history for the frontend to draw. Best-effort: a failure
+    # here must never break the main scan.
     charts_cfg = cfg.get("charts") or {}
     if charts_cfg.get("enabled", True):
         cperiod = str(charts_cfg.get("history_period", "5y"))
         try:
-            print(f"Building year-to-year charts ({cperiod})...")
+            print(f"Collecting price history for the charts ({cperiod})...")
             craw = data.download(tickers, period=cperiod)
             if not craw:                       # reuse the scan download if the fetch came back empty
                 craw = raw
             charts_path = charts.write_charts(craw, outdir, period_label=cperiod)
             print(f"Wrote {charts_path}")
-        except Exception as exc:               # noqa: BLE001 — page is optional, log and move on
+        except Exception as exc:               # noqa: BLE001 — charts are optional, log and move on
             print(f"Charts skipped ({type(exc).__name__}: {exc})", file=sys.stderr)
 
     alert_cfg = cfg.get("alerts") or {}
     if alert_cfg.get("enabled") and not df.empty:
-        alerts.maybe_alert(df, float(alert_cfg.get("score_threshold", 60)), prev_scores)
+        alerts.maybe_alert(df, float(alert_cfg.get("score_threshold", 60)), prev_scores,
+                           recommendations=recs)
     return 0
 
 
