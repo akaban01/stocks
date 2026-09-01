@@ -1,49 +1,49 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2026-08-29T03:14:14Z",
+  "generated_at": "2026-09-01T00:43:25Z",
   "universe": 31,
   "history_years": 5,
   "horizon_days": 10,
   "ok": true,
-  "bars": 36873,
-  "coverage_pct": 66.0,
+  "bars": 36844,
+  "coverage_pct": 66.1,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
   "score_move_corr": -0.04,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7015,
+      "bars": 7005,
       "avg_abs_move_pct": 6.5,
       "median_abs_move_pct": 4.5,
       "coverage_pct": 53.4,
-      "expansion": 1.18,
+      "expansion": 1.17,
       "broke_band_pct": 46.6
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 14969,
+      "bars": 14977,
       "avg_abs_move_pct": 6.4,
       "median_abs_move_pct": 4.5,
-      "coverage_pct": 63.1,
+      "coverage_pct": 63.2,
       "expansion": 0.95,
-      "broke_band_pct": 36.9
+      "broke_band_pct": 36.8
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 14889,
+      "bars": 14862,
       "avg_abs_move_pct": 6.9,
       "median_abs_move_pct": 4.9,
-      "coverage_pct": 74.9,
+      "coverage_pct": 75.0,
       "expansion": 0.72,
-      "broke_band_pct": 25.1
+      "broke_band_pct": 25.0
     }
   },
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2561,
-      "avg_abs_move_pct": 6.7,
+      "bars": 2559,
+      "avg_abs_move_pct": 6.8,
       "median_abs_move_pct": 4.9,
       "coverage_pct": 55.9,
       "expansion": 1.09,
@@ -51,17 +51,17 @@
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 34312,
+      "bars": 34285,
       "avg_abs_move_pct": 6.6,
       "median_abs_move_pct": 4.7,
-      "coverage_pct": 66.8,
+      "coverage_pct": 66.9,
       "expansion": 0.89,
-      "broke_band_pct": 33.2
+      "broke_band_pct": 33.1
     }
   },
   "verdict": {
     "holds": true,
-    "edge_pts": 21.5,
+    "edge_pts": 21.6,
     "text": "Coiled bars broke their own ±1σ band 47% of the time against 25% for calm bars (+22 pts) — the squeeze thesis holds."
   },
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
