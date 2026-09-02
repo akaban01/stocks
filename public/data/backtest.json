@@ -1,11 +1,11 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2026-09-01T23:28:11Z",
+  "generated_at": "2026-09-02T23:29:05Z",
   "universe": 31,
   "history_years": 5,
   "horizon_days": 10,
   "ok": true,
-  "bars": 36834,
+  "bars": 36841,
   "coverage_pct": 66.1,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
@@ -13,7 +13,7 @@
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7006,
+      "bars": 7005,
       "avg_abs_move_pct": 6.4,
       "median_abs_move_pct": 4.5,
       "coverage_pct": 53.5,
@@ -22,7 +22,7 @@
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 14965,
+      "bars": 14962,
       "avg_abs_move_pct": 6.4,
       "median_abs_move_pct": 4.5,
       "coverage_pct": 63.2,
@@ -31,18 +31,18 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 14863,
+      "bars": 14874,
       "avg_abs_move_pct": 6.9,
       "median_abs_move_pct": 4.9,
-      "coverage_pct": 75.0,
+      "coverage_pct": 75.1,
       "expansion": 0.72,
-      "broke_band_pct": 25.0
+      "broke_band_pct": 24.9
     }
   },
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2556,
+      "bars": 2561,
       "avg_abs_move_pct": 6.7,
       "median_abs_move_pct": 4.9,
       "coverage_pct": 56.0,
@@ -51,7 +51,7 @@
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 34278,
+      "bars": 34280,
       "avg_abs_move_pct": 6.6,
       "median_abs_move_pct": 4.7,
       "coverage_pct": 66.9,

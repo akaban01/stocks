@@ -1,7 +1,7 @@
 {
   "schema_version": "2.0.0",
-  "generated_at": "2026-09-01T23:28:07Z",
-  "generated_at_utc": "2026-09-01 23:28 UTC",
+  "generated_at": "2026-09-02T23:29:01Z",
+  "generated_at_utc": "2026-09-02 23:29 UTC",
   "horizon_days": 10,
   "params": {
     "horizon_days": 10,
@@ -34,51 +34,35 @@
     "source": "default"
   },
   "counts": {
-    "BUY_PREMIUM": 4,
-    "STAND_ASIDE": 8,
+    "BUY_PREMIUM": 2,
+    "STAND_ASIDE": 10,
     "NO_DATA": 16,
     "SELL_PREMIUM": 1
   },
   "top_actions": [
     {
-      "ticker": "MRVL",
-      "action": "BUY_PREMIUM",
-      "strategy": "Bear Put Spread",
-      "headline": "MRVL: BUY premium — IV rank 22, cheap → Bear Put Spread",
-      "detail": "Buy 1× 2026-09-25 210 put; Sell 1× 2026-09-25 180 put — net debit $969.00 per spread",
-      "confidence": 0.75
-    },
-    {
-      "ticker": "PLTR",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Straddle",
-      "headline": "PLTR: BUY premium — IV rank 16, cheap → Long Straddle",
-      "detail": "Buy 1× 2026-09-25 180 call; Buy 1× 2026-09-25 180 put — net debit $1,670.00 per spread",
-      "confidence": 0.71
-    },
-    {
       "ticker": "MU",
       "action": "BUY_PREMIUM",
       "strategy": "Long Straddle",
-      "headline": "MU: BUY premium — IV rank 8, cheap → Long Straddle",
-      "detail": "Buy 1× 2026-09-25 935 call; Buy 1× 2026-09-25 935 put — net debit $10,315.00 per spread",
-      "confidence": 0.69
+      "headline": "MU: BUY premium — IV rank 3, cheap → Long Straddle",
+      "detail": "Buy 1× 2026-09-25 955 call; Buy 1× 2026-09-25 955 put — net debit $10,015.00 per spread",
+      "confidence": 0.72
     },
     {
       "ticker": "AAPL",
       "action": "SELL_PREMIUM",
       "strategy": "Bull Put Spread",
-      "headline": "AAPL: SELL premium — IV rank 56, rich → Bull Put Spread",
-      "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $107.50 per spread",
+      "headline": "AAPL: SELL premium — IV rank 55, rich → Bull Put Spread",
+      "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $99.50 per spread",
       "confidence": 0.66
     },
     {
-      "ticker": "AMD",
+      "ticker": "GOOGL",
       "action": "BUY_PREMIUM",
       "strategy": "Long Strangle",
-      "headline": "AMD: BUY premium — IV rank 32, fair → Long Strangle",
-      "detail": "Buy 1× 2026-09-25 505 call; Buy 1× 2026-09-25 415 put — net debit $1,367.50 per spread",
-      "confidence": 0.59
+      "headline": "GOOGL: BUY premium — IV rank 36, fair → Long Strangle",
+      "detail": "Buy 1× 2026-09-25 355 call; Buy 1× 2026-09-25 320 put — net debit $613.50 per spread",
+      "confidence": 0.55
     }
   ],
   "reference": {
@@ -181,115 +165,115 @@
     {
       "rank": 1,
       "ticker": "MU",
-      "price": 933.44,
-      "score": 91.5,
+      "price": 956.08,
+      "score": 92.0,
       "squeeze_on": true,
-      "squeeze_days": 3,
+      "squeeze_days": 4,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.025,
-      "hv_annual": 49.3,
-      "hv_pctile": 0.008,
-      "em_pct": 9.83,
+      "bandwidth_pctile": 0.017,
+      "hv_annual": 49.9,
+      "hv_pctile": 0.017,
+      "em_pct": 9.94,
       "horizon_days": 10,
-      "down_1sigma": 841.71,
-      "up_1sigma": 1025.17,
-      "down_2sigma": 749.98,
-      "up_2sigma": 1116.9,
+      "down_1sigma": 861.05,
+      "up_1sigma": 1051.11,
+      "down_2sigma": 766.03,
+      "up_2sigma": 1146.13,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.006048069173030533,
-      "cash_ratio": 0.02468363549111744,
-      "earnings_in_days": 28.0,
-      "implied_move_pct": 10.54,
+      "debt_ratio": 0.005904850737493044,
+      "cash_ratio": 0.024099126359809982,
+      "earnings_in_days": 27.0,
+      "implied_move_pct": 10.21,
       "vol_verdict": "fair",
-      "iv_annual": 52.91,
-      "iv_rank": 7.8,
-      "premium_score": 23.7,
+      "iv_annual": 51.27,
+      "iv_rank": 3.1,
+      "premium_score": 19.5,
       "premium_state": "cheap",
       "liquidity": "fair",
       "action": "BUY_PREMIUM",
       "strategy": "Long Straddle",
       "options": {
-        "iv_annual": 52.91,
-        "hv_annual": 49.3,
-        "implied_move_pct": 10.54,
-        "hist_move_pct": 9.83,
-        "iv_rank": 7.8,
-        "iv_percentile": 5.2,
-        "vrp": 3.58,
-        "iv_hv_ratio": 1.07,
+        "iv_annual": 51.27,
+        "hv_annual": 49.9,
+        "implied_move_pct": 10.21,
+        "hist_move_pct": 9.94,
+        "iv_rank": 3.1,
+        "iv_percentile": 3.0,
+        "vrp": 1.38,
+        "iv_hv_ratio": 1.03,
         "verdict": "fair",
-        "premium_score": 23.7,
+        "premium_score": 19.5,
         "premium_state": "cheap",
-        "term_slope": 0.1353,
+        "term_slope": 0.1451,
         "term_structure": "contango",
-        "skew": 0.54,
+        "skew": -0.19,
         "skew_label": "balanced",
-        "atm_spread_pct": 3.9,
-        "atm_open_interest": 329,
+        "atm_spread_pct": 6.3,
+        "atm_open_interest": 172,
         "liquidity": "fair",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-09",
-            "dte": 8
+            "dte": 7
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
           }
         ]
       },
       "recommendation": {
         "ticker": "MU",
         "action": "BUY_PREMIUM",
-        "headline": "MU: BUY premium — IV rank 8, cheap → Long Straddle",
-        "detail": "Buy 1× 2026-09-25 935 call; Buy 1× 2026-09-25 935 put — net debit $10,315.00 per spread",
-        "confidence": 0.69,
+        "headline": "MU: BUY premium — IV rank 3, cheap → Long Straddle",
+        "detail": "Buy 1× 2026-09-25 955 call; Buy 1× 2026-09-25 955 put — net debit $10,015.00 per spread",
+        "confidence": 0.72,
         "premium_state": "cheap",
-        "premium_score": 23.7,
+        "premium_score": 19.5,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
@@ -306,38 +290,38 @@
             {
               "action": "buy",
               "right": "call",
-              "strike": 935.0,
+              "strike": 955.0,
               "expiry": "2026-09-25",
               "qty": 1,
-              "mid": 52.075,
-              "bid": 51.05,
-              "ask": 53.1,
-              "iv": 54.23,
-              "open_interest": 329,
-              "label": "Buy 1× 2026-09-25 935 call"
+              "mid": 51.375,
+              "bid": 49.75,
+              "ask": 53.0,
+              "iv": 52.04,
+              "open_interest": 172,
+              "label": "Buy 1× 2026-09-25 955 call"
             },
             {
               "action": "buy",
               "right": "put",
-              "strike": 935.0,
+              "strike": 955.0,
               "expiry": "2026-09-25",
               "qty": 1,
-              "mid": 51.075,
-              "bid": 49.55,
-              "ask": 52.6,
-              "iv": 51.6,
-              "open_interest": 287,
-              "label": "Buy 1× 2026-09-25 935 put"
+              "mid": 48.775,
+              "bid": 47.6,
+              "ask": 49.95,
+              "iv": 50.49,
+              "open_interest": 104,
+              "label": "Buy 1× 2026-09-25 955 put"
             }
           ],
           "expiry": "2026-09-25",
-          "dte": 24,
-          "net": 10315.0,
+          "dte": 23,
+          "net": 10015.0,
           "max_profit": null,
-          "max_loss": 10315.0,
+          "max_loss": 10015.0,
           "breakevens": [
-            831.85,
-            1038.15
+            854.85,
+            1055.15
           ],
           "profit_zone": "outside",
           "pop": 0.414,
@@ -353,10 +337,10 @@
           "sizing": {
             "risk_budget": 500.0,
             "contracts": 0,
-            "risk_per_spread": 10315.0,
+            "risk_per_spread": 10015.0,
             "total_risk": 0.0,
             "over_budget": true,
-            "note": "One spread already risks $10,315, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            "note": "One spread already risks $10,015, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
           },
           "compliance": {
             "tier": "contested",
@@ -378,38 +362,38 @@
               {
                 "action": "buy",
                 "right": "call",
-                "strike": 1030.0,
+                "strike": 1050.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 20.575,
-                "bid": 19.5,
-                "ask": 21.65,
-                "iv": 54.85,
-                "open_interest": 66,
-                "label": "Buy 1× 2026-09-25 1030 call"
+                "mid": 19.7,
+                "bid": 19.0,
+                "ask": 20.4,
+                "iv": 52.9,
+                "open_interest": 435,
+                "label": "Buy 1× 2026-09-25 1050 call"
               },
               {
                 "action": "buy",
                 "right": "put",
-                "strike": 840.0,
+                "strike": 865.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 16.4,
-                "bid": 15.45,
-                "ask": 17.35,
-                "iv": 53.87,
-                "open_interest": 220,
-                "label": "Buy 1× 2026-09-25 840 put"
+                "mid": 16.05,
+                "bid": 15.25,
+                "ask": 16.85,
+                "iv": 52.27,
+                "open_interest": 52,
+                "label": "Buy 1× 2026-09-25 865 put"
               }
             ],
             "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 3697.5,
+            "dte": 23,
+            "net": 3575.0,
             "max_profit": null,
-            "max_loss": 3697.5,
+            "max_loss": 3575.0,
             "breakevens": [
-              803.02,
-              1066.97
+              829.25,
+              1085.75
             ],
             "profit_zone": "outside",
             "pop": 0.296,
@@ -425,10 +409,10 @@
             "sizing": {
               "risk_budget": 500.0,
               "contracts": 0,
-              "risk_per_spread": 3697.5,
+              "risk_per_spread": 3575.0,
               "total_risk": 0.0,
               "over_budget": true,
-              "note": "One spread already risks $3,698, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+              "note": "One spread already risks $3,575, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
             "compliance": {
               "tier": "contested",
@@ -449,40 +433,40 @@
               {
                 "action": "buy",
                 "right": "call",
-                "strike": 935.0,
+                "strike": 955.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 52.075,
-                "bid": 51.05,
-                "ask": 53.1,
-                "iv": 54.23,
-                "open_interest": 329,
-                "label": "Buy 1× 2026-09-25 935 call"
+                "mid": 51.375,
+                "bid": 49.75,
+                "ask": 53.0,
+                "iv": 52.04,
+                "open_interest": 172,
+                "label": "Buy 1× 2026-09-25 955 call"
               },
               {
                 "action": "sell",
                 "right": "call",
-                "strike": 1060.0,
+                "strike": 1080.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 14.65,
-                "bid": 13.95,
-                "ask": 15.35,
-                "iv": 54.78,
-                "open_interest": 90,
-                "label": "Sell 1× 2026-09-25 1060 call"
+                "mid": 14.35,
+                "bid": 13.7,
+                "ask": 15.0,
+                "iv": 53.6,
+                "open_interest": 201,
+                "label": "Sell 1× 2026-09-25 1080 call"
               }
             ],
             "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 3742.5,
-            "max_profit": 8757.5,
-            "max_loss": 3742.5,
+            "dte": 23,
+            "net": 3702.5,
+            "max_profit": 8797.5,
+            "max_loss": 3702.5,
             "breakevens": [
-              972.42
+              992.02
             ],
             "profit_zone": "above",
-            "pop": 0.382,
+            "pop": 0.387,
             "credit_to_width": null,
             "manage": {
               "profit_target": "close at +50% to +100% of the debit",
@@ -495,10 +479,10 @@
             "sizing": {
               "risk_budget": 500.0,
               "contracts": 0,
-              "risk_per_spread": 3742.5,
+              "risk_per_spread": 3702.5,
               "total_risk": 0.0,
               "over_budget": true,
-              "note": "One spread already risks $3,742, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+              "note": "One spread already risks $3,702, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
             "compliance": {
               "tier": "contested",
@@ -509,15 +493,15 @@
         "avoid": [
           {
             "name": "Selling premium (condors, credit spreads)",
-            "reason": "IV rank 8 — you'd collect too little for the risk."
+            "reason": "IV rank 3 — you'd collect too little for the risk."
           }
         ],
         "why": [
-          "IV rank 8/100 (cheap premium, blended score 24).",
-          "Options price a 10.5% move over the horizon vs 9.8% realized (1.07× IV/HV).",
-          "Squeeze on for 3 days — still building, not yet fired.",
+          "IV rank 3/100 (cheap premium, blended score 20).",
+          "Options price a 10.2% move over the horizon vs 9.9% realized (1.03× IV/HV).",
+          "Squeeze on for 4 days — still building, not yet fired.",
           "Setup score 92/100, direction bullish (weak).",
-          "Term structure in contango (+13.5% front→back)."
+          "Term structure in contango (+14.5% front→back)."
         ],
         "warnings": []
       }
@@ -525,115 +509,277 @@
     {
       "rank": 2,
       "ticker": "AMD",
-      "price": 459.61,
-      "score": 90.5,
+      "price": 457.06,
+      "score": 91.8,
       "squeeze_on": true,
-      "squeeze_days": 6,
+      "squeeze_days": 7,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.083,
-      "hv_annual": 48.7,
-      "hv_pctile": 0.033,
-      "em_pct": 9.7,
+      "bandwidth_pctile": 0.1,
+      "hv_annual": 42.1,
+      "hv_pctile": 0.008,
+      "em_pct": 8.39,
       "horizon_days": 10,
-      "down_1sigma": 415.04,
-      "up_1sigma": 504.18,
-      "down_2sigma": 370.46,
-      "up_2sigma": 548.76,
+      "down_1sigma": 418.69,
+      "up_1sigma": 495.43,
+      "down_2sigma": 380.33,
+      "up_2sigma": 533.79,
       "lean": "Bearish",
       "note": "",
-      "debt_ratio": 0.005699039989550776,
-      "cash_ratio": 0.017474301606112904,
-      "earnings_in_days": 62.0,
-      "implied_move_pct": 9.74,
+      "debt_ratio": 0.005730835480240186,
+      "cash_ratio": 0.01757179241071154,
+      "earnings_in_days": 61.0,
+      "implied_move_pct": 9.48,
       "vol_verdict": "fair",
-      "iv_annual": 48.88,
-      "iv_rank": 32.0,
-      "premium_score": 37.3,
+      "iv_annual": 47.58,
+      "iv_rank": 30.2,
+      "premium_score": 42.0,
       "premium_state": "fair",
-      "liquidity": "fair",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Strangle",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
       "options": {
-        "iv_annual": 48.88,
-        "hv_annual": 48.7,
-        "implied_move_pct": 9.74,
-        "hist_move_pct": 9.7,
-        "iv_rank": 32.0,
-        "iv_percentile": 17.2,
-        "vrp": 0.2,
-        "iv_hv_ratio": 1.0,
+        "iv_annual": 47.58,
+        "hv_annual": 42.1,
+        "implied_move_pct": 9.48,
+        "hist_move_pct": 8.39,
+        "iv_rank": 30.2,
+        "iv_percentile": 13.8,
+        "vrp": 5.44,
+        "iv_hv_ratio": 1.13,
         "verdict": "fair",
-        "premium_score": 37.3,
+        "premium_score": 42.0,
         "premium_state": "fair",
-        "term_slope": -0.0162,
+        "term_slope": 0.0092,
         "term_structure": "flat",
-        "skew": 2.26,
+        "skew": 0.09,
         "skew_label": "balanced",
-        "atm_spread_pct": 10.8,
-        "atm_open_interest": 102,
-        "liquidity": "fair",
+        "atm_spread_pct": 5.4,
+        "atm_open_interest": 93,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-09",
-            "dte": 8
+            "dte": 7
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
           }
         ]
       },
       "recommendation": {
         "ticker": "AMD",
-        "action": "BUY_PREMIUM",
-        "headline": "AMD: BUY premium — IV rank 32, fair → Long Strangle",
-        "detail": "Buy 1× 2026-09-25 505 call; Buy 1× 2026-09-25 415 put — net debit $1,367.50 per spread",
-        "confidence": 0.59,
+        "action": "STAND_ASIDE",
+        "headline": "AMD: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "confidence": 0.0,
         "premium_state": "fair",
-        "premium_score": 37.3,
+        "premium_score": 42.0,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~5% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
+        "why": [
+          "IV rank 30/100 (fair premium, blended score 42).",
+          "Options price a 9.5% move over the horizon vs 8.4% realized (1.13× IV/HV).",
+          "Squeeze on for 7 days — still building, not yet fired.",
+          "Setup score 92/100, direction bearish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~5% of mid, OI 93) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      }
+    },
+    {
+      "rank": 3,
+      "ticker": "GOOGL",
+      "price": 337.12,
+      "score": 87.6,
+      "squeeze_on": true,
+      "squeeze_days": 1,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.092,
+      "hv_annual": 20.3,
+      "hv_pctile": 0.025,
+      "em_pct": 4.04,
+      "horizon_days": 10,
+      "down_1sigma": 323.49,
+      "up_1sigma": 350.75,
+      "down_2sigma": 309.85,
+      "up_2sigma": 364.39,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.02929718545688572,
+      "cash_ratio": 0.05881071912790501,
+      "earnings_in_days": 55.0,
+      "implied_move_pct": 5.54,
+      "vol_verdict": "rich",
+      "iv_annual": 27.82,
+      "iv_rank": 36.4,
+      "premium_score": 57.0,
+      "premium_state": "fair",
+      "liquidity": "fair",
+      "action": "BUY_PREMIUM",
+      "strategy": "Long Strangle",
+      "options": {
+        "iv_annual": 27.82,
+        "hv_annual": 20.3,
+        "implied_move_pct": 5.54,
+        "hist_move_pct": 4.04,
+        "iv_rank": 36.4,
+        "iv_percentile": 44.4,
+        "vrp": 7.52,
+        "iv_hv_ratio": 1.37,
+        "verdict": "rich",
+        "premium_score": 57.0,
+        "premium_state": "fair",
+        "term_slope": 0.037,
+        "term_structure": "contango",
+        "skew": -1.03,
+        "skew_label": "balanced",
+        "atm_spread_pct": 7.0,
+        "atm_open_interest": 453,
+        "liquidity": "fair",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-09",
+            "dte": 7
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "GOOGL",
+        "action": "BUY_PREMIUM",
+        "headline": "GOOGL: BUY premium — IV rank 36, fair → Long Strangle",
+        "detail": "Buy 1× 2026-09-25 355 call; Buy 1× 2026-09-25 320 put — net debit $613.50 per spread",
+        "confidence": 0.55,
+        "premium_state": "fair",
+        "premium_score": 57.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -650,41 +796,41 @@
             {
               "action": "buy",
               "right": "call",
-              "strike": 505.0,
+              "strike": 355.0,
               "expiry": "2026-09-25",
               "qty": 1,
-              "mid": 7.675,
-              "bid": 6.6,
-              "ask": 8.75,
-              "iv": 50.13,
-              "open_interest": 221,
-              "label": "Buy 1× 2026-09-25 505 call"
+              "mid": 3.26,
+              "bid": 2.82,
+              "ask": 3.7,
+              "iv": 28.98,
+              "open_interest": 2193,
+              "label": "Buy 1× 2026-09-25 355 call"
             },
             {
               "action": "buy",
               "right": "put",
-              "strike": 415.0,
+              "strike": 320.0,
               "expiry": "2026-09-25",
               "qty": 1,
-              "mid": 6.0,
-              "bid": 5.8,
-              "ask": 6.2,
-              "iv": 47.26,
-              "open_interest": 457,
-              "label": "Buy 1× 2026-09-25 415 put"
+              "mid": 2.875,
+              "bid": 2.7,
+              "ask": 3.05,
+              "iv": 27.33,
+              "open_interest": 1372,
+              "label": "Buy 1× 2026-09-25 320 put"
             }
           ],
           "expiry": "2026-09-25",
-          "dte": 24,
-          "net": 1367.5,
+          "dte": 23,
+          "net": 613.5,
           "max_profit": null,
-          "max_loss": 1367.5,
+          "max_loss": 613.5,
           "breakevens": [
-            401.32,
-            518.67
+            313.87,
+            361.13
           ],
           "profit_zone": "outside",
-          "pop": 0.307,
+          "pop": 0.315,
           "credit_to_width": null,
           "manage": {
             "profit_target": "close at +50% to +100% of the debit",
@@ -697,10 +843,10 @@
           "sizing": {
             "risk_budget": 500.0,
             "contracts": 0,
-            "risk_per_spread": 1367.5,
+            "risk_per_spread": 613.5,
             "total_risk": 0.0,
             "over_budget": true,
-            "note": "One spread already risks $1,368, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            "note": "One spread already risks $614, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
           },
           "compliance": {
             "tier": "contested",
@@ -722,41 +868,41 @@
               {
                 "action": "buy",
                 "right": "call",
-                "strike": 460.0,
+                "strike": 335.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 22.775,
-                "bid": 21.55,
-                "ask": 24.0,
-                "iv": 50.43,
-                "open_interest": 102,
-                "label": "Buy 1× 2026-09-25 460 call"
+                "mid": 10.775,
+                "bid": 10.4,
+                "ask": 11.15,
+                "iv": 29.25,
+                "open_interest": 453,
+                "label": "Buy 1× 2026-09-25 335 call"
               },
               {
                 "action": "buy",
                 "right": "put",
-                "strike": 460.0,
+                "strike": 335.0,
                 "expiry": "2026-09-25",
                 "qty": 1,
-                "mid": 22.35,
-                "bid": 21.8,
-                "ask": 22.9,
-                "iv": 47.33,
-                "open_interest": 279,
-                "label": "Buy 1× 2026-09-25 460 put"
+                "mid": 7.575,
+                "bid": 7.1,
+                "ask": 8.05,
+                "iv": 26.39,
+                "open_interest": 607,
+                "label": "Buy 1× 2026-09-25 335 put"
               }
             ],
             "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 4512.5,
+            "dte": 23,
+            "net": 1835.0,
             "max_profit": null,
-            "max_loss": 4512.5,
+            "max_loss": 1835.0,
             "breakevens": [
-              414.88,
-              505.12
+              316.65,
+              353.35
             ],
             "profit_zone": "outside",
-            "pop": 0.433,
+            "pop": 0.435,
             "credit_to_width": null,
             "manage": {
               "profit_target": "close at +50% to +100% of the debit",
@@ -769,10 +915,10 @@
             "sizing": {
               "risk_budget": 500.0,
               "contracts": 0,
-              "risk_per_spread": 4512.5,
+              "risk_per_spread": 1835.0,
               "total_risk": 0.0,
               "over_budget": true,
-              "note": "One spread already risks $4,512, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+              "note": "One spread already risks $1,835, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
             "compliance": {
               "tier": "contested",
@@ -787,289 +933,127 @@
           }
         ],
         "why": [
-          "IV rank 32/100 (fair premium, blended score 37).",
-          "Options price a 9.7% move over the horizon vs 9.7% realized (1.00× IV/HV).",
-          "Squeeze on for 6 days — still building, not yet fired.",
-          "Setup score 90/100, direction bearish (weak)."
+          "IV rank 36/100 (fair premium, blended score 57).",
+          "Options price a 5.5% move over the horizon vs 4.0% realized (1.37× IV/HV).",
+          "Squeeze on for 1 days — still building, not yet fired.",
+          "Setup score 88/100, direction bearish (weak).",
+          "Term structure in contango (+3.7% front→back)."
         ],
         "warnings": []
       }
     },
     {
-      "rank": 3,
-      "ticker": "LRCX",
-      "price": 290.2,
-      "score": 79.2,
+      "rank": 4,
+      "ticker": "QCOM",
+      "price": 169.96,
+      "score": 79.1,
       "squeeze_on": true,
       "squeeze_days": 4,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.042,
-      "hv_annual": 55.2,
-      "hv_pctile": 0.267,
-      "em_pct": 11.0,
+      "bandwidth_pctile": 0.075,
+      "hv_annual": 30.5,
+      "hv_pctile": 0.25,
+      "em_pct": 6.08,
       "horizon_days": 10,
-      "down_1sigma": 258.28,
-      "up_1sigma": 322.12,
-      "down_2sigma": 226.36,
-      "up_2sigma": 354.04,
-      "lean": "Neutral",
-      "note": "",
-      "debt_ratio": 0.01135000323386198,
-      "cash_ratio": 0.015363971673399385,
-      "earnings_in_days": 49.0,
-      "implied_move_pct": 10.56,
-      "vol_verdict": "fair",
-      "iv_annual": 52.99,
-      "iv_rank": 29.2,
-      "premium_score": 30.5,
-      "premium_state": "cheap",
-      "liquidity": "poor",
-      "action": "STAND_ASIDE",
-      "strategy": "Stand aside",
-      "options": {
-        "iv_annual": 52.99,
-        "hv_annual": 55.2,
-        "implied_move_pct": 10.56,
-        "hist_move_pct": 11.0,
-        "iv_rank": 29.2,
-        "iv_percentile": 34.2,
-        "vrp": -2.23,
-        "iv_hv_ratio": 0.96,
-        "verdict": "fair",
-        "premium_score": 30.5,
-        "premium_state": "cheap",
-        "term_slope": 0.0402,
-        "term_structure": "contango",
-        "skew": -0.9,
-        "skew_label": "balanced",
-        "atm_spread_pct": 11.8,
-        "atm_open_interest": 2,
-        "liquidity": "poor",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          },
-          {
-            "date": "2027-03-19",
-            "dte": 199
-          },
-          {
-            "date": "2027-06-17",
-            "dte": 289
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "LRCX",
-        "action": "STAND_ASIDE",
-        "headline": "LRCX: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~12% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~12% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "confidence": 0.0,
-        "premium_state": "cheap",
-        "premium_score": 30.5,
-        "bias": "neutral",
-        "bias_strength": "none",
-        "plan": {
-          "key": "stand_aside",
-          "name": "Stand aside",
-          "action": "STAND_ASIDE",
-          "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~12% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-          "playbook": "No edge worth paying for. The best trade is often none.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0
-          },
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [
-          {
-            "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~12% of mid — slippage on entry and exit would cost more than the edge."
-          }
-        ],
-        "why": [
-          "IV rank 29/100 (cheap premium, blended score 30).",
-          "Options price a 10.6% move over the horizon vs 11.0% realized (0.96× IV/HV).",
-          "Squeeze on for 4 days — still building, not yet fired.",
-          "Setup score 79/100, no directional edge.",
-          "Term structure in contango (+4.0% front→back)."
-        ],
-        "warnings": [
-          "Thin options market (ATM spread ~12% of mid, OI 2) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
-        ]
-      }
-    },
-    {
-      "rank": 4,
-      "ticker": "QCOM",
-      "price": 166.61,
-      "score": 75.9,
-      "squeeze_on": true,
-      "squeeze_days": 2,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.058,
-      "hv_annual": 39.8,
-      "hv_pctile": 0.3,
-      "em_pct": 7.93,
-      "horizon_days": 10,
-      "down_1sigma": 153.39,
-      "up_1sigma": 179.83,
-      "down_2sigma": 140.17,
-      "up_2sigma": 193.05,
+      "down_1sigma": 159.63,
+      "up_1sigma": 180.29,
+      "down_2sigma": 149.3,
+      "up_2sigma": 190.62,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.08581083255326148,
-      "cash_ratio": 0.04666490972112696,
-      "earnings_in_days": 57.0,
-      "implied_move_pct": 8.86,
-      "vol_verdict": "fair",
-      "iv_annual": 44.49,
-      "iv_rank": 30.8,
-      "premium_score": 45.0,
+      "debt_ratio": 0.08411945602006145,
+      "cash_ratio": 0.04574511986618967,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": 8.68,
+      "vol_verdict": "rich",
+      "iv_annual": 43.59,
+      "iv_rank": 29.7,
+      "premium_score": 58.6,
       "premium_state": "fair",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 44.49,
-        "hv_annual": 39.8,
-        "implied_move_pct": 8.86,
-        "hist_move_pct": 7.93,
-        "iv_rank": 30.8,
-        "iv_percentile": 59.3,
-        "vrp": 4.66,
-        "iv_hv_ratio": 1.12,
-        "verdict": "fair",
-        "premium_score": 45.0,
+        "iv_annual": 43.59,
+        "hv_annual": 30.5,
+        "implied_move_pct": 8.68,
+        "hist_move_pct": 6.08,
+        "iv_rank": 29.7,
+        "iv_percentile": 59.1,
+        "vrp": 13.08,
+        "iv_hv_ratio": 1.43,
+        "verdict": "rich",
+        "premium_score": 58.6,
         "premium_state": "fair",
-        "term_slope": -0.0629,
-        "term_structure": "backwardation",
-        "skew": 1.46,
-        "skew_label": "balanced",
-        "atm_spread_pct": 20.9,
-        "atm_open_interest": 604,
+        "term_slope": -0.0115,
+        "term_structure": "flat",
+        "skew": 3.67,
+        "skew_label": "put_skew",
+        "atm_spread_pct": 16.9,
+        "atm_open_interest": 795,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
           },
           {
             "date": "2027-02-19",
-            "dte": 171
+            "dte": 170
           },
           {
             "date": "2027-03-19",
-            "dte": 199
+            "dte": 198
           }
         ]
       },
       "recommendation": {
         "ticker": "QCOM",
         "action": "STAND_ASIDE",
-        "headline": "QCOM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~21% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~21% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "QCOM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
         "confidence": 0.0,
         "premium_state": "fair",
-        "premium_score": 45.0,
+        "premium_score": 58.6,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
@@ -1077,7 +1061,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~21% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1106,40 +1090,40 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~21% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~17% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 31/100 (fair premium, blended score 45).",
-          "Options price a 8.9% move over the horizon vs 7.9% realized (1.12× IV/HV).",
-          "Squeeze on for 2 days — still building, not yet fired.",
-          "Setup score 76/100, direction bullish (weak).",
-          "Term structure in backwardation (-6.3% front→back)."
+          "IV rank 30/100 (fair premium, blended score 59).",
+          "Options price a 8.7% move over the horizon vs 6.1% realized (1.43× IV/HV).",
+          "Squeeze on for 4 days — still building, not yet fired.",
+          "Setup score 79/100, direction bullish (weak).",
+          "Puts bid over calls by 3.7 vol points — the put side pays more to sell."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~21% of mid, OI 604) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~17% of mid, OI 795) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       }
     },
     {
       "rank": 5,
       "ticker": "HLAL",
-      "price": 72.3,
-      "score": 74.4,
+      "price": 72.67,
+      "score": 76.4,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
       "bandwidth_pctile": 0.008,
-      "hv_annual": 12.9,
-      "hv_pctile": 0.05,
-      "em_pct": 2.56,
+      "hv_annual": 9.9,
+      "hv_pctile": 0.008,
+      "em_pct": 1.98,
       "horizon_days": 10,
-      "down_1sigma": 70.45,
-      "up_1sigma": 74.15,
-      "down_2sigma": 68.6,
-      "up_2sigma": 76.0,
-      "lean": "Neutral",
+      "down_1sigma": 71.23,
+      "up_1sigma": 74.11,
+      "down_2sigma": 69.79,
+      "up_2sigma": 75.55,
+      "lean": "Bullish",
       "note": "",
       "debt_ratio": null,
       "cash_ratio": null,
@@ -1162,8 +1146,8 @@
         "confidence": 0.0,
         "premium_state": "unknown",
         "premium_score": null,
-        "bias": "neutral",
-        "bias_strength": "none",
+        "bias": "bullish",
+        "bias_strength": "weak",
         "plan": {
           "key": "no_data",
           "name": "Not priced",
@@ -1194,7 +1178,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 74/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 76/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -1204,22 +1188,22 @@
     {
       "rank": 6,
       "ticker": "SPUS",
-      "price": 58.38,
-      "score": 72.4,
+      "price": 58.62,
+      "score": 75.7,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.008,
-      "hv_annual": 13.3,
-      "hv_pctile": 0.092,
-      "em_pct": 2.66,
+      "bandwidth_pctile": 0.017,
+      "hv_annual": 10.4,
+      "hv_pctile": 0.017,
+      "em_pct": 2.07,
       "horizon_days": 10,
-      "down_1sigma": 56.83,
-      "up_1sigma": 59.93,
-      "down_2sigma": 55.28,
-      "up_2sigma": 61.48,
-      "lean": "Neutral",
+      "down_1sigma": 57.41,
+      "up_1sigma": 59.83,
+      "down_2sigma": 56.19,
+      "up_2sigma": 61.05,
+      "lean": "Bearish",
       "note": "",
       "debt_ratio": null,
       "cash_ratio": null,
@@ -1242,8 +1226,8 @@
         "confidence": 0.0,
         "premium_state": "unknown",
         "premium_score": null,
-        "bias": "neutral",
-        "bias_strength": "none",
+        "bias": "bearish",
+        "bias_strength": "weak",
         "plan": {
           "key": "no_data",
           "name": "Not priced",
@@ -1274,7 +1258,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 72/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 76/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -1283,124 +1267,124 @@
     },
     {
       "rank": 7,
-      "ticker": "GOOGL",
-      "price": 335.02,
-      "score": 69.2,
+      "ticker": "LRCX",
+      "price": 288.32,
+      "score": 74.2,
       "squeeze_on": false,
       "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.117,
-      "hv_annual": 23.7,
-      "hv_pctile": 0.092,
-      "em_pct": 4.73,
+      "squeeze_fired": true,
+      "fired_dir": "down",
+      "bandwidth_pctile": 0.083,
+      "hv_annual": 47.7,
+      "hv_pctile": 0.008,
+      "em_pct": 9.5,
       "horizon_days": 10,
-      "down_1sigma": 319.18,
-      "up_1sigma": 350.86,
-      "down_2sigma": 303.35,
-      "up_2sigma": 366.69,
+      "down_1sigma": 260.92,
+      "up_1sigma": 315.72,
+      "down_2sigma": 233.52,
+      "up_2sigma": 343.12,
       "lean": "Bearish",
       "note": "",
-      "debt_ratio": 0.02948082971659046,
-      "cash_ratio": 0.059179363788083764,
-      "earnings_in_days": 56.0,
-      "implied_move_pct": 5.38,
+      "debt_ratio": 0.011424012233748145,
+      "cash_ratio": 0.015464154215588914,
+      "earnings_in_days": 48.0,
+      "implied_move_pct": 10.23,
       "vol_verdict": "fair",
-      "iv_annual": 27.02,
-      "iv_rank": 34.3,
-      "premium_score": 42.6,
-      "premium_state": "fair",
-      "liquidity": "fair",
+      "iv_annual": 51.37,
+      "iv_rank": 23.0,
+      "premium_score": 34.0,
+      "premium_state": "cheap",
+      "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 27.02,
-        "hv_annual": 23.7,
-        "implied_move_pct": 5.38,
-        "hist_move_pct": 4.73,
-        "iv_rank": 34.3,
-        "iv_percentile": 40.1,
-        "vrp": 3.29,
-        "iv_hv_ratio": 1.14,
+        "iv_annual": 51.37,
+        "hv_annual": 47.7,
+        "implied_move_pct": 10.23,
+        "hist_move_pct": 9.5,
+        "iv_rank": 23.0,
+        "iv_percentile": 27.7,
+        "vrp": 3.66,
+        "iv_hv_ratio": 1.08,
         "verdict": "fair",
-        "premium_score": 42.6,
-        "premium_state": "fair",
-        "term_slope": 0.0418,
+        "premium_score": 34.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0469,
         "term_structure": "contango",
-        "skew": 2.28,
+        "skew": -1.66,
         "skew_label": "balanced",
-        "atm_spread_pct": 4.1,
-        "atm_open_interest": 374,
-        "liquidity": "fair",
+        "atm_spread_pct": 14.2,
+        "atm_open_interest": 3,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
             "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-09",
-            "dte": 8
+            "dte": 2
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 198
+          },
+          {
+            "date": "2027-06-17",
+            "dte": 288
           }
         ]
       },
       "recommendation": {
-        "ticker": "GOOGL",
+        "ticker": "LRCX",
         "action": "STAND_ASIDE",
-        "headline": "GOOGL: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "headline": "LRCX: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 42.6,
+        "premium_state": "cheap",
+        "premium_score": 34.0,
         "bias": "bearish",
-        "bias_strength": "weak",
+        "bias_strength": "strong",
         "plan": {
           "key": "stand_aside",
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1426,117 +1410,125 @@
           }
         },
         "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 34/100 (fair premium, blended score 43).",
-          "Options price a 5.4% move over the horizon vs 4.7% realized (1.14× IV/HV).",
-          "Setup score 69/100, direction bearish (weak).",
-          "Term structure in contango (+4.2% front→back)."
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~14% of mid — slippage on entry and exit would cost more than the edge."
+          }
         ],
-        "warnings": []
+        "why": [
+          "IV rank 23/100 (cheap premium, blended score 34).",
+          "Options price a 10.2% move over the horizon vs 9.5% realized (1.08× IV/HV).",
+          "The squeeze just released to the down — that release is the trigger.",
+          "Setup score 74/100, direction bearish (strong).",
+          "Term structure in contango (+4.7% front→back)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~14% of mid, OI 3) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       }
     },
     {
       "rank": 8,
       "ticker": "INTC",
-      "price": 88.97,
-      "score": 68.1,
+      "price": 90.05,
+      "score": 68.5,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.292,
-      "hv_annual": 43.3,
-      "hv_pctile": 0.008,
-      "em_pct": 8.62,
+      "bandwidth_pctile": 0.267,
+      "hv_annual": 43.7,
+      "hv_pctile": 0.017,
+      "em_pct": 8.7,
       "horizon_days": 10,
-      "down_1sigma": 81.3,
-      "up_1sigma": 96.64,
-      "down_2sigma": 73.63,
-      "up_2sigma": 104.31,
+      "down_1sigma": 82.22,
+      "up_1sigma": 97.88,
+      "down_2sigma": 74.39,
+      "up_2sigma": 105.71,
       "lean": "Bearish",
       "note": "",
-      "debt_ratio": 0.10745585126503189,
-      "cash_ratio": 0.06320794846885536,
-      "earnings_in_days": 50.0,
-      "implied_move_pct": 10.78,
+      "debt_ratio": 0.10616709454285421,
+      "cash_ratio": 0.062449872779860215,
+      "earnings_in_days": 49.0,
+      "implied_move_pct": 10.8,
       "vol_verdict": "rich",
-      "iv_annual": 54.13,
-      "iv_rank": 23.2,
-      "premium_score": 44.8,
+      "iv_annual": 54.2,
+      "iv_rank": 23.3,
+      "premium_score": 45.0,
       "premium_state": "fair",
       "liquidity": "fair",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 54.13,
-        "hv_annual": 43.3,
-        "implied_move_pct": 10.78,
-        "hist_move_pct": 8.62,
-        "iv_rank": 23.2,
-        "iv_percentile": 20.7,
-        "vrp": 10.85,
-        "iv_hv_ratio": 1.25,
+        "iv_annual": 54.2,
+        "hv_annual": 43.7,
+        "implied_move_pct": 10.8,
+        "hist_move_pct": 8.7,
+        "iv_rank": 23.3,
+        "iv_percentile": 21.1,
+        "vrp": 10.54,
+        "iv_hv_ratio": 1.24,
         "verdict": "rich",
-        "premium_score": 44.8,
+        "premium_score": 45.0,
         "premium_state": "fair",
-        "term_slope": 0.0294,
+        "term_slope": 0.0168,
         "term_structure": "flat",
-        "skew": -1.36,
-        "skew_label": "balanced",
-        "atm_spread_pct": 2.0,
-        "atm_open_interest": 181,
+        "skew": -3.07,
+        "skew_label": "call_skew",
+        "atm_spread_pct": 12.4,
+        "atm_open_interest": 2239,
         "liquidity": "fair",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-09",
-            "dte": 8
+            "dte": 7
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
           }
         ]
       },
@@ -1547,7 +1539,7 @@
         "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
         "confidence": 0.0,
         "premium_state": "fair",
-        "premium_score": 44.8,
+        "premium_score": 45.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -1584,806 +1576,125 @@
         "avoid": [],
         "why": [
           "IV rank 23/100 (fair premium, blended score 45).",
-          "Options price a 10.8% move over the horizon vs 8.6% realized (1.25× IV/HV).",
-          "Setup score 68/100, direction bearish (weak)."
+          "Options price a 10.8% move over the horizon vs 8.7% realized (1.24× IV/HV).",
+          "Setup score 68/100, direction bearish (weak).",
+          "Calls bid over puts by 3.1 vol points — upside is the expensive side."
         ],
         "warnings": []
       }
     },
     {
       "rank": 9,
-      "ticker": "AAPL",
-      "price": 325.13,
-      "score": 67.9,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.108,
-      "hv_annual": 18.3,
-      "hv_pctile": 0.125,
-      "em_pct": 3.65,
-      "horizon_days": 10,
-      "down_1sigma": 313.28,
-      "up_1sigma": 336.98,
-      "down_2sigma": 301.43,
-      "up_2sigma": 348.83,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.01777532062189654,
-      "cash_ratio": 0.013150458703115228,
-      "earnings_in_days": 57.0,
-      "implied_move_pct": 5.03,
-      "vol_verdict": "rich",
-      "iv_annual": 25.27,
-      "iv_rank": 55.6,
-      "premium_score": 68.8,
-      "premium_state": "rich",
-      "liquidity": "good",
-      "action": "SELL_PREMIUM",
-      "strategy": "Bull Put Spread",
-      "options": {
-        "iv_annual": 25.27,
-        "hv_annual": 18.3,
-        "implied_move_pct": 5.03,
-        "hist_move_pct": 3.65,
-        "iv_rank": 55.6,
-        "iv_percentile": 67.7,
-        "vrp": 6.97,
-        "iv_hv_ratio": 1.38,
-        "verdict": "rich",
-        "premium_score": 68.8,
-        "premium_state": "rich",
-        "term_slope": -0.0154,
-        "term_structure": "flat",
-        "skew": 1.45,
-        "skew_label": "balanced",
-        "atm_spread_pct": 3.4,
-        "atm_open_interest": 1732,
-        "liquidity": "good",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-09",
-            "dte": 8
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "AAPL",
-        "action": "SELL_PREMIUM",
-        "headline": "AAPL: SELL premium — IV rank 56, rich → Bull Put Spread",
-        "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $107.50 per spread",
-        "confidence": 0.66,
-        "premium_state": "rich",
-        "premium_score": 68.8,
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "bull_put_spread",
-          "name": "Bull Put Spread",
-          "action": "SELL_PREMIUM",
-          "bias": "bullish",
-          "thesis": "Premium is rich and the lean is up — get paid to be right about a direction you don't need to nail.",
-          "playbook": "Sell a put, buy a lower one. You collect credit and win if the stock stays above the short put — a bullish way to be short rich premium.",
-          "vega": "short",
-          "theta": "positive",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "sell",
-              "right": "put",
-              "strike": 305.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 2.03,
-              "bid": 1.93,
-              "ask": 2.13,
-              "iv": 26.61,
-              "open_interest": 1221,
-              "label": "Sell 1× 2026-09-25 305 put"
-            },
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 295.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 0.955,
-              "bid": 0.9,
-              "ask": 1.01,
-              "iv": 28.26,
-              "open_interest": 1207,
-              "label": "Buy 1× 2026-09-25 295 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 24,
-          "net": -107.5,
-          "max_profit": 107.5,
-          "max_loss": 892.5,
-          "breakevens": [
-            303.93
-          ],
-          "profit_zone": "above",
-          "pop": 0.851,
-          "credit_to_width": 0.107,
-          "manage": {
-            "profit_target": "buy it back at 50% of the credit received",
-            "profit_target_pct": 50,
-            "stop": "close if the loss reaches 2× the credit received",
-            "stop_loss_multiple": 2.0,
-            "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-            "close_by_dte": 21
-          },
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 892.5,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $892, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-          },
-          "compliance": {
-            "tier": "more_contested",
-            "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
-          }
-        },
-        "alternatives": [
-          {
-            "key": "iron_condor",
-            "name": "Iron Condor",
-            "action": "SELL_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Premium is rich with no directional edge — collect it inside a defined-risk box.",
-            "playbook": "Sell an out-of-the-money call spread and an out-of-the-money put spread. You collect premium and keep it if price stays between them. Defined risk on both sides.",
-            "vega": "short",
-            "theta": "positive",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "sell",
-                "right": "put",
-                "strike": 305.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 2.03,
-                "bid": 1.93,
-                "ask": 2.13,
-                "iv": 26.61,
-                "open_interest": 1221,
-                "label": "Sell 1× 2026-09-25 305 put"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 295.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 0.955,
-                "bid": 0.9,
-                "ask": 1.01,
-                "iv": 28.26,
-                "open_interest": 1207,
-                "label": "Buy 1× 2026-09-25 295 put"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 345.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 2.075,
-                "bid": 1.94,
-                "ask": 2.21,
-                "iv": 25.16,
-                "open_interest": 1969,
-                "label": "Sell 1× 2026-09-25 345 call"
-              },
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 355.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 0.87,
-                "bid": 0.79,
-                "ask": 0.95,
-                "iv": 25.2,
-                "open_interest": 490,
-                "label": "Buy 1× 2026-09-25 355 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": -228.0,
-            "max_profit": 228.0,
-            "max_loss": 772.0,
-            "breakevens": [
-              302.72,
-              347.28
-            ],
-            "profit_zone": "inside",
-            "pop": 0.71,
-            "credit_to_width": 0.228,
-            "manage": {
-              "profit_target": "buy it back at 50% of the credit received",
-              "profit_target_pct": 50,
-              "stop": "close if the loss reaches 2× the credit received",
-              "stop_loss_multiple": 2.0,
-              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-              "close_by_dte": 21
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 772.0,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $772, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "more_contested",
-              "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
-            }
-          },
-          {
-            "key": "covered_call",
-            "name": "Covered Call",
-            "action": "SELL_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Rich premium against shares you already hold — income, with the upside capped.",
-            "playbook": "Against shares you already own, sell a call above the price. Turns rich premium into income and caps your upside at the strike.",
-            "vega": "short",
-            "theta": "positive",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "own",
-                "right": "share",
-                "strike": null,
-                "expiry": null,
-                "qty": 100,
-                "mid": 325.13,
-                "bid": null,
-                "ask": null,
-                "iv": null,
-                "open_interest": null,
-                "label": "Own 100 shares at ~325.13"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 345.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 2.075,
-                "bid": 1.94,
-                "ask": 2.21,
-                "iv": 25.16,
-                "open_interest": 1969,
-                "label": "Sell 1× 2026-09-25 345 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": -3251507.5,
-            "max_profit": 2194.5,
-            "max_loss": 32305.5,
-            "breakevens": [
-              323.06
-            ],
-            "profit_zone": "above",
-            "pop": 0.539,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "buy it back at 50% of the credit received",
-              "profit_target_pct": 50,
-              "stop": "close if the loss reaches 2× the credit received",
-              "stop_loss_multiple": 2.0,
-              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-              "close_by_dte": 21
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 32305.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $32,306, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "contested",
-              "note": "Written against shares you already own rather than on margin, which some scholars treat more leniently than a naked short option."
-            }
-          }
-        ],
-        "avoid": [
-          {
-            "name": "Long straddles / strangles",
-            "reason": "IV rank 56 and the market is pricing a 5.0% move vs 3.6% realized — you'd be paying up for the move you want."
-          },
-          {
-            "name": "Short strangle (naked)",
-            "reason": "Open-ended risk — keep the wings on unless the chain is deep and you accept it."
-          }
-        ],
-        "why": [
-          "IV rank 56/100 (rich premium, blended score 69).",
-          "Options price a 5.0% move over the horizon vs 3.6% realized (1.38× IV/HV).",
-          "Setup score 68/100, direction bullish (weak)."
-        ],
-        "warnings": [
-          "The credit is only 11% of the spread width — thin compensation. Widen the wings or pass."
-        ]
-      }
-    },
-    {
-      "rank": 10,
-      "ticker": "META",
-      "price": 578.54,
-      "score": 66.6,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.15,
-      "hv_annual": 29.1,
-      "hv_pctile": 0.125,
-      "em_pct": 5.8,
-      "horizon_days": 10,
-      "down_1sigma": 544.97,
-      "up_1sigma": 612.11,
-      "down_2sigma": 511.39,
-      "up_2sigma": 645.69,
-      "lean": "Neutral",
-      "note": "",
-      "debt_ratio": 0.07620803134022774,
-      "cash_ratio": 0.06124162498837205,
-      "earnings_in_days": 56.0,
-      "implied_move_pct": 7.01,
-      "vol_verdict": "rich",
-      "iv_annual": 35.17,
-      "iv_rank": 47.6,
-      "premium_score": 53.8,
-      "premium_state": "fair",
-      "liquidity": "good",
-      "action": "STAND_ASIDE",
-      "strategy": "Stand aside",
-      "options": {
-        "iv_annual": 35.17,
-        "hv_annual": 29.1,
-        "implied_move_pct": 7.01,
-        "hist_move_pct": 5.8,
-        "iv_rank": 47.6,
-        "iv_percentile": 40.1,
-        "vrp": 6.04,
-        "iv_hv_ratio": 1.21,
-        "verdict": "rich",
-        "premium_score": 53.8,
-        "premium_state": "fair",
-        "term_slope": 0.0222,
-        "term_structure": "flat",
-        "skew": 0.01,
-        "skew_label": "balanced",
-        "atm_spread_pct": 3.6,
-        "atm_open_interest": 645,
-        "liquidity": "good",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-09",
-            "dte": 8
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "META",
-        "action": "STAND_ASIDE",
-        "headline": "META: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 53.8,
-        "bias": "neutral",
-        "bias_strength": "none",
-        "plan": {
-          "key": "stand_aside",
-          "name": "Stand aside",
-          "action": "STAND_ASIDE",
-          "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-          "playbook": "No edge worth paying for. The best trade is often none.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0
-          },
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 48/100 (fair premium, blended score 54).",
-          "Options price a 7.0% move over the horizon vs 5.8% realized (1.21× IV/HV).",
-          "Setup score 67/100, no directional edge."
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "rank": 11,
-      "ticker": "MSFT",
-      "price": 501.02,
-      "score": 65.4,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.192,
-      "hv_annual": 21.5,
-      "hv_pctile": 0.125,
-      "em_pct": 4.28,
-      "horizon_days": 10,
-      "down_1sigma": 479.58,
-      "up_1sigma": 522.46,
-      "down_2sigma": 458.14,
-      "up_2sigma": 543.9,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.034623921760270945,
-      "cash_ratio": 0.02065479447677448,
-      "earnings_in_days": 56.0,
-      "implied_move_pct": 4.93,
-      "vol_verdict": "rich",
-      "iv_annual": 24.77,
-      "iv_rank": 26.5,
-      "premium_score": 40.1,
-      "premium_state": "fair",
-      "liquidity": "fair",
-      "action": "STAND_ASIDE",
-      "strategy": "Stand aside",
-      "options": {
-        "iv_annual": 24.77,
-        "hv_annual": 21.5,
-        "implied_move_pct": 4.93,
-        "hist_move_pct": 4.28,
-        "iv_rank": 26.5,
-        "iv_percentile": 48.7,
-        "vrp": 3.29,
-        "iv_hv_ratio": 1.15,
-        "verdict": "rich",
-        "premium_score": 40.1,
-        "premium_state": "fair",
-        "term_slope": 0.0339,
-        "term_structure": "contango",
-        "skew": 1.11,
-        "skew_label": "balanced",
-        "atm_spread_pct": 9.2,
-        "atm_open_interest": 351,
-        "liquidity": "fair",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-09",
-            "dte": 8
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "MSFT",
-        "action": "STAND_ASIDE",
-        "headline": "MSFT: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 40.1,
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "stand_aside",
-          "name": "Stand aside",
-          "action": "STAND_ASIDE",
-          "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-          "playbook": "No edge worth paying for. The best trade is often none.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0
-          },
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 26/100 (fair premium, blended score 40).",
-          "Options price a 4.9% move over the horizon vs 4.3% realized (1.15× IV/HV).",
-          "Setup score 65/100, direction bullish (weak).",
-          "Term structure in contango (+3.4% front→back)."
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "rank": 12,
       "ticker": "ARM",
-      "price": 234.82,
-      "score": 65.4,
+      "price": 234.86,
+      "score": 68.4,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.125,
-      "hv_annual": 74.9,
-      "hv_pctile": 0.167,
-      "em_pct": 14.92,
+      "bandwidth_pctile": 0.158,
+      "hv_annual": 46.8,
+      "hv_pctile": 0.083,
+      "em_pct": 9.31,
       "horizon_days": 10,
-      "down_1sigma": 199.78,
-      "up_1sigma": 269.86,
-      "down_2sigma": 164.74,
-      "up_2sigma": 304.9,
+      "down_1sigma": 212.98,
+      "up_1sigma": 256.74,
+      "down_2sigma": 191.11,
+      "up_2sigma": 278.61,
       "lean": "Bearish",
       "note": "",
-      "debt_ratio": 0.0019339087259135615,
-      "cash_ratio": 0.015503169332684386,
-      "earnings_in_days": 63.0,
-      "implied_move_pct": 11.58,
-      "vol_verdict": "cheap",
-      "iv_annual": 58.11,
-      "iv_rank": 31.5,
-      "premium_score": 22.5,
-      "premium_state": "cheap",
+      "debt_ratio": 0.001933579406588359,
+      "cash_ratio": 0.015500529346011423,
+      "earnings_in_days": 62.0,
+      "implied_move_pct": 11.72,
+      "vol_verdict": "rich",
+      "iv_annual": 58.83,
+      "iv_rank": 32.2,
+      "premium_score": 50.9,
+      "premium_state": "fair",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 58.11,
-        "hv_annual": 74.9,
-        "implied_move_pct": 11.58,
-        "hist_move_pct": 14.92,
-        "iv_rank": 31.5,
-        "iv_percentile": 43.7,
-        "vrp": -16.8,
-        "iv_hv_ratio": 0.78,
-        "verdict": "cheap",
-        "premium_score": 22.5,
-        "premium_state": "cheap",
-        "term_slope": 0.0303,
-        "term_structure": "contango",
-        "skew": -2.27,
+        "iv_annual": 58.83,
+        "hv_annual": 46.8,
+        "implied_move_pct": 11.72,
+        "hist_move_pct": 9.31,
+        "iv_rank": 32.2,
+        "iv_percentile": 44.2,
+        "vrp": 12.07,
+        "iv_hv_ratio": 1.26,
+        "verdict": "rich",
+        "premium_score": 50.9,
+        "premium_state": "fair",
+        "term_slope": 0.0031,
+        "term_structure": "flat",
+        "skew": -1.87,
         "skew_label": "balanced",
-        "atm_spread_pct": 7.6,
-        "atm_open_interest": 5,
+        "atm_spread_pct": 7.7,
+        "atm_open_interest": 32,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
           },
           {
             "date": "2027-03-19",
-            "dte": 199
+            "dte": 198
           },
           {
             "date": "2027-04-16",
-            "dte": 227
+            "dte": 226
           }
         ]
       },
       "recommendation": {
         "ticker": "ARM",
         "action": "STAND_ASIDE",
-        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "cheap",
-        "premium_score": 22.5,
+        "premium_state": "fair",
+        "premium_score": 50.9,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -2391,7 +1702,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2424,117 +1735,1120 @@
           }
         ],
         "why": [
-          "IV rank 32/100 (cheap premium, blended score 22).",
-          "Options price a 11.6% move over the horizon vs 14.9% realized (0.78× IV/HV).",
-          "Setup score 65/100, direction bearish (weak).",
-          "Term structure in contango (+3.0% front→back)."
+          "IV rank 32/100 (fair premium, blended score 51).",
+          "Options price a 11.7% move over the horizon vs 9.3% realized (1.26× IV/HV).",
+          "Setup score 68/100, direction bearish (weak)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~8% of mid, OI 5) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~8% of mid, OI 32) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       }
     },
     {
-      "rank": 13,
-      "ticker": "AMZN",
-      "price": 254.92,
-      "score": 56.5,
+      "rank": 10,
+      "ticker": "MSFT",
+      "price": 496.82,
+      "score": 67.9,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.308,
-      "hv_annual": 25.7,
-      "hv_pctile": 0.242,
-      "em_pct": 5.12,
+      "bandwidth_pctile": 0.175,
+      "hv_annual": 21.3,
+      "hv_pctile": 0.083,
+      "em_pct": 4.25,
       "horizon_days": 10,
-      "down_1sigma": 241.86,
-      "up_1sigma": 267.98,
-      "down_2sigma": 228.79,
-      "up_2sigma": 281.05,
-      "lean": "Bearish",
+      "down_1sigma": 475.71,
+      "up_1sigma": 517.93,
+      "down_2sigma": 454.61,
+      "up_2sigma": 539.03,
+      "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.0915153853949506,
-      "cash_ratio": 0.044728651374368614,
-      "earnings_in_days": 57.0,
-      "implied_move_pct": 5.63,
+      "debt_ratio": 0.03491662410297373,
+      "cash_ratio": 0.02082940516279831,
+      "earnings_in_days": 55.0,
+      "implied_move_pct": 4.8,
       "vol_verdict": "fair",
-      "iv_annual": 28.28,
-      "iv_rank": 25.9,
-      "premium_score": 36.3,
+      "iv_annual": 24.11,
+      "iv_rank": 25.0,
+      "premium_score": 37.1,
+      "premium_state": "fair",
+      "liquidity": "fair",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 24.11,
+        "hv_annual": 21.3,
+        "implied_move_pct": 4.8,
+        "hist_move_pct": 4.25,
+        "iv_rank": 25.0,
+        "iv_percentile": 48.3,
+        "vrp": 2.78,
+        "iv_hv_ratio": 1.13,
+        "verdict": "fair",
+        "premium_score": 37.1,
+        "premium_state": "fair",
+        "term_slope": 0.0564,
+        "term_structure": "contango",
+        "skew": 0.43,
+        "skew_label": "balanced",
+        "atm_spread_pct": 4.4,
+        "atm_open_interest": 198,
+        "liquidity": "fair",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-09",
+            "dte": 7
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 198
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "MSFT",
+        "action": "STAND_ASIDE",
+        "headline": "MSFT: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "confidence": 0.0,
+        "premium_state": "fair",
+        "premium_score": 37.1,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "IV rank 25/100 (fair premium, blended score 37).",
+          "Options price a 4.8% move over the horizon vs 4.2% realized (1.13× IV/HV).",
+          "Setup score 68/100, direction bullish (weak).",
+          "Term structure in contango (+5.6% front→back)."
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "rank": 11,
+      "ticker": "AAPL",
+      "price": 324.96,
+      "score": 67.0,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.125,
+      "hv_annual": 18.3,
+      "hv_pctile": 0.133,
+      "em_pct": 3.65,
+      "horizon_days": 10,
+      "down_1sigma": 313.11,
+      "up_1sigma": 336.81,
+      "down_2sigma": 301.27,
+      "up_2sigma": 348.65,
+      "lean": "Bullish",
+      "note": "",
+      "debt_ratio": 0.0177846193274379,
+      "cash_ratio": 0.013157338030122331,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": 5.0,
+      "vol_verdict": "rich",
+      "iv_annual": 25.12,
+      "iv_rank": 55.1,
+      "premium_score": 68.0,
+      "premium_state": "rich",
+      "liquidity": "good",
+      "action": "SELL_PREMIUM",
+      "strategy": "Bull Put Spread",
+      "options": {
+        "iv_annual": 25.12,
+        "hv_annual": 18.3,
+        "implied_move_pct": 5.0,
+        "hist_move_pct": 3.65,
+        "iv_rank": 55.1,
+        "iv_percentile": 65.9,
+        "vrp": 6.82,
+        "iv_hv_ratio": 1.37,
+        "verdict": "rich",
+        "premium_score": 68.0,
+        "premium_state": "rich",
+        "term_slope": -0.0096,
+        "term_structure": "flat",
+        "skew": 1.06,
+        "skew_label": "balanced",
+        "atm_spread_pct": 4.1,
+        "atm_open_interest": 1955,
+        "liquidity": "good",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-09",
+            "dte": 7
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "AAPL",
+        "action": "SELL_PREMIUM",
+        "headline": "AAPL: SELL premium — IV rank 55, rich → Bull Put Spread",
+        "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $99.50 per spread",
+        "confidence": 0.66,
+        "premium_state": "rich",
+        "premium_score": 68.0,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "bull_put_spread",
+          "name": "Bull Put Spread",
+          "action": "SELL_PREMIUM",
+          "bias": "bullish",
+          "thesis": "Premium is rich and the lean is up — get paid to be right about a direction you don't need to nail.",
+          "playbook": "Sell a put, buy a lower one. You collect credit and win if the stock stays above the short put — a bullish way to be short rich premium.",
+          "vega": "short",
+          "theta": "positive",
+          "risk": "defined",
+          "legs": [
+            {
+              "action": "sell",
+              "right": "put",
+              "strike": 305.0,
+              "expiry": "2026-09-25",
+              "qty": 1,
+              "mid": 1.895,
+              "bid": 1.83,
+              "ask": 1.96,
+              "iv": 26.21,
+              "open_interest": 1205,
+              "label": "Sell 1× 2026-09-25 305 put"
+            },
+            {
+              "action": "buy",
+              "right": "put",
+              "strike": 295.0,
+              "expiry": "2026-09-25",
+              "qty": 1,
+              "mid": 0.9,
+              "bid": 0.87,
+              "ask": 0.93,
+              "iv": 28.13,
+              "open_interest": 1095,
+              "label": "Buy 1× 2026-09-25 295 put"
+            }
+          ],
+          "expiry": "2026-09-25",
+          "dte": 23,
+          "net": -99.5,
+          "max_profit": 99.5,
+          "max_loss": 900.5,
+          "breakevens": [
+            304.0
+          ],
+          "profit_zone": "above",
+          "pop": 0.855,
+          "credit_to_width": 0.1,
+          "manage": {
+            "profit_target": "buy it back at 50% of the credit received",
+            "profit_target_pct": 50,
+            "stop": "close if the loss reaches 2× the credit received",
+            "stop_loss_multiple": 2.0,
+            "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
+            "close_by_dte": 21
+          },
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0,
+            "risk_per_spread": 900.5,
+            "total_risk": 0.0,
+            "over_budget": true,
+            "note": "One spread already risks $900, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+          },
+          "compliance": {
+            "tier": "more_contested",
+            "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
+          }
+        },
+        "alternatives": [
+          {
+            "key": "iron_condor",
+            "name": "Iron Condor",
+            "action": "SELL_PREMIUM",
+            "bias": "neutral",
+            "thesis": "Premium is rich with no directional edge — collect it inside a defined-risk box.",
+            "playbook": "Sell an out-of-the-money call spread and an out-of-the-money put spread. You collect premium and keep it if price stays between them. Defined risk on both sides.",
+            "vega": "short",
+            "theta": "positive",
+            "risk": "defined",
+            "legs": [
+              {
+                "action": "sell",
+                "right": "put",
+                "strike": 305.0,
+                "expiry": "2026-09-25",
+                "qty": 1,
+                "mid": 1.895,
+                "bid": 1.83,
+                "ask": 1.96,
+                "iv": 26.21,
+                "open_interest": 1205,
+                "label": "Sell 1× 2026-09-25 305 put"
+              },
+              {
+                "action": "buy",
+                "right": "put",
+                "strike": 295.0,
+                "expiry": "2026-09-25",
+                "qty": 1,
+                "mid": 0.9,
+                "bid": 0.87,
+                "ask": 0.93,
+                "iv": 28.13,
+                "open_interest": 1095,
+                "label": "Buy 1× 2026-09-25 295 put"
+              },
+              {
+                "action": "sell",
+                "right": "call",
+                "strike": 345.0,
+                "expiry": "2026-09-25",
+                "qty": 1,
+                "mid": 1.975,
+                "bid": 1.89,
+                "ask": 2.06,
+                "iv": 25.15,
+                "open_interest": 2024,
+                "label": "Sell 1× 2026-09-25 345 call"
+              },
+              {
+                "action": "buy",
+                "right": "call",
+                "strike": 355.0,
+                "expiry": "2026-09-25",
+                "qty": 1,
+                "mid": 0.835,
+                "bid": 0.78,
+                "ask": 0.89,
+                "iv": 25.4,
+                "open_interest": 576,
+                "label": "Buy 1× 2026-09-25 355 call"
+              }
+            ],
+            "expiry": "2026-09-25",
+            "dte": 23,
+            "net": -213.5,
+            "max_profit": 213.5,
+            "max_loss": 786.5,
+            "breakevens": [
+              302.87,
+              347.13
+            ],
+            "profit_zone": "inside",
+            "pop": 0.72,
+            "credit_to_width": 0.213,
+            "manage": {
+              "profit_target": "buy it back at 50% of the credit received",
+              "profit_target_pct": 50,
+              "stop": "close if the loss reaches 2× the credit received",
+              "stop_loss_multiple": 2.0,
+              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
+              "close_by_dte": 21
+            },
+            "sizing": {
+              "risk_budget": 500.0,
+              "contracts": 0,
+              "risk_per_spread": 786.5,
+              "total_risk": 0.0,
+              "over_budget": true,
+              "note": "One spread already risks $786, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            },
+            "compliance": {
+              "tier": "more_contested",
+              "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
+            }
+          },
+          {
+            "key": "covered_call",
+            "name": "Covered Call",
+            "action": "SELL_PREMIUM",
+            "bias": "neutral",
+            "thesis": "Rich premium against shares you already hold — income, with the upside capped.",
+            "playbook": "Against shares you already own, sell a call above the price. Turns rich premium into income and caps your upside at the strike.",
+            "vega": "short",
+            "theta": "positive",
+            "risk": "defined",
+            "legs": [
+              {
+                "action": "own",
+                "right": "share",
+                "strike": null,
+                "expiry": null,
+                "qty": 100,
+                "mid": 324.96,
+                "bid": null,
+                "ask": null,
+                "iv": null,
+                "open_interest": null,
+                "label": "Own 100 shares at ~324.96"
+              },
+              {
+                "action": "sell",
+                "right": "call",
+                "strike": 345.0,
+                "expiry": "2026-09-25",
+                "qty": 1,
+                "mid": 1.975,
+                "bid": 1.89,
+                "ask": 2.06,
+                "iv": 25.15,
+                "open_interest": 2024,
+                "label": "Sell 1× 2026-09-25 345 call"
+              }
+            ],
+            "expiry": "2026-09-25",
+            "dte": 23,
+            "net": -3249797.5,
+            "max_profit": 2201.5,
+            "max_loss": 32298.5,
+            "breakevens": [
+              322.98
+            ],
+            "profit_zone": "above",
+            "pop": 0.539,
+            "credit_to_width": null,
+            "manage": {
+              "profit_target": "buy it back at 50% of the credit received",
+              "profit_target_pct": 50,
+              "stop": "close if the loss reaches 2× the credit received",
+              "stop_loss_multiple": 2.0,
+              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
+              "close_by_dte": 21
+            },
+            "sizing": {
+              "risk_budget": 500.0,
+              "contracts": 0,
+              "risk_per_spread": 32298.5,
+              "total_risk": 0.0,
+              "over_budget": true,
+              "note": "One spread already risks $32,298, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            },
+            "compliance": {
+              "tier": "contested",
+              "note": "Written against shares you already own rather than on margin, which some scholars treat more leniently than a naked short option."
+            }
+          }
+        ],
+        "avoid": [
+          {
+            "name": "Long straddles / strangles",
+            "reason": "IV rank 55 and the market is pricing a 5.0% move vs 3.6% realized — you'd be paying up for the move you want."
+          },
+          {
+            "name": "Short strangle (naked)",
+            "reason": "Open-ended risk — keep the wings on unless the chain is deep and you accept it."
+          }
+        ],
+        "why": [
+          "IV rank 55/100 (rich premium, blended score 68).",
+          "Options price a 5.0% move over the horizon vs 3.6% realized (1.37× IV/HV).",
+          "Setup score 67/100, direction bullish (weak)."
+        ],
+        "warnings": [
+          "The credit is only 10% of the spread width — thin compensation. Widen the wings or pass."
+        ]
+      }
+    },
+    {
+      "rank": 12,
+      "ticker": "META",
+      "price": 592.85,
+      "score": 65.6,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.158,
+      "hv_annual": 30.4,
+      "hv_pctile": 0.142,
+      "em_pct": 6.06,
+      "horizon_days": 10,
+      "down_1sigma": 556.93,
+      "up_1sigma": 628.77,
+      "down_2sigma": 521.01,
+      "up_2sigma": 664.69,
+      "lean": "Bullish",
+      "note": "",
+      "debt_ratio": 0.07436855016971011,
+      "cash_ratio": 0.059763397378540764,
+      "earnings_in_days": 55.0,
+      "implied_move_pct": 6.99,
+      "vol_verdict": "rich",
+      "iv_annual": 35.09,
+      "iv_rank": 47.4,
+      "premium_score": 50.5,
       "premium_state": "fair",
       "liquidity": "good",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 28.28,
-        "hv_annual": 25.7,
-        "implied_move_pct": 5.63,
-        "hist_move_pct": 5.12,
-        "iv_rank": 25.9,
-        "iv_percentile": 51.7,
-        "vrp": 2.55,
-        "iv_hv_ratio": 1.1,
-        "verdict": "fair",
-        "premium_score": 36.3,
+        "iv_annual": 35.09,
+        "hv_annual": 30.4,
+        "implied_move_pct": 6.99,
+        "hist_move_pct": 6.06,
+        "iv_rank": 47.4,
+        "iv_percentile": 39.7,
+        "vrp": 4.68,
+        "iv_hv_ratio": 1.15,
+        "verdict": "rich",
+        "premium_score": 50.5,
         "premium_state": "fair",
-        "term_slope": 0.0484,
-        "term_structure": "contango",
-        "skew": 1.47,
+        "term_slope": 0.0142,
+        "term_structure": "flat",
+        "skew": -0.03,
         "skew_label": "balanced",
-        "atm_spread_pct": 3.9,
-        "atm_open_interest": 820,
+        "atm_spread_pct": 4.4,
+        "atm_open_interest": 548,
         "liquidity": "good",
         "expiry": "2026-09-25",
-        "days_to_expiry": 24,
+        "days_to_expiry": 23,
         "expiries": [
           {
-            "date": "2026-09-02",
-            "dte": 1
-          },
-          {
             "date": "2026-09-04",
-            "dte": 3
+            "dte": 2
           },
           {
             "date": "2026-09-09",
-            "dte": 8
+            "dte": 7
           },
           {
             "date": "2026-09-11",
-            "dte": 10
+            "dte": 9
           },
           {
             "date": "2026-09-18",
-            "dte": 17
+            "dte": 16
           },
           {
             "date": "2026-09-25",
-            "dte": 24
+            "dte": 23
           },
           {
             "date": "2026-10-02",
-            "dte": 31
+            "dte": 30
           },
           {
             "date": "2026-10-09",
-            "dte": 38
+            "dte": 37
           },
           {
             "date": "2026-10-16",
-            "dte": 45
+            "dte": 44
           },
           {
             "date": "2026-11-20",
-            "dte": 80
+            "dte": 79
           },
           {
             "date": "2026-12-18",
-            "dte": 108
+            "dte": 107
           },
           {
             "date": "2027-01-15",
-            "dte": 136
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "META",
+        "action": "STAND_ASIDE",
+        "headline": "META: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "confidence": 0.0,
+        "premium_state": "fair",
+        "premium_score": 50.5,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "IV rank 47/100 (fair premium, blended score 50).",
+          "Options price a 7.0% move over the horizon vs 6.1% realized (1.15× IV/HV).",
+          "Setup score 66/100, direction bullish (weak)."
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "rank": 13,
+      "ticker": "TXN",
+      "price": 254.8,
+      "score": 62.3,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.383,
+      "hv_annual": 27.7,
+      "hv_pctile": 0.075,
+      "em_pct": 5.52,
+      "horizon_days": 10,
+      "down_1sigma": 240.73,
+      "up_1sigma": 268.87,
+      "down_2sigma": 226.65,
+      "up_2sigma": 282.95,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.06038792737136217,
+      "cash_ratio": 0.030086527424155296,
+      "earnings_in_days": 54.0,
+      "implied_move_pct": 7.85,
+      "vol_verdict": "rich",
+      "iv_annual": 39.42,
+      "iv_rank": 44.2,
+      "premium_score": 63.6,
+      "premium_state": "fair",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 39.42,
+        "hv_annual": 27.7,
+        "implied_move_pct": 7.85,
+        "hist_move_pct": 5.52,
+        "iv_rank": 44.2,
+        "iv_percentile": 67.5,
+        "vrp": 11.69,
+        "iv_hv_ratio": 1.42,
+        "verdict": "rich",
+        "premium_score": 63.6,
+        "premium_state": "fair",
+        "term_slope": 0.0104,
+        "term_structure": "flat",
+        "skew": 2.35,
+        "skew_label": "balanced",
+        "atm_spread_pct": 25.5,
+        "atm_open_interest": 90,
+        "liquidity": "poor",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 198
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "TXN",
+        "action": "STAND_ASIDE",
+        "headline": "TXN: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "confidence": 0.0,
+        "premium_state": "fair",
+        "premium_score": 63.6,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~26% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
+        "why": [
+          "IV rank 44/100 (fair premium, blended score 64).",
+          "Options price a 7.8% move over the horizon vs 5.5% realized (1.42× IV/HV).",
+          "Setup score 62/100, direction bearish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~26% of mid, OI 90) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      }
+    },
+    {
+      "rank": 14,
+      "ticker": "AMAT",
+      "price": 438.46,
+      "score": 58.9,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.583,
+      "hv_annual": 42.8,
+      "hv_pctile": 0.025,
+      "em_pct": 8.54,
+      "horizon_days": 10,
+      "down_1sigma": 401.04,
+      "up_1sigma": 475.88,
+      "down_2sigma": 363.61,
+      "up_2sigma": 513.31,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.021111576894032244,
+      "cash_ratio": 0.026534604181461408,
+      "earnings_in_days": 70.0,
+      "implied_move_pct": 10.11,
+      "vol_verdict": "rich",
+      "iv_annual": 50.76,
+      "iv_rank": 29.1,
+      "premium_score": 45.6,
+      "premium_state": "fair",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 50.76,
+        "hv_annual": 42.8,
+        "implied_move_pct": 10.11,
+        "hist_move_pct": 8.54,
+        "iv_rank": 29.1,
+        "iv_percentile": 51.7,
+        "vrp": 7.91,
+        "iv_hv_ratio": 1.18,
+        "verdict": "rich",
+        "premium_score": 45.6,
+        "premium_state": "fair",
+        "term_slope": -0.0124,
+        "term_structure": "flat",
+        "skew": -0.38,
+        "skew_label": "balanced",
+        "atm_spread_pct": 23.6,
+        "atm_open_interest": 4,
+        "liquidity": "poor",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 198
+          }
+        ]
+      },
+      "recommendation": {
+        "ticker": "AMAT",
+        "action": "STAND_ASIDE",
+        "headline": "AMAT: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "confidence": 0.0,
+        "premium_state": "fair",
+        "premium_score": 45.6,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~24% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
+        "why": [
+          "IV rank 29/100 (fair premium, blended score 46).",
+          "Options price a 10.1% move over the horizon vs 8.5% realized (1.18× IV/HV).",
+          "Setup score 59/100, direction bearish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~24% of mid, OI 4) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      }
+    },
+    {
+      "rank": 15,
+      "ticker": "AMZN",
+      "price": 254.98,
+      "score": 57.2,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.325,
+      "hv_annual": 25.3,
+      "hv_pctile": 0.217,
+      "em_pct": 5.04,
+      "horizon_days": 10,
+      "down_1sigma": 242.12,
+      "up_1sigma": 267.84,
+      "down_2sigma": 229.27,
+      "up_2sigma": 280.69,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.09149385757418431,
+      "cash_ratio": 0.044718129532759686,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": 5.65,
+      "vol_verdict": "fair",
+      "iv_annual": 28.38,
+      "iv_rank": 26.1,
+      "premium_score": 37.9,
+      "premium_state": "fair",
+      "liquidity": "good",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 28.38,
+        "hv_annual": 25.3,
+        "implied_move_pct": 5.65,
+        "hist_move_pct": 5.04,
+        "iv_rank": 26.1,
+        "iv_percentile": 51.7,
+        "vrp": 3.07,
+        "iv_hv_ratio": 1.12,
+        "verdict": "fair",
+        "premium_score": 37.9,
+        "premium_state": "fair",
+        "term_slope": 0.0412,
+        "term_structure": "contango",
+        "skew": 0.61,
+        "skew_label": "balanced",
+        "atm_spread_pct": 4.0,
+        "atm_open_interest": 910,
+        "liquidity": "good",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 23,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 2
+          },
+          {
+            "date": "2026-09-09",
+            "dte": 7
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 9
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 16
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 23
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 30
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 37
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 44
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 79
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 107
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 135
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 170
           }
         ]
       },
@@ -2545,7 +2859,7 @@
         "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
         "confidence": 0.0,
         "premium_state": "fair",
-        "premium_score": 36.3,
+        "premium_score": 37.9,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -2581,724 +2895,37 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "IV rank 26/100 (fair premium, blended score 36).",
-          "Options price a 5.6% move over the horizon vs 5.1% realized (1.10× IV/HV).",
-          "Setup score 56/100, direction bearish (weak).",
-          "Term structure in contango (+4.8% front→back)."
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "rank": 14,
-      "ticker": "MRVL",
-      "price": 210.39,
-      "score": 54.1,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": true,
-      "fired_dir": "down",
-      "bandwidth_pctile": 0.058,
-      "hv_annual": 77.2,
-      "hv_pctile": 0.442,
-      "em_pct": 15.39,
-      "horizon_days": 10,
-      "down_1sigma": 178.02,
-      "up_1sigma": 242.76,
-      "down_2sigma": 145.65,
-      "up_2sigma": 275.13,
-      "lean": "Neutral",
-      "note": "",
-      "debt_ratio": 0.027957175397389733,
-      "cash_ratio": 0.0207998297551028,
-      "earnings_in_days": 90.0,
-      "implied_move_pct": 11.26,
-      "vol_verdict": "cheap",
-      "iv_annual": 56.5,
-      "iv_rank": 21.6,
-      "premium_score": 17.1,
-      "premium_state": "cheap",
-      "liquidity": "fair",
-      "action": "BUY_PREMIUM",
-      "strategy": "Bear Put Spread",
-      "options": {
-        "iv_annual": 56.5,
-        "hv_annual": 77.2,
-        "implied_move_pct": 11.26,
-        "hist_move_pct": 15.39,
-        "iv_rank": 21.6,
-        "iv_percentile": 40.9,
-        "vrp": -20.74,
-        "iv_hv_ratio": 0.73,
-        "verdict": "cheap",
-        "premium_score": 17.1,
-        "premium_state": "cheap",
-        "term_slope": 0.0476,
-        "term_structure": "contango",
-        "skew": -1.71,
-        "skew_label": "balanced",
-        "atm_spread_pct": 14.8,
-        "atm_open_interest": 363,
-        "liquidity": "fair",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          },
-          {
-            "date": "2027-02-19",
-            "dte": 171
-          },
-          {
-            "date": "2027-03-19",
-            "dte": 199
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "MRVL",
-        "action": "BUY_PREMIUM",
-        "headline": "MRVL: BUY premium — IV rank 22, cheap → Bear Put Spread",
-        "detail": "Buy 1× 2026-09-25 210 put; Sell 1× 2026-09-25 180 put — net debit $969.00 per spread",
-        "confidence": 0.75,
-        "premium_state": "cheap",
-        "premium_score": 17.1,
-        "bias": "bearish",
-        "bias_strength": "strong",
-        "plan": {
-          "key": "bear_put_spread",
-          "name": "Bear Put Spread",
-          "action": "BUY_PREMIUM",
-          "bias": "bearish",
-          "thesis": "Options are reasonably priced and the break is down — pay a capped premium for a capped move.",
-          "playbook": "Buy a put, sell a lower one. A capped, cheaper bearish bet.",
-          "vega": "long",
-          "theta": "negative",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 210.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 11.925,
-              "bid": 11.25,
-              "ask": 12.6,
-              "iv": 55.27,
-              "open_interest": 558,
-              "label": "Buy 1× 2026-09-25 210 put"
-            },
-            {
-              "action": "sell",
-              "right": "put",
-              "strike": 180.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 2.235,
-              "bid": 2.01,
-              "ask": 2.46,
-              "iv": 57.2,
-              "open_interest": 709,
-              "label": "Sell 1× 2026-09-25 180 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 24,
-          "net": 969.0,
-          "max_profit": 2031.0,
-          "max_loss": 969.0,
-          "breakevens": [
-            200.31
-          ],
-          "profit_zone": "below",
-          "pop": 0.367,
-          "credit_to_width": null,
-          "manage": {
-            "profit_target": "close at +50% to +100% of the debit",
-            "profit_target_pct": 50,
-            "stop": "cut at −50% of the debit",
-            "stop_loss_pct": 50,
-            "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-            "close_by_dte": 7
-          },
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 969.0,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $969, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-          },
-          "compliance": {
-            "tier": "contested",
-            "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-          }
-        },
-        "alternatives": [
-          {
-            "key": "long_straddle",
-            "name": "Long Straddle",
-            "action": "BUY_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Options are cheap and the chart is coiled — pay for the move, either direction.",
-            "playbook": "Buy the at-the-money call and the at-the-money put. You win if the move is big enough, either way; you lose if it sits still. The trade for cheap options in front of a coiled chart.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 210.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 12.85,
-                "bid": 11.9,
-                "ask": 13.8,
-                "iv": 57.72,
-                "open_interest": 363,
-                "label": "Buy 1× 2026-09-25 210 call"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 210.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 11.925,
-                "bid": 11.25,
-                "ask": 12.6,
-                "iv": 55.27,
-                "open_interest": 558,
-                "label": "Buy 1× 2026-09-25 210 put"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 2477.5,
-            "max_profit": null,
-            "max_loss": 2477.5,
-            "breakevens": [
-              185.22,
-              234.78
-            ],
-            "profit_zone": "outside",
-            "pop": 0.414,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 2477.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $2,478, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-            }
-          },
-          {
-            "key": "long_strangle",
-            "name": "Long Strangle",
-            "action": "BUY_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Cheap options plus a coiled chart — the budget version of the both-ways bet.",
-            "playbook": "Buy an out-of-the-money call and an out-of-the-money put. Cheaper than a straddle and needs a bigger move to pay — the budget version of the same both-ways bet.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 235.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 4.65,
-                "bid": 4.2,
-                "ask": 5.1,
-                "iv": 58.37,
-                "open_interest": 372,
-                "label": "Buy 1× 2026-09-25 235 call"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 190.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 4.25,
-                "bid": 3.95,
-                "ask": 4.55,
-                "iv": 56.24,
-                "open_interest": 477,
-                "label": "Buy 1× 2026-09-25 190 put"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 890.0,
-            "max_profit": null,
-            "max_loss": 890.0,
-            "breakevens": [
-              181.1,
-              243.9
-            ],
-            "profit_zone": "outside",
-            "pop": 0.304,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 890.0,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $890, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-            }
-          }
-        ],
-        "avoid": [
-          {
-            "name": "Selling premium (condors, credit spreads)",
-            "reason": "IV rank 22 — you'd collect too little for the risk."
-          }
-        ],
-        "why": [
-          "IV rank 22/100 (cheap premium, blended score 17).",
-          "Options price a 11.3% move over the horizon vs 15.4% realized (0.73× IV/HV).",
-          "The squeeze just released to the down — that release is the trigger.",
-          "Setup score 54/100, direction bearish (strong).",
-          "Term structure in contango (+4.8% front→back)."
-        ],
-        "warnings": []
-      }
-    },
-    {
-      "rank": 15,
-      "ticker": "PLTR",
-      "price": 179.92,
-      "score": 52.9,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.292,
-      "hv_annual": 50.9,
-      "hv_pctile": 0.325,
-      "em_pct": 10.13,
-      "horizon_days": 10,
-      "down_1sigma": 161.69,
-      "up_1sigma": 198.15,
-      "down_2sigma": 143.45,
-      "up_2sigma": 216.39,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.000488946365081901,
-      "cash_ratio": 0.021762273573732505,
-      "earnings_in_days": 61.0,
-      "implied_move_pct": 8.96,
-      "vol_verdict": "fair",
-      "iv_annual": 45.0,
-      "iv_rank": 16.1,
-      "premium_score": 20.9,
-      "premium_state": "cheap",
-      "liquidity": "good",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Straddle",
-      "options": {
-        "iv_annual": 45.0,
-        "hv_annual": 50.9,
-        "implied_move_pct": 8.96,
-        "hist_move_pct": 10.13,
-        "iv_rank": 16.1,
-        "iv_percentile": 28.4,
-        "vrp": -5.88,
-        "iv_hv_ratio": 0.88,
-        "verdict": "fair",
-        "premium_score": 20.9,
-        "premium_state": "cheap",
-        "term_slope": 0.0211,
-        "term_structure": "flat",
-        "skew": 3.14,
-        "skew_label": "put_skew",
-        "atm_spread_pct": 2.3,
-        "atm_open_interest": 983,
-        "liquidity": "good",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 24,
-        "expiries": [
-          {
-            "date": "2026-09-04",
-            "dte": 3
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 10
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 17
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 24
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 31
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 38
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 45
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 80
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 108
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 136
-          },
-          {
-            "date": "2027-02-19",
-            "dte": 171
-          },
-          {
-            "date": "2027-03-19",
-            "dte": 199
-          }
-        ]
-      },
-      "recommendation": {
-        "ticker": "PLTR",
-        "action": "BUY_PREMIUM",
-        "headline": "PLTR: BUY premium — IV rank 16, cheap → Long Straddle",
-        "detail": "Buy 1× 2026-09-25 180 call; Buy 1× 2026-09-25 180 put — net debit $1,670.00 per spread",
-        "confidence": 0.71,
-        "premium_state": "cheap",
-        "premium_score": 20.9,
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "long_straddle",
-          "name": "Long Straddle",
-          "action": "BUY_PREMIUM",
-          "bias": "neutral",
-          "thesis": "Options are cheap and the chart is coiled — pay for the move, either direction.",
-          "playbook": "Buy the at-the-money call and the at-the-money put. You win if the move is big enough, either way; you lose if it sits still. The trade for cheap options in front of a coiled chart.",
-          "vega": "long",
-          "theta": "negative",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "buy",
-              "right": "call",
-              "strike": 180.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 8.55,
-              "bid": 8.45,
-              "ask": 8.65,
-              "iv": 46.28,
-              "open_interest": 983,
-              "label": "Buy 1× 2026-09-25 180 call"
-            },
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 180.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 8.15,
-              "bid": 8.05,
-              "ask": 8.25,
-              "iv": 43.73,
-              "open_interest": 1957,
-              "label": "Buy 1× 2026-09-25 180 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 24,
-          "net": 1670.0,
-          "max_profit": null,
-          "max_loss": 1670.0,
-          "breakevens": [
-            163.3,
-            196.7
-          ],
-          "profit_zone": "outside",
-          "pop": 0.42,
-          "credit_to_width": null,
-          "manage": {
-            "profit_target": "close at +50% to +100% of the debit",
-            "profit_target_pct": 50,
-            "stop": "cut at −50% of the debit",
-            "stop_loss_pct": 50,
-            "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-            "close_by_dte": 7
-          },
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 1670.0,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $1,670, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-          },
-          "compliance": {
-            "tier": "contested",
-            "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-          }
-        },
-        "alternatives": [
-          {
-            "key": "long_strangle",
-            "name": "Long Strangle",
-            "action": "BUY_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Cheap options plus a coiled chart — the budget version of the both-ways bet.",
-            "playbook": "Buy an out-of-the-money call and an out-of-the-money put. Cheaper than a straddle and needs a bigger move to pay — the budget version of the same both-ways bet.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 195.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 3.15,
-                "bid": 3.05,
-                "ask": 3.25,
-                "iv": 45.07,
-                "open_interest": 807,
-                "label": "Buy 1× 2026-09-25 195 call"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 165.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 2.9,
-                "bid": 2.84,
-                "ask": 2.96,
-                "iv": 46.68,
-                "open_interest": 1927,
-                "label": "Buy 1× 2026-09-25 165 put"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 605.0,
-            "max_profit": null,
-            "max_loss": 605.0,
-            "breakevens": [
-              158.95,
-              201.05
-            ],
-            "profit_zone": "outside",
-            "pop": 0.309,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 605.0,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $605, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-            }
-          },
-          {
-            "key": "bull_call_spread",
-            "name": "Bull Call Spread",
-            "action": "BUY_PREMIUM",
-            "bias": "bullish",
-            "thesis": "Options are reasonably priced and the break is up — pay a capped premium for a capped move.",
-            "playbook": "Buy a call, sell a higher one. A capped, cheaper bullish bet — the short leg pays for part of the long one.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 180.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 8.55,
-                "bid": 8.45,
-                "ask": 8.65,
-                "iv": 46.28,
-                "open_interest": 983,
-                "label": "Buy 1× 2026-09-25 180 call"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 200.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 2.185,
-                "bid": 2.15,
-                "ask": 2.22,
-                "iv": 44.79,
-                "open_interest": 1917,
-                "label": "Sell 1× 2026-09-25 200 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 24,
-            "net": 636.5,
-            "max_profit": 1363.5,
-            "max_loss": 636.5,
-            "breakevens": [
-              186.37
-            ],
-            "profit_zone": "above",
-            "pop": 0.38,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 636.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $636, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
-            }
-          }
-        ],
-        "avoid": [
-          {
-            "name": "Selling premium (condors, credit spreads)",
-            "reason": "IV rank 16 — you'd collect too little for the risk."
-          }
-        ],
-        "why": [
-          "IV rank 16/100 (cheap premium, blended score 21).",
-          "Options price a 9.0% move over the horizon vs 10.1% realized (0.88× IV/HV).",
-          "Setup score 53/100, direction bullish (weak).",
-          "Puts bid over calls by 3.1 vol points — the put side pays more to sell."
+          "IV rank 26/100 (fair premium, blended score 38).",
+          "Options price a 5.7% move over the horizon vs 5.0% realized (1.12× IV/HV).",
+          "Setup score 57/100, direction bearish (weak).",
+          "Term structure in contango (+4.1% front→back)."
         ],
         "warnings": []
       }
     },
     {
       "rank": 16,
-      "ticker": "TXN",
-      "price": 253.34,
-      "score": 52.9,
+      "ticker": "MRVL",
+      "price": 206.48,
+      "score": 53.8,
       "squeeze_on": false,
       "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.308,
-      "hv_annual": 34.1,
-      "hv_pctile": 0.317,
-      "em_pct": 6.8,
+      "squeeze_fired": true,
+      "fired_dir": "down",
+      "bandwidth_pctile": 0.083,
+      "hv_annual": 76.5,
+      "hv_pctile": 0.433,
+      "em_pct": 15.25,
       "horizon_days": 10,
-      "down_1sigma": 236.11,
-      "up_1sigma": 270.57,
-      "down_2sigma": 218.88,
-      "up_2sigma": 287.8,
-      "lean": "Bearish",
+      "down_1sigma": 174.99,
+      "up_1sigma": 237.97,
+      "down_2sigma": 143.51,
+      "up_2sigma": 269.45,
+      "lean": "Neutral",
       "note": "",
-      "debt_ratio": 0.060735944598578055,
-      "cash_ratio": 0.030259916879738346,
-      "earnings_in_days": 55.0,
+      "debt_ratio": 0.028486586346764424,
+      "cash_ratio": 0.021193705654973177,
+      "earnings_in_days": 89.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -3310,15 +2937,15 @@
       "strategy": "Not priced",
       "options": null,
       "recommendation": {
-        "ticker": "TXN",
+        "ticker": "MRVL",
         "action": "NO_DATA",
-        "headline": "TXN: not priced — no IV read this run",
+        "headline": "MRVL: not priced — no IV read this run",
         "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
         "confidence": 0.0,
         "premium_state": "unknown",
         "premium_score": null,
         "bias": "bearish",
-        "bias_strength": "weak",
+        "bias_strength": "strong",
         "plan": {
           "key": "no_data",
           "name": "Not priced",
@@ -3349,7 +2976,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 53/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 54/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -3358,267 +2985,27 @@
     },
     {
       "rank": 17,
-      "ticker": "AVGO",
-      "price": 369.68,
-      "score": 51.4,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.758,
-      "hv_annual": 35.3,
-      "hv_pctile": 0.075,
-      "em_pct": 7.04,
-      "horizon_days": 10,
-      "down_1sigma": 343.67,
-      "up_1sigma": 395.69,
-      "down_2sigma": 317.66,
-      "up_2sigma": 421.7,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": 0.036904511804796446,
-      "cash_ratio": 0.011159993662454454,
-      "earnings_in_days": 0.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "AVGO",
-        "action": "NO_DATA",
-        "headline": "AVGO: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 51/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      }
-    },
-    {
-      "rank": 18,
-      "ticker": "AMAT",
-      "price": 441.85,
-      "score": 50.3,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.533,
-      "hv_annual": 49.2,
-      "hv_pctile": 0.233,
-      "em_pct": 9.79,
-      "horizon_days": 10,
-      "down_1sigma": 398.57,
-      "up_1sigma": 485.13,
-      "down_2sigma": 355.3,
-      "up_2sigma": 528.4,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": 0.02094960340229249,
-      "cash_ratio": 0.02633102381829022,
-      "earnings_in_days": 71.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "AMAT",
-        "action": "NO_DATA",
-        "headline": "AMAT: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 50/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      }
-    },
-    {
-      "rank": 19,
-      "ticker": "ADBE",
-      "price": 286.08,
-      "score": 49.0,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.4,
-      "hv_annual": 40.6,
-      "hv_pctile": 0.342,
-      "em_pct": 8.08,
-      "horizon_days": 10,
-      "down_1sigma": 262.97,
-      "up_1sigma": 309.19,
-      "down_2sigma": 239.85,
-      "up_2sigma": 332.31,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.06223355169436611,
-      "cash_ratio": 0.0494737804673793,
-      "earnings_in_days": 8.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "ADBE",
-        "action": "NO_DATA",
-        "headline": "ADBE: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 49/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      }
-    },
-    {
-      "rank": 20,
       "ticker": "TSLA",
-      "price": 356.09,
-      "score": 47.8,
+      "price": 357.01,
+      "score": 53.7,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.275,
-      "hv_annual": 41.7,
-      "hv_pctile": 0.442,
-      "em_pct": 8.31,
+      "bandwidth_pctile": 0.183,
+      "hv_annual": 41.0,
+      "hv_pctile": 0.375,
+      "em_pct": 8.16,
       "horizon_days": 10,
-      "down_1sigma": 326.49,
-      "up_1sigma": 385.69,
-      "down_2sigma": 296.89,
-      "up_2sigma": 415.29,
+      "down_1sigma": 327.88,
+      "up_1sigma": 386.14,
+      "down_2sigma": 298.76,
+      "up_2sigma": 415.26,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.011433493417761913,
-      "cash_ratio": 0.030947225622107565,
-      "earnings_in_days": 49.0,
+      "debt_ratio": 0.011404028762993068,
+      "cash_ratio": 0.03086747315401305,
+      "earnings_in_days": 48.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -3669,7 +3056,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 48/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 54/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -3677,28 +3064,28 @@
       }
     },
     {
-      "rank": 21,
+      "rank": 18,
       "ticker": "CVX",
-      "price": 211.05,
-      "score": 45.9,
+      "price": 211.78,
+      "score": 53.5,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.7,
-      "hv_annual": 23.5,
-      "hv_pctile": 0.225,
-      "em_pct": 4.68,
+      "bandwidth_pctile": 0.617,
+      "hv_annual": 21.4,
+      "hv_pctile": 0.117,
+      "em_pct": 4.26,
       "horizon_days": 10,
-      "down_1sigma": 201.18,
-      "up_1sigma": 220.92,
-      "down_2sigma": 191.31,
-      "up_2sigma": 230.79,
+      "down_1sigma": 202.75,
+      "up_1sigma": 220.81,
+      "down_2sigma": 193.73,
+      "up_2sigma": 229.83,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.08955392547842687,
-      "cash_ratio": 0.020604044374274932,
-      "earnings_in_days": 58.0,
+      "debt_ratio": 0.08924523738890777,
+      "cash_ratio": 0.02053302322070424,
+      "earnings_in_days": 57.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -3749,7 +3136,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 46/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 54/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -3757,28 +3144,28 @@
       }
     },
     {
-      "rank": 22,
-      "ticker": "NOW",
-      "price": 142.9,
-      "score": 44.3,
+      "rank": 19,
+      "ticker": "AVGO",
+      "price": 367.24,
+      "score": 52.7,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.617,
-      "hv_annual": 55.4,
-      "hv_pctile": 0.308,
-      "em_pct": 11.03,
+      "bandwidth_pctile": 0.742,
+      "hv_annual": 35.2,
+      "hv_pctile": 0.058,
+      "em_pct": 7.02,
       "horizon_days": 10,
-      "down_1sigma": 127.14,
-      "up_1sigma": 158.66,
-      "down_2sigma": 111.38,
-      "up_2sigma": 174.42,
-      "lean": "Bullish",
+      "down_1sigma": 341.46,
+      "up_1sigma": 393.02,
+      "down_2sigma": 315.68,
+      "up_2sigma": 418.8,
+      "lean": "Bearish",
       "note": "",
-      "debt_ratio": 0.057215817379216424,
-      "cash_ratio": 0.03156921402997472,
-      "earnings_in_days": 56.0,
+      "debt_ratio": 0.03714971172279296,
+      "cash_ratio": 0.0112341425780491,
+      "earnings_in_days": null,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -3790,9 +3177,169 @@
       "strategy": "Not priced",
       "options": null,
       "recommendation": {
-        "ticker": "NOW",
+        "ticker": "AVGO",
         "action": "NO_DATA",
-        "headline": "NOW: not priced — no IV read this run",
+        "headline": "AVGO: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 53/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      }
+    },
+    {
+      "rank": 20,
+      "ticker": "PLTR",
+      "price": 169.46,
+      "score": 49.7,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.225,
+      "hv_annual": 54.7,
+      "hv_pctile": 0.433,
+      "em_pct": 10.89,
+      "horizon_days": 10,
+      "down_1sigma": 151.01,
+      "up_1sigma": 187.91,
+      "down_2sigma": 132.55,
+      "up_2sigma": 206.37,
+      "lean": "Neutral",
+      "note": "",
+      "debt_ratio": 0.0005191267915096419,
+      "cash_ratio": 0.023105559347791557,
+      "earnings_in_days": 60.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "PLTR",
+        "action": "NO_DATA",
+        "headline": "PLTR: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "neutral",
+        "bias_strength": "none",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 50/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      }
+    },
+    {
+      "rank": 21,
+      "ticker": "ADBE",
+      "price": 279.79,
+      "score": 48.4,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.367,
+      "hv_annual": 41.2,
+      "hv_pctile": 0.375,
+      "em_pct": 8.2,
+      "horizon_days": 10,
+      "down_1sigma": 256.84,
+      "up_1sigma": 302.74,
+      "down_2sigma": 233.89,
+      "up_2sigma": 325.69,
+      "lean": "Bullish",
+      "note": "",
+      "debt_ratio": 0.06363263168082818,
+      "cash_ratio": 0.050586006496940686,
+      "earnings_in_days": 7.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "ADBE",
+        "action": "NO_DATA",
+        "headline": "ADBE: not priced — no IV read this run",
         "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
         "confidence": 0.0,
         "premium_state": "unknown",
@@ -3829,7 +3376,87 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 44/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 48/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      }
+    },
+    {
+      "rank": 22,
+      "ticker": "LLY",
+      "price": 1160.08,
+      "score": 48.1,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.35,
+      "hv_annual": 32.8,
+      "hv_pctile": 0.392,
+      "em_pct": 6.54,
+      "horizon_days": 10,
+      "down_1sigma": 1084.19,
+      "up_1sigma": 1235.97,
+      "down_2sigma": 1008.29,
+      "up_2sigma": 1311.87,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.05307729515408344,
+      "cash_ratio": 0.008651595154640925,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "LLY",
+        "action": "NO_DATA",
+        "headline": "LLY: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 48/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -3839,26 +3466,26 @@
     {
       "rank": 23,
       "ticker": "XOM",
-      "price": 164.55,
-      "score": 42.8,
+      "price": 164.15,
+      "score": 45.4,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.325,
-      "hv_annual": 27.0,
-      "hv_pctile": 0.517,
-      "em_pct": 5.37,
+      "bandwidth_pctile": 0.275,
+      "hv_annual": 26.8,
+      "hv_pctile": 0.492,
+      "em_pct": 5.33,
       "horizon_days": 10,
-      "down_1sigma": 155.71,
-      "up_1sigma": 173.39,
-      "down_2sigma": 146.88,
-      "up_2sigma": 182.22,
+      "down_1sigma": 155.39,
+      "up_1sigma": 172.91,
+      "down_2sigma": 146.64,
+      "up_2sigma": 181.66,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.06261758030329725,
-      "cash_ratio": 0.015648483673560514,
-      "earnings_in_days": 58.0,
+      "debt_ratio": 0.06277016582793082,
+      "cash_ratio": 0.01568661564990781,
+      "earnings_in_days": 57.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -3909,7 +3536,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 43/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 45/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -3918,187 +3545,27 @@
     },
     {
       "rank": 24,
-      "ticker": "NVDA",
-      "price": 217.44,
-      "score": 33.5,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.025,
-      "hv_annual": 44.1,
-      "hv_pctile": 0.892,
-      "em_pct": 8.78,
-      "horizon_days": 10,
-      "down_1sigma": 198.36,
-      "up_1sigma": 236.52,
-      "down_2sigma": 179.28,
-      "up_2sigma": 255.6,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": 0.007401166870070125,
-      "cash_ratio": 0.01189767079200234,
-      "earnings_in_days": 76.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "NVDA",
-        "action": "NO_DATA",
-        "headline": "NVDA: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 34/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      }
-    },
-    {
-      "rank": 25,
-      "ticker": "JNJ",
-      "price": 271.19,
-      "score": 32.9,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.667,
-      "hv_annual": 19.2,
-      "hv_pctile": 0.517,
-      "em_pct": 3.83,
-      "horizon_days": 10,
-      "down_1sigma": 260.81,
-      "up_1sigma": 281.57,
-      "down_2sigma": 250.44,
-      "up_2sigma": 291.94,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.07503132447239762,
-      "cash_ratio": 0.031762382003633086,
-      "earnings_in_days": 41.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "JNJ",
-        "action": "NO_DATA",
-        "headline": "JNJ: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "compliance": {
-            "tier": "n/a",
-            "note": "No position — nothing to rule on."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 33/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      }
-    },
-    {
-      "rank": 26,
       "ticker": "SHOP",
-      "price": 139.82,
-      "score": 30.8,
+      "price": 141.87,
+      "score": 43.3,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.392,
-      "hv_annual": 71.2,
-      "hv_pctile": 0.725,
-      "em_pct": 14.18,
+      "bandwidth_pctile": 0.017,
+      "hv_annual": 69.5,
+      "hv_pctile": 0.692,
+      "em_pct": 13.84,
       "horizon_days": 10,
-      "down_1sigma": 119.99,
-      "up_1sigma": 159.65,
-      "down_2sigma": 100.15,
-      "up_2sigma": 179.49,
+      "down_1sigma": 122.23,
+      "up_1sigma": 161.51,
+      "down_2sigma": 102.6,
+      "up_2sigma": 181.14,
       "lean": "Neutral",
       "note": "",
-      "debt_ratio": 0.0009810509071074116,
-      "cash_ratio": 0.027265498028643767,
-      "earnings_in_days": 62.0,
+      "debt_ratio": 0.0009668749776397668,
+      "cash_ratio": 0.0268715187008086,
+      "earnings_in_days": 61.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -4149,7 +3616,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 31/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 43/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -4157,28 +3624,28 @@
       }
     },
     {
-      "rank": 27,
-      "ticker": "LLY",
-      "price": 1160.0,
-      "score": 28.1,
+      "rank": 25,
+      "ticker": "NOW",
+      "price": 136.72,
+      "score": 42.9,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.417,
-      "hv_annual": 36.9,
-      "hv_pctile": 0.767,
-      "em_pct": 7.35,
+      "bandwidth_pctile": 0.583,
+      "hv_annual": 58.2,
+      "hv_pctile": 0.358,
+      "em_pct": 11.59,
       "horizon_days": 10,
-      "down_1sigma": 1074.71,
-      "up_1sigma": 1245.29,
-      "down_2sigma": 989.41,
-      "up_2sigma": 1330.59,
-      "lean": "Neutral",
+      "down_1sigma": 120.88,
+      "up_1sigma": 152.56,
+      "down_2sigma": 105.04,
+      "up_2sigma": 168.4,
+      "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.0530809504398664,
-      "cash_ratio": 0.008652190965951146,
-      "earnings_in_days": 57.0,
+      "debt_ratio": 0.0598020732683798,
+      "cash_ratio": 0.03299619820045586,
+      "earnings_in_days": 55.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -4190,9 +3657,89 @@
       "strategy": "Not priced",
       "options": null,
       "recommendation": {
-        "ticker": "LLY",
+        "ticker": "NOW",
         "action": "NO_DATA",
-        "headline": "LLY: not priced — no IV read this run",
+        "headline": "NOW: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 43/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      }
+    },
+    {
+      "rank": 26,
+      "ticker": "NVDA",
+      "price": 224.41,
+      "score": 34.0,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.033,
+      "hv_annual": 43.9,
+      "hv_pctile": 0.875,
+      "em_pct": 8.74,
+      "horizon_days": 10,
+      "down_1sigma": 204.81,
+      "up_1sigma": 244.01,
+      "down_2sigma": 185.2,
+      "up_2sigma": 263.62,
+      "lean": "Neutral",
+      "note": "",
+      "debt_ratio": 0.007171292055513011,
+      "cash_ratio": 0.01152813786361598,
+      "earnings_in_days": 75.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "NVDA",
+        "action": "NO_DATA",
+        "headline": "NVDA: not priced — no IV read this run",
         "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
         "confidence": 0.0,
         "premium_state": "unknown",
@@ -4229,7 +3776,87 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 28/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 34/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      }
+    },
+    {
+      "rank": 27,
+      "ticker": "JNJ",
+      "price": 275.21,
+      "score": 31.7,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.65,
+      "hv_annual": 19.6,
+      "hv_pctile": 0.55,
+      "em_pct": 3.9,
+      "horizon_days": 10,
+      "down_1sigma": 264.47,
+      "up_1sigma": 285.95,
+      "down_2sigma": 253.74,
+      "up_2sigma": 296.68,
+      "lean": "Bullish",
+      "note": "",
+      "debt_ratio": 0.07393534701085705,
+      "cash_ratio": 0.03129843104654143,
+      "earnings_in_days": 40.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "JNJ",
+        "action": "NO_DATA",
+        "headline": "JNJ: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "compliance": {
+            "tier": "n/a",
+            "note": "No position — nothing to rule on."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 32/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -4239,26 +3866,26 @@
     {
       "rank": 28,
       "ticker": "UBER",
-      "price": 75.24,
-      "score": 13.0,
+      "price": 76.45,
+      "score": 12.4,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.883,
-      "hv_annual": 43.3,
-      "hv_pctile": 0.8,
-      "em_pct": 8.63,
+      "bandwidth_pctile": 0.875,
+      "hv_annual": 43.6,
+      "hv_pctile": 0.817,
+      "em_pct": 8.68,
       "horizon_days": 10,
-      "down_1sigma": 68.75,
-      "up_1sigma": 81.73,
-      "down_2sigma": 62.26,
-      "up_2sigma": 88.22,
-      "lean": "Neutral",
+      "down_1sigma": 69.82,
+      "up_1sigma": 83.08,
+      "down_2sigma": 63.19,
+      "up_2sigma": 89.71,
+      "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.09585364068597736,
-      "cash_ratio": 0.03507888057890721,
-      "earnings_in_days": 62.0,
+      "debt_ratio": 0.09433653510604388,
+      "cash_ratio": 0.03452367615387731,
+      "earnings_in_days": 61.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
@@ -4277,8 +3904,8 @@
         "confidence": 0.0,
         "premium_state": "unknown",
         "premium_score": null,
-        "bias": "neutral",
-        "bias_strength": "none",
+        "bias": "bullish",
+        "bias_strength": "weak",
         "plan": {
           "key": "no_data",
           "name": "Not priced",
@@ -4309,7 +3936,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 13/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 12/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
@@ -4319,26 +3946,26 @@
     {
       "rank": 29,
       "ticker": "CRM",
-      "price": 258.11,
+      "price": 256.93,
       "score": 0.0,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
       "bandwidth_pctile": 1.0,
-      "hv_annual": 77.2,
+      "hv_annual": 77.4,
       "hv_pctile": 1.0,
-      "em_pct": 15.37,
+      "em_pct": 15.43,
       "horizon_days": 10,
-      "down_1sigma": 218.44,
-      "up_1sigma": 297.78,
-      "down_2sigma": 178.77,
-      "up_2sigma": 337.45,
+      "down_1sigma": 217.29,
+      "up_1sigma": 296.57,
+      "down_2sigma": 177.65,
+      "up_2sigma": 336.21,
       "lean": "Bullish",
       "note": "",
-      "debt_ratio": 0.19948732253101417,
-      "cash_ratio": 0.053680241835092325,
-      "earnings_in_days": null,
+      "debt_ratio": 0.20040351105563342,
+      "cash_ratio": 0.05392677991552825,
+      "earnings_in_days": 90.0,
       "implied_move_pct": null,
       "vol_verdict": null,
       "iv_annual": null,
