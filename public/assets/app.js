@@ -668,9 +668,12 @@
       : "";
 
     if (!all.length) {
-      host.innerHTML = '<p class="empty">No long-dated chains in the last run. Only the ' +
-        "top-ranked names are priced, and many of those have no listed expiry near 13 months — " +
-        "LEAPS exist mostly on large caps.</p>";
+      host.innerHTML = '<p class="empty">No long-dated spreads in the last run.</p>' +
+        '<p class="empty faint">Only the top-ranked names are priced. Of those, some have no ' +
+        "listed expiry near 13 months — LEAPS exist mostly on large caps — and others have the " +
+        "expiry but no usable quotes on it. A scan that runs outside US market hours reads a " +
+        "chain with no bid, no ask and no open interest, which is not enough to price a spread " +
+        "against. The scheduled run is half an hour after the close for that reason.</p>";
       $("#spreadfilters").innerHTML = "";
       return;
     }

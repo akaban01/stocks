@@ -61,6 +61,13 @@ EARNINGS_PER_YEAR = 4
 # doubly so out here, where the capital is committed for the whole period.
 MIN_CREDIT_TO_WIDTH = 0.20
 
+# Below this annualized IV the long chain is not telling us anything. Outside
+# market hours the feed returns a floor value — 0.01% to 0.8% — with zero bid,
+# zero ask and zero open interest on every contract. That is absence of data
+# dressed as data: every probability and every cheap-or-rich call downstream
+# would be computed against a distribution with no width.
+MIN_USABLE_IV = 5.0
+
 PLAYBOOK = {
     "leaps_bull_call": "Buy a call about 13 months out, sell a higher one in the same expiry. A "
                        "bullish position with a year to be right and a cost you know on day one — "
@@ -119,6 +126,17 @@ def _manage_diagonal() -> dict:
 
 # --------------------------------------------------------------- the structures
 
+def _tradeable(*quotes) -> bool:
+    """Every leg has a real two-sided market.
+
+    When the feed has no quotes it still returns contracts, with bid and ask at
+    zero; the mid then falls back to the last traded price, which can be days
+    stale. A spread priced off two stale last-trades has a debit, a max profit
+    and a breakeven that all look real and none of which you could transact."""
+    return all(q is not None and q.bid is not None and q.ask is not None
+               and q.ask >= q.bid > 0 for q in quotes)
+
+
 def _debit_vertical(view: OptionView, bullish: bool) -> Plan | None:
     """Long-dated bull call / bear put spread, placed by moneyness."""
     exp, dte = view.long_expiry, view.long_dte
@@ -129,7 +147,7 @@ def _debit_vertical(view: OptionView, bullish: bool) -> Plan | None:
     target = view.spot * (1 + VERTICAL_WIDTH * (1 if bullish else -1))
     short_q = pick_quote(view, exp, right, target, exclude={long_q.strike})
     legs = [x for x in (make_leg("buy", long_q, exp), make_leg("sell", short_q, exp)) if x]
-    if len(legs) < 2:
+    if len(legs) < 2 or not _tradeable(long_q, short_q):
         return None
     width = abs(short_q.strike - long_q.strike)
     if width <= 0:
@@ -172,7 +190,7 @@ def _credit_vertical(view: OptionView, bullish: bool) -> Plan | None:
                         wing_strike(view.spot, short_q.strike, step, below=bullish),
                         exclude={short_q.strike})
     legs = [x for x in (make_leg("sell", short_q, exp), make_leg("buy", long_q, exp)) if x]
-    if len(legs) < 2:
+    if len(legs) < 2 or not _tradeable(short_q, long_q):
         return None
     width = abs(short_q.strike - long_q.strike)
     if width <= 0:
@@ -220,7 +238,7 @@ def _poor_mans_covered_call(view: OptionView, front_sigma: float) -> Plan | None
         return None
     legs = [x for x in (make_leg("buy", long_q, long_exp),
                         make_leg("sell", short_q, front_exp)) if x]
-    if len(legs) < 2:
+    if len(legs) < 2 or not _tradeable(long_q, short_q):
         return None
     plan = Plan(
         key="poor_mans_covered_call", name="Poor Man's Covered Call",
@@ -350,6 +368,12 @@ def long_spreads(row: dict, view: OptionView | None, risk_budget: float = 2500.0
     if view is None or not view.long_expiry or not view.long_dte:
         return None
     if view.long_expiry not in view.chain:
+        return None
+    # No usable volatility read on the long chain means no probability and no
+    # cheap-or-rich judgement can be made, so there is nothing honest to publish.
+    # The near-term engine makes the same call when it cannot read a chain; this
+    # one used to publish anyway, off a floor IV, and the numbers looked real.
+    if view.long_iv is None or view.long_iv < MIN_USABLE_IV:
         return None
 
     long_sigma = (view.long_iv or view.iv_annual) / 100 * ((view.long_dte / 365) ** 0.5)
