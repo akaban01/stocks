@@ -94,11 +94,24 @@ options:
   top_n: 15                 # how many top-ranked names to price
   margin: 0.15              # ± band around the historical move for cheap/rich
 
+  long_dated:
+    # Also read a ~13-month expiry per priced name, for the Spreads tab. Costs
+    # one extra chain call per ticker. Exchanges list long-dated options on
+    # January cycles, so the nearest real expiry to the target can be anywhere
+    # from ~9 to ~18 months out; the actual DTE is always reported.
+    enabled: true
+    target_days: 395        # ~13 months
+
 strategy:
   # Turns the scan + the IV read into ONE explicit instruction per ticker:
   # buy premium / sell premium / stand aside, with the exact legs, net price,
   # max loss, breakevens and management rules. See spread_scanner/strategy.py.
   risk_budget_usd: 500      # max loss per position; sets the suggested contract count
+  long_risk_budget_usd: 2500
+                            # the same, for the ≈13-month spreads. Separate because
+                            # a LEAPS spread costs several times a monthly one and
+                            # holds the capital for a year — sizing them against the
+                            # short-term budget would mark every one "over budget".
   allow_undefined_risk: false
                             # true = allow naked short strangles as an alternative
                             #        when the chain is deep and there's no earnings

@@ -56,6 +56,15 @@ SPREAD_FAIR = 15.0
 OI_GOOD = 500
 OI_FAIR = 100
 
+# --- the long-dated (LEAPS) expiry -------------------------------------------
+# "13 months out" is a target, not a listing: exchanges list LEAPS on January
+# cycles plus a few quarterlies, so the nearest real expiry to 395 days can sit
+# anywhere from ~9 to ~18 months out. We take the closest listed expiry inside
+# that window and report its true DTE rather than pretending it is 13 months.
+LONG_TARGET_DAYS = 395
+LONG_MIN_DTE = 270
+LONG_MAX_DTE = 550
+
 
 @dataclass
 class Quote:
@@ -110,6 +119,14 @@ class OptionView:
     # --- the chain we priced off -------------------------------------------
     expiry: str
     days_to_expiry: int
+
+    # --- the long-dated expiry the LEAPS spreads are built on ----------------
+    long_expiry: str | None = None
+    long_dte: int | None = None
+    long_iv: float | None = None          # ATM IV on that expiry, annualized %
+    long_spread_pct: float | None = None  # ATM bid/ask as % of mid, that expiry
+    long_open_interest: int | None = None
+    long_liquidity: str = "unknown"
     expiries: list[dict] = field(default_factory=list)   # [{"date","dte"}]
     # {expiry: {"call": {strike: Quote}, "put": {strike: Quote}}} — in-memory
     # only; the strategy engine prices legs off it, it never reaches the JSON.
@@ -139,6 +156,12 @@ class OptionView:
             "expiry": self.expiry,
             "days_to_expiry": self.days_to_expiry,
             "expiries": self.expiries,
+            "long_expiry": self.long_expiry,
+            "long_dte": self.long_dte,
+            "long_iv": self.long_iv,
+            "long_spread_pct": self.long_spread_pct,
+            "long_open_interest": self.long_open_interest,
+            "long_liquidity": self.long_liquidity,
         }
 
 
@@ -168,6 +191,19 @@ def _dte(expiry: str, today: dt.date | None = None) -> int | None:
 def _nearest_expiry(expiries: list[str], target_days: int) -> tuple[str, int] | None:
     """Pick the expiry closest to `target_days` calendar days out (future only)."""
     dated = [(e, d) for e in expiries if (d := _dte(e)) is not None and d >= 1]
+    if not dated:
+        return None
+    return min(dated, key=lambda ed: abs(ed[1] - target_days))
+
+
+def _long_expiry(expiries: list[str], target_days: int = LONG_TARGET_DAYS,
+                 lo: int = LONG_MIN_DTE, hi: int = LONG_MAX_DTE) -> tuple[str, int] | None:
+    """The listed expiry closest to `target_days`, restricted to [lo, hi] days.
+
+    Returns None when the name simply has no LEAPS that far out — common for
+    small caps and for most ETFs' back months. Better to say "no long-dated
+    chain" than to build a 13-month plan on a 4-month contract."""
+    dated = [(e, d) for e in expiries if (d := _dte(e)) is not None and lo <= d <= hi]
     if not dated:
         return None
     return min(dated, key=lambda ed: abs(ed[1] - target_days))
@@ -353,12 +389,15 @@ def implied_view(
     hv_history: list[float] | None = None,
     strike_window: float = 3.0,
     fetch_expiries: int = 2,
+    long_dated: bool = True,
+    long_target_days: int = LONG_TARGET_DAYS,
 ) -> OptionView | None:
     """Read `ticker`'s option chain and build the full volatility picture.
 
     `hv_annual` / `hv_history` come from the scanner (annualized %, the trailing
     year of readings) and drive the IV rank / percentile / VRP numbers.
     `strike_window` is how many expiry-sigmas of strikes to keep in the snapshot.
+    `long_dated` adds a third chain ~13 months out for the LEAPS spread engine.
     """
     try:
         tk = yf.Ticker(ticker)
@@ -380,6 +419,12 @@ def implied_view(
     back = _nearest_expiry([e for e in expiries if e != expiry], target_days=60)
     if back and fetch_expiries > 1:
         wanted.append(back[0])
+
+    # One more chain, ~13 months out, for the long-dated spreads. It costs a
+    # third call per ticker, so it is opt-out.
+    long_exp = _long_expiry(expiries, target_days=long_target_days) if long_dated else None
+    if long_exp and long_exp[0] not in wanted:
+        wanted.append(long_exp[0])
 
     for exp in wanted:
         try:
@@ -423,12 +468,33 @@ def implied_view(
     score = premium_score(rank, ratio, slope)
 
     # Trim the snapshot to strikes the strategy engine could plausibly use.
-    lo, hi = spot * (1 - strike_window * expiry_sigma), spot * (1 + strike_window * expiry_sigma)
-    trimmed = {
-        exp: {right: {k: q for k, q in side.items() if lo <= k <= hi}
-              for right, side in sides.items()}
-        for exp, sides in chain.items()
-    }
+    # The window is scaled per expiry: a 13-month chain needs far wider strikes
+    # than the front month, and trimming it to the front month's sigma would cut
+    # away exactly the deep-ITM and far-OTM legs the LEAPS structures need.
+    def _trim(exp: str, sides: dict) -> dict:
+        exp_dte = _dte(exp) or dte
+        sig = iv / 100 * math.sqrt(max(exp_dte, 1) / 365)
+        lo, hi = spot * (1 - strike_window * sig), spot * (1 + strike_window * sig)
+        return {right: {k: q for k, q in side.items() if lo <= k <= hi}
+                for right, side in sides.items()}
+
+    trimmed = {exp: _trim(exp, sides) for exp, sides in chain.items()}
+
+    # The long-dated ATM contract's own liquidity: LEAPS quote much wider than
+    # the front month, and that spread is paid twice on a spread you hold for a
+    # year. Read it off the real chain rather than assuming the front month's.
+    long_expiry = long_dte = long_iv = long_spread = long_oi = None
+    long_liq = "unknown"
+    if long_exp and long_exp[0] in trimmed:
+        long_expiry, long_dte = long_exp
+        lcalls, lputs = trimmed[long_expiry]["call"], trimmed[long_expiry]["put"]
+        long_iv = _atm_iv(lcalls, lputs, spot)
+        lk = _nearest_strike(lcalls, spot)
+        lq = lcalls.get(lk) if lk is not None else None
+        if lq is not None:
+            long_spread = round(lq.spread_pct, 1) if lq.spread_pct is not None else None
+            long_oi = lq.open_interest
+        long_liq = classify_liquidity(long_spread, long_oi)
 
     return OptionView(
         ticker=ticker,
@@ -454,6 +520,12 @@ def implied_view(
         expiry=expiry,
         days_to_expiry=dte,
         expiries=[{"date": e, "dte": _dte(e)} for e in expiries[:12]],
+        long_expiry=long_expiry,
+        long_dte=long_dte,
+        long_iv=long_iv,
+        long_spread_pct=long_spread,
+        long_open_interest=long_oi,
+        long_liquidity=long_liq,
         chain=trimmed,
     )
 
@@ -464,6 +536,8 @@ def screen_options(
     margin: float = 0.15,
     hv_annual: dict[str, float] | None = None,
     hv_history: dict[str, list[float]] | None = None,
+    long_dated: bool = True,
+    long_target_days: int = LONG_TARGET_DAYS,
 ) -> dict[str, OptionView]:
     """`rows` = [(ticker, spot, hist_move_pct)]. Returns {ticker: OptionView}."""
     out: dict[str, OptionView] = {}
@@ -472,6 +546,8 @@ def screen_options(
             ticker, spot, hist, horizon_days, margin,
             hv_annual=(hv_annual or {}).get(ticker),
             hv_history=(hv_history or {}).get(ticker),
+            long_dated=long_dated,
+            long_target_days=long_target_days,
         )
         if view is not None:
             out[ticker] = view

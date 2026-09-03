@@ -8,10 +8,11 @@ made both halves harder to change.
 
 So everything lands in ``<outdir>/data/`` as versioned JSON:
 
-    scan.json     the ranked signals, the option/IV read, and one explicit
-                  strategy recommendation per ticker — plus the copy the UI
-                  needs (glossary, action labels, strategy playbook), so the
-                  frontend never has to hardcode trading explanations.
+    scan.json     the ranked signals, the option/IV read, one explicit strategy
+                  recommendation per ticker, and the ≈13-month spread candidates
+                  behind the Spreads tab — plus the copy the UI needs (glossary,
+                  action labels, strategy playbook), so the frontend never has
+                  to hardcode trading explanations.
     signals.csv   the same rows, flat, for spreadsheets.
 
 ``SCHEMA_VERSION`` is bumped whenever the shape changes so a cached frontend can
@@ -27,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.0.0"
+SCHEMA_VERSION = "2.1.0"
 
 # ---------------------------------------------------------------------------
 # UI copy. It lives here — not in the frontend — so the meaning of a field and
@@ -122,9 +123,23 @@ GLOSSARY = {
                "building; fired means it just released, which is the actual entry trigger.",
     "lean": "A faint directional hint from squeeze momentum. A tiebreaker between two structures, never a "
             "reason to take a position.",
+    "long_dated": "The ≈13-month expiry the Spreads tab is built on. It is whichever listed expiry "
+                  "sits closest to 395 days out, because exchanges list long-dated options on "
+                  "January cycles rather than on a rolling 13-month schedule — so the real number "
+                  "of days is always shown next to it.",
+    "leaps_vega": "Over a year, the level of implied volatility moves a long-dated spread far more "
+                  "than time decay does. A 13-month debit spread is mostly a bet on direction and "
+                  "partly a bet on volatility rising; a 13-month credit spread earns its theta "
+                  "almost entirely in the final months.",
+    "reward_to_risk": "Maximum profit divided by maximum loss. On a long-dated spread it is the "
+                      "number that matters most, because you are committing the capital for the "
+                      "whole period rather than recycling it monthly.",
+    "risk_form": "What actually secures a position: a debit you have already paid, margin against a "
+                 "short option, or shares you already own. It decides how the trade can hurt you, "
+                 "which is a different question from how likely it is to win.",
     "earnings": "Calendar days to the next report. Inside the expiry, IV is elevated for a reason and "
                 "collapses the morning after — that cuts both ways depending on which side you're on.",
-    "debt_cash_ratio": "The Shariah financial screen: interest-bearing debt and cash as a share of market "
+    "debt_cash_ratio": "The balance-sheet screen: interest-bearing debt and cash as a share of market "
                        "cap, both required under ~33%.",
 }
 
@@ -132,11 +147,10 @@ DISCLAIMER = {
     "general": "Educational tool, not financial advice. Expected-move bands and probabilities are "
                "statistical estimates from past and implied volatility — not predictions. Option prices "
                "are last-known mids and will have moved; price every trade in your broker before placing it.",
-    "compliance": "Not a fatwa. The halal screen covers the underlying company (industry plus debt and "
-                  "cash ratios, AAOIFI / S&P Islamic style), not the instrument. Conventional options are "
-                  "themselves contested in Islamic finance — selling them, trading on margin and short "
-                  "selling draw the most objection. Seek your own ruling, and re-verify each name with a "
-                  "dedicated screener (Zoya, Musaffa).",
+    "risk": "Every position here can lose. A debit spread can expire worthless and take the whole "
+            "premium with it; a credit spread can lose several times what it collected. Position "
+            "sizes are computed against the risk budgets in config.yaml, not against your account "
+            "or your tolerance for a losing year.",
     "method": "Indicators are computed without look-ahead: every value uses only data up to and including "
               "its own bar. IV rank and percentile are proxies ranked against realized-volatility history, "
               "because free data sources do not publish implied-volatility history.",
@@ -219,17 +233,34 @@ def _headline_actions(signals: list[dict], limit: int = 5) -> list[dict]:
 
 # -------------------------------------------------------------- the main write
 
+def _long_dated_summary(signals: list[dict]) -> dict:
+    """Headline counts for the Spreads tab, so it can say what it has before
+    the reader scrolls a table of legs."""
+    blocks = [s["long_dated"] for s in signals if s.get("long_dated")]
+    candidates = sum(len(b.get("candidates") or []) for b in blocks)
+    expiries = sorted({b["expiry"] for b in blocks if b.get("expiry")})
+    return {
+        "tickers": len(blocks),
+        "candidates": candidates,
+        "preferred": sum(1 for b in blocks if b.get("preferred")),
+        "expiries": expiries,
+        "target_days": blocks[0]["target_days"] if blocks else None,
+    }
+
+
 def build_scan(df: pd.DataFrame, params: dict, *,
                weights: dict | None = None,
                weights_as_of: str | None = None,
                recommendations: dict[str, dict] | None = None,
                option_views: dict | None = None,
+               long_spreads: dict[str, dict] | None = None,
                universe: dict | None = None,
                playbook: dict | None = None) -> dict:
     """Assemble the full scan payload (no I/O — handy to test and to reuse)."""
     now_iso, now_utc = _now()
     recommendations = recommendations or {}
     option_views = option_views or {}
+    long_spreads = long_spreads or {}
 
     signals: list[dict] = []
     for row in (df.to_dict("records") if not df.empty else []):
@@ -240,6 +271,10 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         view = option_views.get(ticker)
         signal["options"] = _clean(view.as_dict()) if view is not None else None
         signal["recommendation"] = _clean(recommendations.get(ticker))
+        # The ≈13-month spreads are a separate block, not a variant of the
+        # recommendation: they answer a different question on the same chain,
+        # and most names have no long-dated chain at all.
+        signal["long_dated"] = _clean(long_spreads.get(ticker))
         signals.append(signal)
 
     return {
@@ -255,6 +290,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
             "source": "auto-calibrated" if weights_as_of else "default",
         },
         "counts": _counts(signals),
+        "long_dated": _long_dated_summary(signals),
         "top_actions": _headline_actions(signals),
         "reference": {
             "actions": ACTIONS,

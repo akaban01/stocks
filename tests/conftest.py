@@ -32,12 +32,15 @@ def bs_price(spot: float, strike: float, iv_pct: float, dte: int, right: str) ->
 
 def build_chain(spot: float, iv: float, dte: int, step: float = 5.0,
                 skew_pts: float = 4.0, spread_frac: float = 0.03,
-                oi: int = 1500) -> dict:
-    """{"call": {strike: Quote}, "put": {strike: Quote}} around `spot`."""
+                oi: int = 1500, span: int = 14) -> dict:
+    """{"call": {strike: Quote}, "put": {strike: Quote}} around `spot`.
+
+    `span` is how many strike increments to build either side — a long-dated
+    chain needs a wider ladder than the front month."""
     sigma = iv / 100 * math.sqrt(max(dte, 1) / 365)
     base = round(spot / step) * step
     side: dict[str, dict[float, Quote]] = {"call": {}, "put": {}}
-    for i in range(-14, 15):
+    for i in range(-span, span + 1):
         strike = round(base + i * step, 2)
         if strike <= 0:
             continue
@@ -58,8 +61,15 @@ def build_chain(spot: float, iv: float, dte: int, step: float = 5.0,
 def make_view(ticker: str = "TEST", spot: float = 200.0, iv: float = 45.0,
               hv: float = 30.0, iv_rank: float = 60.0, dte: int = 24,
               horizon: int = 10, liquidity: str = "good", term_slope: float = 0.03,
-              skew: float = 4.0, step: float = 5.0) -> OptionView:
-    """A fully-populated OptionView with a priced two-expiry chain."""
+              skew: float = 4.0, step: float = 5.0, long_dte: int | None = 409,
+              long_liquidity: str | None = None) -> OptionView:
+    """A fully-populated OptionView with a priced chain.
+
+    Three expiries: the front one the near-term engine trades, a ~2-month back
+    month for the term-structure read, and (unless ``long_dte=None``) a
+    ~13-month LEAPS expiry for the long-dated engine. The long chain is built on
+    a wider strike ladder, because a year of sigma reaches far past the front
+    month's strikes."""
     expiry = (dt.date.today() + dt.timedelta(days=dte)).isoformat()
     back = (dt.date.today() + dt.timedelta(days=dte + 33)).isoformat()
     ratio = round(iv / hv, 2)
@@ -68,6 +78,24 @@ def make_view(ticker: str = "TEST", spot: float = 200.0, iv: float = 45.0,
     hist = hv * math.sqrt(horizon / 252)
     spread_pct = {"good": 2.5, "fair": 11.0, "poor": 24.0}[liquidity]
     oi = {"good": 2400, "fair": 260, "poor": 40}[liquidity]
+
+    chain = {expiry: build_chain(spot, iv, dte, step, skew, spread_pct / 200, oi),
+             back: build_chain(spot, iv * (1 + term_slope), dte + 33, step, skew,
+                               spread_pct / 200, oi)}
+    expiries = [{"date": expiry, "dte": dte}, {"date": back, "dte": dte + 33}]
+
+    long_expiry = long_iv = long_spread = long_oi = None
+    if long_dte:
+        long_expiry = (dt.date.today() + dt.timedelta(days=long_dte)).isoformat()
+        # LEAPS quote flatter in vol and wider in price than the front month.
+        long_iv = round(iv * 0.9, 2)
+        lliq = long_liquidity or liquidity
+        long_spread = {"good": 5.0, "fair": 13.0, "poor": 26.0}[lliq]
+        long_oi = {"good": 900, "fair": 180, "poor": 25}[lliq]
+        chain[long_expiry] = build_chain(spot, long_iv, long_dte, step, skew,
+                                         long_spread / 200, long_oi, span=30)
+        expiries.append({"date": long_expiry, "dte": long_dte})
+
     return OptionView(
         ticker=ticker, spot=spot, iv_annual=iv, hv_annual=hv,
         implied_move_pct=round(implied, 2), hist_move_pct=round(hist, 2),
@@ -80,10 +108,12 @@ def make_view(ticker: str = "TEST", spot: float = 200.0, iv: float = 45.0,
         atm_spread_pct=spread_pct, atm_open_interest=oi,
         liquidity=options.classify_liquidity(spread_pct, oi),
         expiry=expiry, days_to_expiry=dte,
-        expiries=[{"date": expiry, "dte": dte}, {"date": back, "dte": dte + 33}],
-        chain={expiry: build_chain(spot, iv, dte, step, skew, spread_pct / 200, oi),
-               back: build_chain(spot, iv * (1 + term_slope), dte + 33, step, skew,
-                                 spread_pct / 200, oi)},
+        expiries=expiries,
+        long_expiry=long_expiry, long_dte=long_dte, long_iv=long_iv,
+        long_spread_pct=long_spread, long_open_interest=long_oi,
+        long_liquidity=options.classify_liquidity(long_spread, long_oi)
+        if long_expiry else "unknown",
+        chain=chain,
     )
 
 

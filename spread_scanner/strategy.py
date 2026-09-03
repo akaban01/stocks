@@ -25,9 +25,9 @@ expiry, net debit/credit from live mids, max profit, max loss, breakevens, a
 model probability of profit, a position size for your risk budget, and the
 management rules (profit target, stop, when to be out).
 
-    ⚠️ Educational tool, not financial advice — and not a fatwa. Conventional
-    options are contested in Islamic finance; every plan carries a `compliance`
-    note, but the ruling is yours to seek. See ``COMPLIANCE_NOTE``.
+    ⚠️ Educational tool, not financial advice. Every plan carries a `risk_form`
+    note describing what secures the position — a paid debit, margin, or shares
+    you already own — because that is what decides how it can hurt you.
 """
 
 from __future__ import annotations
@@ -55,25 +55,22 @@ MIN_SCORE_FOR_FAIR_IV = 55.0   # at fair IV, only a genuinely coiled name is wor
 MIN_CREDIT_TO_WIDTH = 0.20     # a credit spread paying less than this isn't worth the risk
 MAX_CONTRACTS = 20
 
-COMPLIANCE_NOTE = (
-    "Conventional exchange-traded options are contested in Islamic finance: many "
-    "scholars treat the contract itself as impermissible (gharar, and paying for a "
-    "right rather than an asset), while others permit defined-risk, fully-funded "
-    "positions. Selling options, trading on margin and short selling draw the most "
-    "objections. The halal screen here covers the *underlying company*, not the "
-    "instrument — seek your own ruling before trading options."
-)
-
-_COMPLIANCE = {
-    "debit": ("contested", "You pay a known premium up front and can never owe more than it — "
-                           "the form most often argued to be acceptable, though the contract "
-                           "itself remains contested."),
-    "credit": ("more_contested", "Selling options collects a premium for taking on an obligation, "
-                                 "normally against margin — the form scholars object to most."),
-    "covered": ("contested", "Written against shares you already own rather than on margin, which "
-                             "some scholars treat more leniently than a naked short option."),
-    "shares": ("least_contested", "Owning the screened shares outright involves no option contract."),
-    "none": ("n/a", "No position — nothing to rule on."),
+# What actually secures each structure. This is the difference between a trade
+# that can only lose the cash you put up and one that can be called on for more,
+# so it ships alongside every plan rather than being left to the reader.
+_RISK_FORM = {
+    "debit": ("defined_debit", "You pay a known premium up front and can never lose more than it. "
+                               "The debit is the whole risk; nothing can be called on later."),
+    "credit": ("short_premium", "You collect a premium for taking on an obligation, held against "
+                                "margin. The long wings cap the loss — without them it is open-ended."),
+    "covered": ("covered", "The short call is secured by shares you already own rather than by "
+                           "margin, so assignment delivers stock you hold instead of creating a short."),
+    "long_option": ("option_covered", "The short call is secured by the long call, not by shares and not "
+                                      "by margin: assignment is covered by exercising or selling the long "
+                                      "leg. That is why the whole position can only lose the debit — and "
+                                      "why the long leg must never be closed first."),
+    "shares": ("shares_only", "Owning the shares outright — no option contract, no expiry, no margin."),
+    "none": ("n/a", "No position — nothing to secure."),
 }
 
 # Human-readable copy for each strategy, shipped in the JSON so the frontend
@@ -135,7 +132,7 @@ class Plan:
     credit_to_width: float | None = None
     manage: dict = field(default_factory=dict)
     sizing: dict = field(default_factory=dict)
-    compliance: dict = field(default_factory=dict)
+    risk_form: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -177,7 +174,7 @@ def _p_above(spot: float, strike: float, sigma: float) -> float | None:
     return 1 - _norm_cdf(math.log(strike / spot) / sigma)
 
 
-def _pop(spot: float, breakevens: list[float], zone: str, sigma: float) -> float | None:
+def pop_estimate(spot: float, breakevens: list[float], zone: str, sigma: float) -> float | None:
     """Probability of finishing in the profit zone, from the same model."""
     if not breakevens or sigma <= 0:
         return None
@@ -202,11 +199,11 @@ def _pop(spot: float, breakevens: list[float], zone: str, sigma: float) -> float
 
 # -------------------------------------------------------------- chain helpers
 
-def _side(view: OptionView, expiry: str, right: str) -> dict[float, Quote]:
+def chain_side(view: OptionView, expiry: str, right: str) -> dict[float, Quote]:
     return (view.chain.get(expiry) or {}).get(right, {})
 
 
-def _strike_step(strikes) -> float:
+def strike_step(strikes) -> float:
     """Typical gap between consecutive strikes in this chain."""
     ks = sorted(strikes)
     if len(ks) < 2:
@@ -215,7 +212,7 @@ def _strike_step(strikes) -> float:
     return gaps[len(gaps) // 2] if gaps else 1.0
 
 
-def _wing_strike(spot: float, short_strike: float, step: float, below: bool) -> float:
+def wing_strike(spot: float, short_strike: float, step: float, below: bool) -> float:
     """Where to put the protective long leg, as an absolute strike."""
     dist = abs(spot - short_strike)
     width = max(WING_MIN_STEPS * step, WING_WIDTH_FRAC * dist)
@@ -223,17 +220,17 @@ def _wing_strike(spot: float, short_strike: float, step: float, below: bool) -> 
     return short_strike - width if below else short_strike + width
 
 
-def _pick(view: OptionView, expiry: str, right: str, target: float,
+def pick_quote(view: OptionView, expiry: str, right: str, target: float,
           exclude: set[float] | None = None) -> Quote | None:
     """The real contract closest to `target`, skipping strikes already used."""
-    side = _side(view, expiry, right)
+    side = chain_side(view, expiry, right)
     candidates = [k for k in side if k not in (exclude or set())]
     if not candidates:
         return None
     return side[min(candidates, key=lambda k: abs(k - target))]
 
 
-def _leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | None:
+def make_leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | None:
     if q is None:
         return None
     strike_txt = f"{q.strike:g}"
@@ -244,7 +241,7 @@ def _leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | None:
     )
 
 
-def _net(legs: list[Leg]) -> float | None:
+def net_cost(legs: list[Leg]) -> float | None:
     """Net cost per spread in dollars. Positive = debit, negative = credit."""
     total = 0.0
     for leg in legs:
@@ -254,7 +251,7 @@ def _net(legs: list[Leg]) -> float | None:
     return round(total * 100, 2)
 
 
-def _sigma_expiry(view: OptionView, dte: int) -> float:
+def sigma_to_expiry(view: OptionView, dte: int) -> float:
     """1σ move over the life of the expiry, as a fraction of spot."""
     return view.iv_annual / 100 * math.sqrt(max(dte, 1) / 365)
 
@@ -294,7 +291,7 @@ def _manage_calendar() -> dict:
     }
 
 
-def _size(plan: Plan, budget: float) -> dict:
+def size_position(plan: Plan, budget: float) -> dict:
     """How many spreads fit the risk budget, and what they tie up."""
     risk = plan.max_loss if plan.max_loss is not None else (plan.net if (plan.net or 0) > 0 else None)
     if not risk or risk <= 0:
@@ -321,12 +318,18 @@ def _size(plan: Plan, budget: float) -> dict:
     }
 
 
+def resolve_risk_form(basis: str) -> dict:
+    """{"tier", "note"} for a structure's ``risk_form`` basis (debit / credit /
+    covered / shares / none). Shared with the long-dated engine."""
+    tier, note = _RISK_FORM.get(basis, _RISK_FORM["none"])
+    return {"tier": tier, "note": note}
+
+
 def _finish(plan: Plan, view: OptionView, sigma: float, budget: float) -> Plan:
-    plan.net = _net(plan.legs)
-    plan.pop = _pop(view.spot, plan.breakevens, plan.profit_zone, sigma)
-    tier, note = _COMPLIANCE.get(plan.compliance.get("basis", "none"), _COMPLIANCE["none"])
-    plan.compliance = {"tier": tier, "note": note}
-    plan.sizing = _size(plan, budget)
+    plan.net = net_cost(plan.legs)
+    plan.pop = pop_estimate(view.spot, plan.breakevens, plan.profit_zone, sigma)
+    plan.risk_form = resolve_risk_form(plan.risk_form.get("basis", "none"))
+    plan.sizing = size_position(plan, budget)
     plan.playbook = PLAYBOOK.get(plan.key, "")
     return plan
 
@@ -335,9 +338,9 @@ def _finish(plan: Plan, view: OptionView, sigma: float, budget: float) -> Plan:
 
 def _long_straddle(view: OptionView, sigma: float) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
-    call = _pick(view, exp, "call", view.spot)
-    put = _pick(view, exp, "put", view.spot)
-    legs = [x for x in (_leg("buy", call, exp), _leg("buy", put, exp)) if x]
+    call = pick_quote(view, exp, "call", view.spot)
+    put = pick_quote(view, exp, "put", view.spot)
+    legs = [x for x in (make_leg("buy", call, exp), make_leg("buy", put, exp)) if x]
     if len(legs) < 2:
         return None
     plan = Plan(
@@ -345,9 +348,9 @@ def _long_straddle(view: OptionView, sigma: float) -> Plan | None:
         thesis="Options are cheap and the chart is coiled — pay for the move, either direction.",
         playbook="", vega="long", theta="negative", risk="defined",
         legs=legs, expiry=exp, dte=dte, profit_zone="outside",
-        compliance={"basis": "debit"}, manage=_manage_long(),
+        risk_form={"basis": "debit"}, manage=_manage_long(),
     )
-    debit = _net(legs)
+    debit = net_cost(legs)
     if debit is not None:
         per_share = debit / 100
         plan.max_loss = debit
@@ -358,9 +361,9 @@ def _long_straddle(view: OptionView, sigma: float) -> Plan | None:
 
 def _long_strangle(view: OptionView, sigma: float) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
-    call = _pick(view, exp, "call", view.spot * (1 + STRANGLE_SIGMA * sigma))
-    put = _pick(view, exp, "put", view.spot * (1 - STRANGLE_SIGMA * sigma))
-    legs = [x for x in (_leg("buy", call, exp), _leg("buy", put, exp)) if x]
+    call = pick_quote(view, exp, "call", view.spot * (1 + STRANGLE_SIGMA * sigma))
+    put = pick_quote(view, exp, "put", view.spot * (1 - STRANGLE_SIGMA * sigma))
+    legs = [x for x in (make_leg("buy", call, exp), make_leg("buy", put, exp)) if x]
     if len(legs) < 2 or call.strike <= put.strike:
         return None
     plan = Plan(
@@ -368,9 +371,9 @@ def _long_strangle(view: OptionView, sigma: float) -> Plan | None:
         thesis="Cheap options plus a coiled chart — the budget version of the both-ways bet.",
         playbook="", vega="long", theta="negative", risk="defined",
         legs=legs, expiry=exp, dte=dte, profit_zone="outside",
-        compliance={"basis": "debit"}, manage=_manage_long(),
+        risk_form={"basis": "debit"}, manage=_manage_long(),
     )
-    debit = _net(legs)
+    debit = net_cost(legs)
     if debit is not None:
         per_share = debit / 100
         plan.max_loss = debit
@@ -381,12 +384,12 @@ def _long_strangle(view: OptionView, sigma: float) -> Plan | None:
 def _debit_vertical(view: OptionView, sigma: float, bullish: bool) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
     right = "call" if bullish else "put"
-    long_q = _pick(view, exp, right, view.spot)
+    long_q = pick_quote(view, exp, right, view.spot)
     if long_q is None:
         return None
     target = view.spot * (1 + DEBIT_SHORT_SIGMA * sigma * (1 if bullish else -1))
-    short_q = _pick(view, exp, right, target, exclude={long_q.strike})
-    legs = [x for x in (_leg("buy", long_q, exp), _leg("sell", short_q, exp)) if x]
+    short_q = pick_quote(view, exp, right, target, exclude={long_q.strike})
+    legs = [x for x in (make_leg("buy", long_q, exp), make_leg("sell", short_q, exp)) if x]
     if len(legs) < 2:
         return None
     width = abs(short_q.strike - long_q.strike)
@@ -400,9 +403,9 @@ def _debit_vertical(view: OptionView, sigma: float, bullish: bool) -> Plan | Non
         playbook="", vega="long", theta="negative", risk="defined",
         legs=legs, expiry=exp, dte=dte,
         profit_zone="above" if bullish else "below",
-        compliance={"basis": "debit"}, manage=_manage_long(),
+        risk_form={"basis": "debit"}, manage=_manage_long(),
     )
-    debit = _net(legs)
+    debit = net_cost(legs)
     if debit is not None and debit > 0:
         plan.max_loss = debit
         plan.max_profit = round(width * 100 - debit, 2)
@@ -416,13 +419,13 @@ def _credit_vertical(view: OptionView, sigma: float, bullish: bool) -> Plan | No
     exp, dte = view.expiry, view.days_to_expiry
     right = "put" if bullish else "call"
     sign = -1 if bullish else 1
-    short_q = _pick(view, exp, right, view.spot * (1 + sign * SHORT_SIGMA * sigma))
+    short_q = pick_quote(view, exp, right, view.spot * (1 + sign * SHORT_SIGMA * sigma))
     if short_q is None:
         return None
-    step = _strike_step(_side(view, exp, right))
-    wing_target = _wing_strike(view.spot, short_q.strike, step, below=bullish)
-    long_q = _pick(view, exp, right, wing_target, exclude={short_q.strike})
-    legs = [x for x in (_leg("sell", short_q, exp), _leg("buy", long_q, exp)) if x]
+    step = strike_step(chain_side(view, exp, right))
+    wing_target = wing_strike(view.spot, short_q.strike, step, below=bullish)
+    long_q = pick_quote(view, exp, right, wing_target, exclude={short_q.strike})
+    legs = [x for x in (make_leg("sell", short_q, exp), make_leg("buy", long_q, exp)) if x]
     if len(legs) < 2:
         return None
     width = abs(short_q.strike - long_q.strike)
@@ -436,9 +439,9 @@ def _credit_vertical(view: OptionView, sigma: float, bullish: bool) -> Plan | No
         playbook="", vega="short", theta="positive", risk="defined",
         legs=legs, expiry=exp, dte=dte,
         profit_zone="above" if bullish else "below",
-        compliance={"basis": "credit"}, manage=_manage_credit(),
+        risk_form={"basis": "credit"}, manage=_manage_credit(),
     )
-    net = _net(legs)
+    net = net_cost(legs)
     if net is not None and net < 0 and width > 0:
         credit = -net
         plan.max_profit = round(credit, 2)
@@ -451,20 +454,20 @@ def _credit_vertical(view: OptionView, sigma: float, bullish: bool) -> Plan | No
 
 def _iron_condor(view: OptionView, sigma: float) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
-    short_put = _pick(view, exp, "put", view.spot * (1 - SHORT_SIGMA * sigma))
-    short_call = _pick(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
+    short_put = pick_quote(view, exp, "put", view.spot * (1 - SHORT_SIGMA * sigma))
+    short_call = pick_quote(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
     if short_put is None or short_call is None or short_call.strike <= short_put.strike:
         return None
-    put_step = _strike_step(_side(view, exp, "put"))
-    call_step = _strike_step(_side(view, exp, "call"))
-    long_put = _pick(view, exp, "put",
-                     _wing_strike(view.spot, short_put.strike, put_step, below=True),
+    put_step = strike_step(chain_side(view, exp, "put"))
+    call_step = strike_step(chain_side(view, exp, "call"))
+    long_put = pick_quote(view, exp, "put",
+                     wing_strike(view.spot, short_put.strike, put_step, below=True),
                      exclude={short_put.strike})
-    long_call = _pick(view, exp, "call",
-                      _wing_strike(view.spot, short_call.strike, call_step, below=False),
+    long_call = pick_quote(view, exp, "call",
+                      wing_strike(view.spot, short_call.strike, call_step, below=False),
                       exclude={short_call.strike})
-    legs = [x for x in (_leg("sell", short_put, exp), _leg("buy", long_put, exp),
-                        _leg("sell", short_call, exp), _leg("buy", long_call, exp)) if x]
+    legs = [x for x in (make_leg("sell", short_put, exp), make_leg("buy", long_put, exp),
+                        make_leg("sell", short_call, exp), make_leg("buy", long_call, exp)) if x]
     if len(legs) < 4:
         return None
     plan = Plan(
@@ -472,9 +475,9 @@ def _iron_condor(view: OptionView, sigma: float) -> Plan | None:
         thesis="Premium is rich with no directional edge — collect it inside a defined-risk box.",
         playbook="", vega="short", theta="positive", risk="defined",
         legs=legs, expiry=exp, dte=dte, profit_zone="inside",
-        compliance={"basis": "credit"}, manage=_manage_credit(),
+        risk_form={"basis": "credit"}, manage=_manage_credit(),
     )
-    net = _net(legs)
+    net = net_cost(legs)
     width = max(short_put.strike - long_put.strike, long_call.strike - short_call.strike)
     if net is not None and net < 0 and width > 0:
         credit = -net
@@ -488,9 +491,9 @@ def _iron_condor(view: OptionView, sigma: float) -> Plan | None:
 
 def _short_strangle(view: OptionView, sigma: float) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
-    put = _pick(view, exp, "put", view.spot * (1 - SHORT_SIGMA * sigma))
-    call = _pick(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
-    legs = [x for x in (_leg("sell", put, exp), _leg("sell", call, exp)) if x]
+    put = pick_quote(view, exp, "put", view.spot * (1 - SHORT_SIGMA * sigma))
+    call = pick_quote(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
+    legs = [x for x in (make_leg("sell", put, exp), make_leg("sell", call, exp)) if x]
     if len(legs) < 2 or call.strike <= put.strike:
         return None
     plan = Plan(
@@ -498,9 +501,9 @@ def _short_strangle(view: OptionView, sigma: float) -> Plan | None:
         thesis="Premium is rich and liquid — collect the most of it, at open-ended risk.",
         playbook="", vega="short", theta="positive", risk="undefined",
         legs=legs, expiry=exp, dte=dte, profit_zone="inside",
-        compliance={"basis": "credit"}, manage=_manage_credit(),
+        risk_form={"basis": "credit"}, manage=_manage_credit(),
     )
-    net = _net(legs)
+    net = net_cost(legs)
     if net is not None and net < 0:
         credit = -net
         plan.max_profit = round(credit, 2)
@@ -516,11 +519,11 @@ def _calendar(view: OptionView, sigma: float) -> Plan | None:
     if not exps:
         return None
     back = exps[0]
-    front_q = _pick(view, view.expiry, "call", view.spot)
-    back_q = _pick(view, back, "call", front_q.strike if front_q else view.spot)
+    front_q = pick_quote(view, view.expiry, "call", view.spot)
+    back_q = pick_quote(view, back, "call", front_q.strike if front_q else view.spot)
     if front_q is None or back_q is None or back_q.strike != front_q.strike:
         return None
-    legs = [x for x in (_leg("sell", front_q, view.expiry), _leg("buy", back_q, back)) if x]
+    legs = [x for x in (make_leg("sell", front_q, view.expiry), make_leg("buy", back_q, back)) if x]
     if len(legs) < 2:
         return None
     back_dte = next((e["dte"] for e in view.expiries if e["date"] == back), None)
@@ -529,9 +532,9 @@ def _calendar(view: OptionView, sigma: float) -> Plan | None:
         thesis="The near expiry is priced richer than the far one — sell the front, own the back.",
         playbook="", vega="long", theta="positive", risk="defined",
         legs=legs, expiry=back, dte=back_dte, profit_zone="inside",
-        compliance={"basis": "credit"}, manage=_manage_calendar(),
+        risk_form={"basis": "credit"}, manage=_manage_calendar(),
     )
-    debit = _net(legs)
+    debit = net_cost(legs)
     if debit is not None and debit > 0:
         plan.max_loss = debit
         plan.max_profit = None                     # depends on where vol lands at front expiry
@@ -543,8 +546,8 @@ def _calendar(view: OptionView, sigma: float) -> Plan | None:
 
 def _covered_call(view: OptionView, sigma: float) -> Plan | None:
     exp, dte = view.expiry, view.days_to_expiry
-    call = _pick(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
-    call_leg = _leg("sell", call, exp)
+    call = pick_quote(view, exp, "call", view.spot * (1 + SHORT_SIGMA * sigma))
+    call_leg = make_leg("sell", call, exp)
     if call_leg is None:
         return None
     shares = Leg(action="own", right="share", strike=None, expiry=None, qty=100,
@@ -555,7 +558,7 @@ def _covered_call(view: OptionView, sigma: float) -> Plan | None:
         thesis="Rich premium against shares you already hold — income, with the upside capped.",
         playbook="", vega="short", theta="positive", risk="defined",
         legs=[shares, call_leg], expiry=exp, dte=dte, profit_zone="above",
-        compliance={"basis": "covered"}, manage=_manage_credit(),
+        risk_form={"basis": "covered"}, manage=_manage_credit(),
     )
     if call.mid is not None:
         credit = round(call.mid * 100, 2)
@@ -570,7 +573,7 @@ def _stand_aside(reason: str) -> Plan:
     return Plan(
         key="stand_aside", name="Stand aside", action="STAND_ASIDE", bias="neutral",
         thesis=reason, playbook=PLAYBOOK["stand_aside"], vega="flat", theta="flat",
-        risk="none", compliance={"tier": "n/a", "note": _COMPLIANCE["none"][1]},
+        risk="none", risk_form={"tier": "n/a", "note": _RISK_FORM["none"][1]},
     )
 
 
@@ -578,7 +581,7 @@ def _no_data(reason: str) -> Plan:
     return Plan(
         key="no_data", name="Not priced", action="NO_DATA", bias="neutral",
         thesis=reason, playbook=PLAYBOOK["no_data"], vega="flat", theta="flat",
-        risk="none", compliance={"tier": "n/a", "note": _COMPLIANCE["none"][1]},
+        risk="none", risk_form={"tier": "n/a", "note": _RISK_FORM["none"][1]},
     )
 
 
@@ -598,7 +601,7 @@ _BUILDERS = {
 
 # ------------------------------------------------------------ decision layer
 
-def _bias(row: dict) -> tuple[str, str]:
+def directional_bias(row: dict) -> tuple[str, str]:
     """(direction, strength). A released squeeze is the only *strong* signal;
     the momentum lean is a tiebreaker, never a thesis."""
     if row.get("squeeze_fired") and row.get("fired_dir") in ("up", "down"):
@@ -830,15 +833,15 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
         return Recommendation(
             ticker=ticker, action=plan.action, headline=_no_data_headline(ticker),
             detail=plan.thesis, confidence=0.0, premium_state="unknown", premium_score=None,
-            bias=_bias(row)[0], bias_strength=_bias(row)[1], plan=plan.as_dict(),
+            bias=directional_bias(row)[0], bias_strength=directional_bias(row)[1], plan=plan.as_dict(),
             why=[f"Setup score {float(row.get('score') or 0):.0f}/100 from price action alone — "
                  "no implied-volatility read, so no premium call can be made."],
             warnings=["Without IV there is no way to say whether options here are cheap or rich. "
                       "Raise `options.top_n` in the config to price more names."],
         )
 
-    bias, strength = _bias(row)
-    sigma = _sigma_expiry(view, view.days_to_expiry)
+    bias, strength = directional_bias(row)
+    sigma = sigma_to_expiry(view, view.days_to_expiry)
     earnings_inside = _earnings_inside(row, view.days_to_expiry)
 
     primary_key, alt_keys, avoid, aside_reason = _choose(view, row, bias, strength,

@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 import run
-from spread_scanner import data, halal, options
+from spread_scanner import data, halal, leaps, options
 from conftest import make_view
 
 TICKERS = ["AAA", "BBB", "CCC"]
@@ -38,7 +38,8 @@ def offline(monkeypatch):
     monkeypatch.setattr(halal, "screen_universe", fake_screen)
 
     # AAA rich, BBB cheap, CCC never priced (outside top_n in the real thing).
-    def fake_options(rows, horizon_days, margin=0.15, hv_annual=None, hv_history=None):
+    def fake_options(rows, horizon_days, margin=0.15, hv_annual=None, hv_history=None,
+                     long_dated=True, long_target_days=395):
         spec = {"AAA": dict(iv=58, hv=28, iv_rank=88), "BBB": dict(iv=18, hv=30, iv_rank=8)}
         return {t: make_view(t, spot=float(spot), **spec[t])
                 for t, spot, _hist in rows if t in spec}
@@ -83,6 +84,14 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     # The halal ratios and the flattened action columns ride along on every row.
     assert by["AAA"]["debt_ratio"] == 0.05
     assert by["AAA"]["strategy"] == by["AAA"]["recommendation"]["plan"]["name"]
+
+    # The ~13-month spreads are built off the same views, on their own budget.
+    assert scan["long_dated"]["tickers"] == 2
+    assert scan["long_dated"]["candidates"] > 0
+    ld = by["AAA"]["long_dated"]
+    assert ld["dte"] > 270 and ld["expiry"] > by["AAA"]["options"]["expiry"]
+    assert {c["key"] for c in ld["candidates"]} <= set(leaps.CANDIDATE_ORDER)
+    assert by["CCC"]["long_dated"] is None, "an unpriced name has no long-dated chain"
 
     charts = json.loads((site / "data" / "charts.json").read_text(encoding="utf-8"))
     assert charts["count"] == 3

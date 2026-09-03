@@ -1,4 +1,4 @@
-/* Halal Spread Scanner — frontend styles.
+/* Spread Scanner — frontend styles.
    Hand-written and checked in: the backend emits JSON only and never
    regenerates anything in this directory outside of data/. */
 
@@ -262,11 +262,41 @@ details.alts > summary:hover { color: var(--text); }
 .alt .n { font-weight: 700; }
 .alt .d { color: var(--text-dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-.compliance {
-  font-size: .78rem; color: var(--text-faint); border-top: 1px solid var(--line-soft);
-  padding-top: 11px;
+.riskform {
+  border-top: 1px dashed var(--line);
+  padding-top: 12px; font-size: .82rem; color: var(--text-faint); line-height: 1.5;
 }
-.compliance b { color: var(--text-dim); }
+.riskform b { color: var(--text-dim); }
+
+/* -------------------------------------------------------------- spreads tab */
+
+.spreads > tbody > tr > td { vertical-align: middle; }
+.spreads .srow { cursor: pointer; }
+.spreads > tbody > tr.srow:hover > td,
+.spreads > tbody > tr.srow[aria-expanded="true"] > td { background: var(--surface-2); }
+.spreads > tbody > tr.srow.picked > td:first-child { box-shadow: inset 3px 0 0 var(--link); }
+.spreads .net { font-weight: 700; }
+
+.pick {
+  font-size: .64rem; text-transform: uppercase; letter-spacing: .06em;
+  background: #16324f; color: #79c0ff; border: 1px solid #1f4f7a;
+  border-radius: 999px; padding: 1px 6px; vertical-align: middle;
+}
+.chip.pickonly[aria-pressed="true"] { color: #79c0ff; border-color: #79c0ff; }
+
+/* Sits below the table rather than inside it: eleven columns scroll sideways,
+   and a detail row would carry its prose off-screen with them. */
+#spreaddetail {
+  margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--surface); padding: 14px 18px 18px;
+}
+.spread-detail { display: grid; gap: 14px; }
+.sd-head {
+  font-size: .8rem; color: var(--text-dim); font-variant-numeric: tabular-nums;
+  text-transform: none; letter-spacing: 0;
+}
+.sd-sum { margin: 0; font-size: .9rem; color: var(--text); }
+
 
 /* ---------------------------------------------------------------- table */
 

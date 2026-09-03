@@ -176,16 +176,16 @@ def test_condor_wings_bracket_the_short_strikes():
 def test_strike_step_reads_the_grid():
     for step in (1.0, 2.5, 5.0):
         chain = build_chain(spot=200.0, iv=40.0, dte=30, step=step)
-        assert strategy._strike_step(chain["call"]) == pytest.approx(step)
-    assert strategy._strike_step({}) == 1.0            # empty chain -> safe default
+        assert strategy.strike_step(chain["call"]) == pytest.approx(step)
+    assert strategy.strike_step({}) == 1.0            # empty chain -> safe default
 
 
 def test_wing_strike_is_floored_and_capped_in_strike_increments():
     # Short strike a long way from spot: the wing is capped at 6 increments.
-    assert strategy._wing_strike(200.0, 100.0, 5.0, below=True) == 100.0 - 30.0
+    assert strategy.wing_strike(200.0, 100.0, 5.0, below=True) == 100.0 - 30.0
     # Short strike very close to spot: the wing is floored at 2 increments.
-    assert strategy._wing_strike(200.0, 199.0, 5.0, below=True) == 199.0 - 10.0
-    assert strategy._wing_strike(200.0, 220.0, 5.0, below=False) > 220.0
+    assert strategy.wing_strike(200.0, 199.0, 5.0, below=True) == 199.0 - 10.0
+    assert strategy.wing_strike(200.0, 220.0, 5.0, below=False) > 220.0
 
 
 def test_sizing_respects_the_risk_budget():
@@ -209,11 +209,11 @@ def test_probability_of_profit_is_a_probability_and_points_the_right_way():
 
 def test_pop_helper_matches_the_normal_model():
     # ±1σ either side: ~68% inside, ~32% outside.
-    assert strategy._pop(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
+    assert strategy.pop_estimate(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
                          "inside", 0.2) == pytest.approx(0.683, abs=0.01)
-    assert strategy._pop(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
+    assert strategy.pop_estimate(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
                          "outside", 0.2) == pytest.approx(0.317, abs=0.01)
-    assert strategy._pop(100.0, [100.0], "above", 0.2) == pytest.approx(0.5, abs=0.01)
+    assert strategy.pop_estimate(100.0, [100.0], "above", 0.2) == pytest.approx(0.5, abs=0.01)
 
 
 # ------------------------------------------------------------ presentation
@@ -227,7 +227,7 @@ def test_every_recommendation_is_json_serializable_and_self_describing():
         r = rec(kw)
         payload = json.loads(json.dumps(r.as_dict()))
         assert payload["headline"] and payload["detail"]
-        assert payload["plan"]["compliance"]["note"]
+        assert payload["plan"]["risk_form"]["note"]
         assert payload["why"]
         assert payload["plan"]["key"] in strategy.PLAYBOOK
 

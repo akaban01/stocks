@@ -24,8 +24,8 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import (alerts, charts, data, halal, indicators, options, report,
-                            scanner, strategy, universe)
+from spread_scanner import (alerts, charts, data, halal, indicators, leaps, options,
+                            report, scanner, strategy, universe)
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -194,9 +194,13 @@ def main(argv: list[str] | None = None) -> int:
         rows = list(zip(head["ticker"], head["price"], head["em_pct"]))
         hv_now, hv_hist = _hv_context(raw, params)
         print(f"Reading option chains for the top {len(rows)} names (IV rank, term structure, skew)...")
+        long_cfg = opt_cfg.get("long_dated") or {}
         views = options.screen_options(rows, horizon_days=int(params["horizon_days"]),
                                        margin=float(opt_cfg.get("margin", 0.15)),
-                                       hv_annual=hv_now, hv_history=hv_hist)
+                                       hv_annual=hv_now, hv_history=hv_hist,
+                                       long_dated=bool(long_cfg.get("enabled", True)),
+                                       long_target_days=int(long_cfg.get("target_days",
+                                                                         options.LONG_TARGET_DAYS)))
         for col, attr in (("implied_move_pct", "implied_move_pct"), ("vol_verdict", "verdict"),
                           ("iv_annual", "iv_annual"), ("iv_rank", "iv_rank"),
                           ("premium_score", "premium_score"), ("premium_state", "premium_state"),
@@ -208,10 +212,12 @@ def main(argv: list[str] | None = None) -> int:
     # One explicit instruction per ticker: buy premium, sell premium or stand
     # aside — with the exact legs, net price, risk and management rules.
     strat_cfg = cfg.get("strategy") or {}
+    scan_rows = df.to_dict("records") if not df.empty else []
+    risk_budget = float(strat_cfg.get("risk_budget_usd", 500))
     recs = strategy.recommend_all(
-        df.to_dict("records") if not df.empty else [],
+        scan_rows,
         views,
-        risk_budget=float(strat_cfg.get("risk_budget_usd", 500)),
+        risk_budget=risk_budget,
         allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
     )
     if recs:
@@ -219,16 +225,31 @@ def main(argv: list[str] | None = None) -> int:
         df["strategy"] = df["ticker"].map(
             lambda t: ((recs.get(t) or {}).get("plan") or {}).get("name"))
 
+    # ---- Long-dated (≈13-month) spreads -------------------------------------
+    # The same chain, a different question: if you wanted this name for the next
+    # year, which spread expresses it. Reuses the directional read the near-term
+    # engine already made, so the two tabs never disagree about the lean.
+    biases = {str(r.get("ticker")): strategy.directional_bias(r) for r in scan_rows}
+    long_blocks = leaps.long_spreads_all(
+        scan_rows, views,
+        risk_budget=float(strat_cfg.get("long_risk_budget_usd", risk_budget * 5)),
+        biases=biases,
+    )
+    if long_blocks:
+        print(f"Built {sum(len(b['candidates']) for b in long_blocks.values())} long-dated spreads "
+              f"across {len(long_blocks)} names.")
+
     scan_path = report.write_scan(
         df, outdir, params,
         weights=scanner.SCORE_WEIGHTS,
         weights_as_of=(weights_meta or {}).get("as_of"),
         recommendations=recs,
         option_views=views,
+        long_spreads=long_blocks,
         universe={"scanned": int(len(df)), "requested": len(tickers),
                   "source": (uni_cfg.get("source") if not args.tickers else "cli"),
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
-        playbook=strategy.PLAYBOOK,
+        playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
     )
     print(f"\nWrote {scan_path}")
 

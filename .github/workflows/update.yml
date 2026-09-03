@@ -57,7 +57,21 @@ jobs:
           assert scan["reference"]["actions"], "scan.json is missing UI reference copy"
           missing = [s["ticker"] for s in scan["signals"] if not s.get("recommendation")]
           assert not missing, f"no recommendation for: {missing}"
-          print(f"scan.json OK — {len(scan['signals'])} signals, counts {scan['counts']}")
+          # The Spreads tab renders whatever is in `long_dated`. An empty run is
+          # legitimate (not every name lists LEAPS), a malformed one is not.
+          for sig in scan["signals"]:
+              ld = sig.get("long_dated")
+              if ld is None:
+                  continue
+              assert ld["expiry"] and ld["dte"] > 0, f"{sig['ticker']}: bad long-dated expiry"
+              keys = {c["key"] for c in ld["candidates"]}
+              assert ld["preferred"] in keys or ld["preferred"] is None, \
+                  f"{sig['ticker']}: preferred {ld['preferred']} is not among {keys}"
+              for c in ld["candidates"]:
+                  assert c["legs"] and c["playbook"], f"{sig['ticker']}: {c['key']} is incomplete"
+          ld = scan["long_dated"]
+          print(f"scan.json OK — {len(scan['signals'])} signals, counts {scan['counts']}, "
+                f"{ld['candidates']} long-dated spreads across {ld['tickers']} names")
           for name in ("charts", "backtest"):
               p = Path(f"public/data/{name}.json")
               if p.exists():
