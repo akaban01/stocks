@@ -198,3 +198,51 @@ def test_the_shipped_copy_carries_no_religious_framing():
     blob = json.dumps(report.build_scan(_frame(), PARAMS)).lower()
     for word in ("halal", "shariah", "sharia", "fatwa", "islamic", "musaffa", "zoya"):
         assert word not in blob, f"{word!r} still ships in the payload"
+
+
+# ------------------------------------------------- option feed health
+
+def _sig(ticker, iv):
+    row = make_row(ticker)
+    row["options"] = None if iv is None else {"iv_annual": iv}
+    return row
+
+
+def test_a_working_feed_passes():
+    """Real post-close values, taken from the run of 2026-09-02."""
+    health = report.option_data_health(
+        [_sig(t, iv) for t, iv in
+         (("MU", 51.27), ("AMD", 47.58), ("GOOGL", 27.82))])
+    assert health["ok"]
+    assert health["usable"] == health["priced"] == 3
+    assert health["median_iv"] == 47.58      # odd count, so unambiguous
+
+
+def test_an_empty_feed_is_refused_with_the_numbers_in_the_reason():
+    """Real pre-market values, taken from runs 68 and 69: every contract
+    present, every one of them empty."""
+    health = report.option_data_health(
+        [_sig(t, iv) for t, iv in
+         (("MU", 0.1), ("AMD", 0.39), ("GOOGL", 0.78), ("QCOM", 0.05))])
+    assert not health["ok"]
+    assert health["usable"] == 0 and health["priced"] == 4
+    assert "0 of 4" in health["reason"]
+    assert "outside US market hours" in health["reason"]
+
+
+def test_a_scan_with_no_option_layer_at_all_is_not_a_failure():
+    """Options switched off is not the same as options broken."""
+    health = report.option_data_health([_sig("AAA", None), _sig("BBB", None)])
+    assert health["ok"] and health["priced"] == 0 and health["median_iv"] is None
+
+
+def test_a_single_odd_name_does_not_condemn_a_working_feed():
+    """The check exists to catch a feed that is down, not a thin contract."""
+    health = report.option_data_health(
+        [_sig("AAA", 31.0), _sig("BBB", 44.0), _sig("CCC", 0.2)])
+    assert health["ok"] and health["usable"] == 2
+
+
+def test_the_threshold_is_where_it_says_it_is():
+    assert report.option_data_health([_sig("AAA", report.MIN_PLAUSIBLE_IV)])["ok"]
+    assert not report.option_data_health([_sig("AAA", report.MIN_PLAUSIBLE_IV - 0.01)])["ok"]

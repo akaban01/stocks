@@ -244,6 +244,36 @@ name's caveats.
 
 Set `options.long_dated.enabled: false` to skip the extra chain call per ticker.
 
+## A scan is only published if the option feed answered
+
+The US close is 21:00 UTC in winter and 20:00 in summer, so the schedule sits
+after both. It cannot rely on firing then: scheduled workflows are the lowest
+priority on shared runners, and the observed fire times for this one ran 21:48,
+23:27, 00:42, 02:02, 03:13 and once **05:31** — an eight-hour delay. The odd
+minute in the cron helps (`:00` and `:30` are the worst queues) but nothing in a
+schedule can bound that.
+
+It matters because the option feed empties overnight. Outside US market hours it
+still returns every contract, with a floor implied volatility and no bid, no ask
+and no open interest — data shaped like data:
+
+| Scan fired (UTC) | Local (ET) | ATM IV across the priced names | Median OI |
+|---|---|---|---|
+| 23:29, 00:43, 02:03, 03:14 | 7pm–11pm | 24–68% | 200–600 |
+| 05:32 | 1:32am | 0.03–1.56% | 0 |
+| 10:19, 10:32 | 6:30am | 0.01–0.78% | 0 |
+
+So the run **refuses to publish a scan whose option feed came back empty**
+(`report.option_data_health`). If fewer than half the priced names have a
+plausible implied volatility, the validation step fails before the commit, and
+yesterday's good scan stays up rather than being overwritten by an empty one.
+Options switched off entirely is not a failure — that is no option data, which
+is a different thing from bad option data.
+
+That guard is also what makes the schedule safe to tune: if winter runs start
+failing it, the cron is too close to the close and should move later. The check
+turns that from silent bad data into a visible failed run.
+
 ## Universe & screening
 
 The scanner builds its universe in two automated stages, so you never hand-pick
@@ -314,7 +344,7 @@ commits it back to the repo.
 ```yaml
 on:
   schedule:
-    - cron: "30 21 * * 1-5"   # 21:30 UTC weekdays, ~30 min after US close
+    - cron: "23 21 * * 1-5"   # 21:23 UTC weekdays, after the US close year-round
   workflow_dispatch:           # or run it manually
 permissions:
   contents: write              # so it can commit the refreshed data

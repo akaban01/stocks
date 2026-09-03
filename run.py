@@ -206,7 +206,17 @@ def main(argv: list[str] | None = None) -> int:
                           ("premium_score", "premium_score"), ("premium_state", "premium_state"),
                           ("liquidity", "liquidity")):
             df[col] = df["ticker"].map(lambda t, a=attr: getattr(views.get(t), a, None))
-        print(f"  priced {len(views)} names.")
+        usable = sum(1 for v in views.values()
+                     if (v.iv_annual or 0) >= report.MIN_PLAUSIBLE_IV)
+        print(f"  priced {len(views)} names ({usable} with usable quotes).")
+        if views and usable * 2 < len(views):
+            # Outside US market hours the feed returns every contract with a
+            # floor IV and no bid, ask or open interest. The scan is still
+            # written so a local run can be inspected, but CI will refuse to
+            # publish it over the last good one.
+            print("  ! The option feed returned contracts with no quotes in them — this is "
+                  "what it does outside US market hours. This scan will not be published.",
+                  file=sys.stderr)
 
     # ---- Strategy engine ----------------------------------------------------
     # One explicit instruction per ticker: buy premium, sell premium or stand
