@@ -408,3 +408,68 @@ def test_a_thin_credit_is_called_out_the_way_the_near_term_engine_does():
 
 def test_a_healthy_credit_is_not_flagged():
     assert not any("of its width" in w for w in block(spot=200.0, bias="bullish")["warnings"])
+
+
+# ------------------------------------------------- chains the feed cannot price
+
+def _unquoted(long_iv=0.2, **kw):
+    """A view carrying the signature of a chain read outside market hours: a
+    floor implied vol, and zero bid / zero ask / zero open interest on every
+    contract. Taken from a real run — see the docstrings below."""
+    v = make_view(**kw)
+    v.long_iv = long_iv
+    v.long_spread_pct, v.long_open_interest, v.long_liquidity = 0.0, 0, "poor"
+    for side in v.chain[v.long_expiry].values():
+        for q in side.values():
+            q.bid, q.ask, q.iv, q.open_interest = 0.0, 0.0, 0.0, 0
+    return v
+
+
+def test_a_chain_with_no_volatility_read_publishes_nothing():
+    """A live run outside US market hours returned ATM implied vols of 0.01% to
+    0.8% on the long chain, with zero bid, ask and open interest throughout.
+    The engine priced two spreads off it anyway: concrete debits and max profits
+    taken from stale last-trades, and a probability of profit computed against a
+    distribution 0.2% wide. None of it was transactable."""
+    assert leaps.long_spreads(make_row(), _unquoted(), 2500.0, "bearish", "weak") is None
+
+
+@pytest.mark.parametrize("iv", [None, 0.01, 0.1, 0.2, 0.78, 4.9])
+def test_every_implausible_volatility_is_refused(iv):
+    v = make_view()
+    v.long_iv = iv
+    assert leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong") is None
+
+
+def test_a_real_volatility_read_is_still_accepted():
+    """The guard must not swallow ordinary low-volatility names."""
+    for iv in (leaps.MIN_USABLE_IV, 12.0, 28.0, 60.0):
+        v = make_view()
+        v.long_iv = iv
+        b = leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong")
+        assert b is not None and b["candidates"], f"refused a usable {iv}% chain"
+
+
+def test_legs_without_a_two_sided_market_are_not_published():
+    """Zero bid and zero ask means the mid fell back to the last traded price,
+    which can be days old. A spread priced off two of those has a debit, a max
+    profit and a breakeven that all look real and none of which you can fill."""
+    v = _unquoted(long_iv=30.0)          # a believable IV, but no quotes
+    b = leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong")
+    assert b is not None, "the volatility read is fine here; only the quotes are missing"
+    assert b["candidates"] == []
+    # The diagonal's short leg lives in the front month, which is still quoted,
+    # but its long leg is not — so it must go too.
+    assert "poor_mans_covered_call" not in [c["key"] for c in b["candidates"]]
+
+
+def test_one_unquoted_leg_is_enough_to_drop_a_candidate():
+    v = make_view(spot=200.0)
+    side = v.chain[v.long_expiry]["call"]
+    for k in side:
+        if abs(k - 230.0) < 0.01:        # the bull call's short leg only
+            side[k].bid = side[k].ask = 0.0
+    keys = [c["key"] for c in
+            leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong")["candidates"]]
+    assert "leaps_bull_call" not in keys
+    assert "leaps_bull_put" in keys, "the put-side structures are untouched"
