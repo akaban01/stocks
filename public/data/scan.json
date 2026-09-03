@@ -1,7 +1,7 @@
 {
   "schema_version": "2.1.0",
-  "generated_at": "2026-09-03T10:19:07Z",
-  "generated_at_utc": "2026-09-03 10:19 UTC",
+  "generated_at": "2026-09-03T10:32:53Z",
+  "generated_at_utc": "2026-09-03 10:32 UTC",
   "horizon_days": 10,
   "params": {
     "horizon_days": 10,
@@ -38,13 +38,11 @@
     "NO_DATA": 16
   },
   "long_dated": {
-    "tickers": 13,
-    "candidates": 2,
-    "preferred": 1,
-    "expiries": [
-      "2027-09-17"
-    ],
-    "target_days": 395
+    "tickers": 0,
+    "candidates": 0,
+    "preferred": 0,
+    "expiries": [],
+    "target_days": null
   },
   "top_actions": [],
   "reference": {
@@ -322,27 +320,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.1,
-        "liquidity": "unknown",
-        "atm_spread_pct": null,
-        "atm_open_interest": null,
-        "premium_state": "cheap",
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 2,
@@ -511,27 +489,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.2,
-        "front_iv_annual": 0.39,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 3,
@@ -701,168 +659,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.2,
-        "front_iv_annual": 0.78,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": "leaps_bear_put",
-        "summary": "The bearish lean plus cheap premium points at the LEAPS Bear Put Spread on the 2027-09-17 expiry (379 days out).",
-        "candidates": [
-          {
-            "key": "leaps_bull_call",
-            "name": "LEAPS Bull Call Spread",
-            "action": "BUY_PREMIUM",
-            "bias": "bullish",
-            "thesis": "A year of room for the upside thesis, at a cost that is fixed the day you put it on.",
-            "playbook": "Buy a call about 13 months out, sell a higher one in the same expiry. A bullish position with a year to be right and a cost you know on day one — the short leg pays for part of the long one and caps the win.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 335.0,
-                "expiry": "2027-09-17",
-                "qty": 1,
-                "mid": 55.65,
-                "bid": 0.0,
-                "ask": 0.0,
-                "iv": 0.0,
-                "open_interest": 0,
-                "label": "Buy 1× 2027-09-17 335 call"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 345.0,
-                "expiry": "2027-09-17",
-                "qty": 1,
-                "mid": 50.62,
-                "bid": 0.0,
-                "ask": 0.0,
-                "iv": 0.39,
-                "open_interest": 0,
-                "label": "Sell 1× 2027-09-17 345 call"
-              }
-            ],
-            "expiry": "2027-09-17",
-            "dte": 379,
-            "net": 503.0,
-            "max_profit": 497.0,
-            "max_loss": 503.0,
-            "breakevens": [
-              340.03
-            ],
-            "profit_zone": "above",
-            "pop": 0.0,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "take 50–70% of the maximum profit — the last of it takes months to arrive",
-              "profit_target_pct": 60,
-              "stop": "cut at −50% of the debit, or sooner if the reason you put it on stops being true",
-              "stop_loss_pct": 50,
-              "time_stop": "roll or close with ~90 days left; the final quarter is where a long-dated spread loses its remaining time value fastest",
-              "close_by_dte": 90
-            },
-            "sizing": {
-              "risk_budget": 2500.0,
-              "contracts": 4,
-              "risk_per_spread": 503.0,
-              "total_risk": 2012.0,
-              "over_budget": false,
-              "note": "4× risks $2,012 of a $2,500 budget."
-            },
-            "risk_form": {
-              "tier": "defined_debit",
-              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-            }
-          },
-          {
-            "key": "leaps_bear_put",
-            "name": "LEAPS Bear Put Spread",
-            "action": "BUY_PREMIUM",
-            "bias": "bearish",
-            "thesis": "A year of room for the downside thesis, at a cost that is fixed the day you put it on.",
-            "playbook": "Buy a long-dated put, sell a lower one. The same shape pointed down: a year of room for a thesis, at a defined cost.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 335.0,
-                "expiry": "2027-09-17",
-                "qty": 1,
-                "mid": 38.25,
-                "bid": 0.0,
-                "ask": 0.0,
-                "iv": 0.2,
-                "open_interest": 0,
-                "label": "Buy 1× 2027-09-17 335 put"
-              },
-              {
-                "action": "sell",
-                "right": "put",
-                "strike": 330.0,
-                "expiry": "2027-09-17",
-                "qty": 1,
-                "mid": 37.2,
-                "bid": 0.0,
-                "ask": 0.0,
-                "iv": 0.39,
-                "open_interest": 0,
-                "label": "Sell 1× 2027-09-17 330 put"
-              }
-            ],
-            "expiry": "2027-09-17",
-            "dte": 379,
-            "net": 105.0,
-            "max_profit": 395.0,
-            "max_loss": 105.0,
-            "breakevens": [
-              333.95
-            ],
-            "profit_zone": "below",
-            "pop": 0.0,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "take 50–70% of the maximum profit — the last of it takes months to arrive",
-              "profit_target_pct": 60,
-              "stop": "cut at −50% of the debit, or sooner if the reason you put it on stops being true",
-              "stop_loss_pct": 50,
-              "time_stop": "roll or close with ~90 days left; the final quarter is where a long-dated spread loses its remaining time value fastest",
-              "close_by_dte": 90
-            },
-            "sizing": {
-              "risk_budget": 2500.0,
-              "contracts": 20,
-              "risk_per_spread": 105.0,
-              "total_risk": 2100.0,
-              "over_budget": false,
-              "note": "20× risks $2,100 of a $2,500 budget."
-            },
-            "risk_form": {
-              "tier": "defined_debit",
-              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-            }
-          }
-        ],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 4,
@@ -1033,27 +830,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.01,
-        "front_iv_annual": 0.05,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 5,
@@ -1140,21 +917,21 @@
       "rank": 6,
       "ticker": "HLAL",
       "price": 72.67,
-      "score": 76.4,
+      "score": 75.7,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.008,
-      "hv_annual": 9.9,
-      "hv_pctile": 0.008,
-      "em_pct": 1.98,
+      "bandwidth_pctile": 0.017,
+      "hv_annual": 9.8,
+      "hv_pctile": 0.017,
+      "em_pct": 1.96,
       "horizon_days": 10,
-      "down_1sigma": 71.23,
-      "up_1sigma": 74.11,
-      "down_2sigma": 69.79,
-      "up_2sigma": 75.55,
-      "lean": "Bullish",
+      "down_1sigma": 71.25,
+      "up_1sigma": 74.09,
+      "down_2sigma": 69.82,
+      "up_2sigma": 75.52,
+      "lean": "Neutral",
       "note": "",
       "debt_ratio": null,
       "cash_ratio": null,
@@ -1177,8 +954,8 @@
         "confidence": 0.0,
         "premium_state": "unknown",
         "premium_score": null,
-        "bias": "bullish",
-        "bias_strength": "weak",
+        "bias": "neutral",
+        "bias_strength": "none",
         "plan": {
           "key": "no_data",
           "name": "Not priced",
@@ -1385,30 +1162,179 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.78,
-        "liquidity": "unknown",
-        "atm_spread_pct": null,
-        "atm_open_interest": null,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "strong",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 8,
+      "ticker": "ARM",
+      "price": 234.86,
+      "score": 68.8,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.158,
+      "hv_annual": 48.7,
+      "hv_pctile": 0.075,
+      "em_pct": 9.7,
+      "horizon_days": 10,
+      "down_1sigma": 212.09,
+      "up_1sigma": 257.63,
+      "down_2sigma": 189.32,
+      "up_2sigma": 280.4,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.001933579406588359,
+      "cash_ratio": 0.015500529346011423,
+      "earnings_in_days": 62.0,
+      "implied_move_pct": 0.02,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.1,
+      "iv_rank": 0.0,
+      "premium_score": 4.5,
+      "premium_state": "cheap",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 0.1,
+        "hv_annual": 48.7,
+        "implied_move_pct": 0.02,
+        "hist_move_pct": 9.7,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -48.57,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 4.5,
+        "premium_state": "cheap",
+        "term_slope": 14.6,
+        "term_structure": "contango",
+        "skew": 1.46,
+        "skew_label": "balanced",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 22,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 1
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 8
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 15
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 22
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 29
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 36
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 43
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 78
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 106
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 134
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 197
+          },
+          {
+            "date": "2027-04-16",
+            "dte": 225
+          }
+        ],
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
+      },
+      "recommendation": {
+        "ticker": "ARM",
+        "action": "STAND_ASIDE",
+        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "confidence": 0.0,
+        "premium_state": "cheap",
+        "premium_score": 4.5,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "risk_form": {
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
+          }
+        },
+        "alternatives": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
+        "why": [
+          "IV rank 0/100 (cheap premium, blended score 4).",
+          "Options price a 0.0% move over the horizon vs 9.7% realized.",
+          "Setup score 69/100, direction bearish (weak).",
+          "Term structure in contango (+1460.0% front→back)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      },
+      "long_dated": null
+    },
+    {
+      "rank": 9,
       "ticker": "INTC",
       "price": 90.05,
       "score": 68.5,
@@ -1573,216 +1499,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.03,
-        "front_iv_annual": 0.1,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
-    },
-    {
-      "rank": 9,
-      "ticker": "ARM",
-      "price": 234.86,
-      "score": 68.4,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.158,
-      "hv_annual": 46.8,
-      "hv_pctile": 0.083,
-      "em_pct": 9.31,
-      "horizon_days": 10,
-      "down_1sigma": 212.98,
-      "up_1sigma": 256.74,
-      "down_2sigma": 191.11,
-      "up_2sigma": 278.61,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": 0.001933579406588359,
-      "cash_ratio": 0.015500529346011423,
-      "earnings_in_days": 62.0,
-      "implied_move_pct": 0.02,
-      "vol_verdict": "cheap",
-      "iv_annual": 0.1,
-      "iv_rank": 0.0,
-      "premium_score": 4.5,
-      "premium_state": "cheap",
-      "liquidity": "poor",
-      "action": "STAND_ASIDE",
-      "strategy": "Stand aside",
-      "options": {
-        "iv_annual": 0.1,
-        "hv_annual": 46.8,
-        "implied_move_pct": 0.02,
-        "hist_move_pct": 9.31,
-        "iv_rank": 0.0,
-        "iv_percentile": 0.0,
-        "vrp": -46.66,
-        "iv_hv_ratio": 0.0,
-        "verdict": "cheap",
-        "premium_score": 4.5,
-        "premium_state": "cheap",
-        "term_slope": 14.6,
-        "term_structure": "contango",
-        "skew": 1.46,
-        "skew_label": "balanced",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "liquidity": "poor",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 22,
-        "expiries": [
-          {
-            "date": "2026-09-04",
-            "dte": 1
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 8
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 15
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 22
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 29
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 36
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 43
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 78
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 106
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 134
-          },
-          {
-            "date": "2027-03-19",
-            "dte": 197
-          },
-          {
-            "date": "2027-04-16",
-            "dte": 225
-          }
-        ],
-        "long_expiry": "2027-09-17",
-        "long_dte": 379,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
-      },
-      "recommendation": {
-        "ticker": "ARM",
-        "action": "STAND_ASIDE",
-        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "confidence": 0.0,
-        "premium_state": "cheap",
-        "premium_score": 4.5,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "stand_aside",
-          "name": "Stand aside",
-          "action": "STAND_ASIDE",
-          "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-          "playbook": "No edge worth paying for. The best trade is often none.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0
-          },
-          "risk_form": {
-            "tier": "n/a",
-            "note": "No position — nothing to secure."
-          }
-        },
-        "alternatives": [],
-        "avoid": [
-          {
-            "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
-          }
-        ],
-        "why": [
-          "IV rank 0/100 (cheap premium, blended score 4).",
-          "Options price a 0.0% move over the horizon vs 9.3% realized.",
-          "Setup score 68/100, direction bearish (weak).",
-          "Term structure in contango (+1460.0% front→back)."
-        ],
-        "warnings": [
-          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
-        ]
-      },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.1,
-        "liquidity": "unknown",
-        "atm_spread_pct": null,
-        "atm_open_interest": null,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 10,
@@ -1950,27 +1667,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.1,
-        "front_iv_annual": 0.39,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 11,
@@ -2139,27 +1836,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.03,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 12,
@@ -2327,27 +2004,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": 0.1,
-        "front_iv_annual": 0.39,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bullish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 13,
@@ -2516,46 +2173,26 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.1,
-        "liquidity": "unknown",
-        "atm_spread_pct": null,
-        "atm_open_interest": null,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 14,
       "ticker": "AMAT",
       "price": 438.46,
-      "score": 58.7,
+      "score": 58.9,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.575,
-      "hv_annual": 43.8,
-      "hv_pctile": 0.033,
-      "em_pct": 8.73,
+      "bandwidth_pctile": 0.583,
+      "hv_annual": 42.8,
+      "hv_pctile": 0.025,
+      "em_pct": 8.54,
       "horizon_days": 10,
-      "down_1sigma": 400.18,
-      "up_1sigma": 476.74,
-      "down_2sigma": 361.9,
-      "up_2sigma": 515.02,
+      "down_1sigma": 401.04,
+      "up_1sigma": 475.88,
+      "down_2sigma": 363.61,
+      "up_2sigma": 513.31,
       "lean": "Bearish",
       "note": "",
       "debt_ratio": 0.021111576894032244,
@@ -2572,12 +2209,12 @@
       "strategy": "Stand aside",
       "options": {
         "iv_annual": 0.39,
-        "hv_annual": 43.8,
+        "hv_annual": 42.8,
         "implied_move_pct": 0.08,
-        "hist_move_pct": 8.73,
+        "hist_move_pct": 8.54,
         "iv_rank": 0.0,
         "iv_percentile": 0.0,
-        "vrp": -43.44,
+        "vrp": -42.46,
         "iv_hv_ratio": 0.01,
         "verdict": "cheap",
         "premium_score": 10.0,
@@ -2697,34 +2334,14 @@
         ],
         "why": [
           "IV rank 0/100 (cheap premium, blended score 10).",
-          "Options price a 0.1% move over the horizon vs 8.7% realized (0.01× IV/HV).",
+          "Options price a 0.1% move over the horizon vs 8.5% realized (0.01× IV/HV).",
           "Setup score 59/100, direction bearish (weak)."
         ],
         "warnings": [
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.39,
-        "liquidity": "unknown",
-        "atm_spread_pct": null,
-        "atm_open_interest": null,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 15,
@@ -2892,27 +2509,7 @@
           "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": {
-        "expiry": "2027-09-17",
-        "dte": 379,
-        "target_days": 395,
-        "iv_annual": null,
-        "front_iv_annual": 0.01,
-        "liquidity": "poor",
-        "atm_spread_pct": 0.0,
-        "atm_open_interest": 0,
-        "premium_state": "cheap",
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "preferred": null,
-        "summary": "The long-dated chain has no strikes at the distances these structures need.",
-        "candidates": [],
-        "warnings": [
-          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
-          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
-          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
-        ]
-      }
+      "long_dated": null
     },
     {
       "rank": 16,
@@ -3728,20 +3325,20 @@
       "rank": 26,
       "ticker": "JNJ",
       "price": 275.21,
-      "score": 31.7,
+      "score": 33.0,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.65,
-      "hv_annual": 19.6,
-      "hv_pctile": 0.55,
-      "em_pct": 3.9,
+      "bandwidth_pctile": 0.567,
+      "hv_annual": 19.9,
+      "hv_pctile": 0.575,
+      "em_pct": 3.97,
       "horizon_days": 10,
-      "down_1sigma": 264.47,
-      "up_1sigma": 285.95,
-      "down_2sigma": 253.74,
-      "up_2sigma": 296.68,
+      "down_1sigma": 264.28,
+      "up_1sigma": 286.14,
+      "down_2sigma": 253.35,
+      "up_2sigma": 297.07,
       "lean": "Bullish",
       "note": "",
       "debt_ratio": 0.07393534701085705,
@@ -3797,7 +3394,7 @@
         "alternatives": [],
         "avoid": [],
         "why": [
-          "Setup score 32/100 from price action alone — no implied-volatility read, so no premium call can be made."
+          "Setup score 33/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
