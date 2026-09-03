@@ -56,7 +56,7 @@ def _format_message(rows: pd.DataFrame, threshold: float,
                 lines.append(f"   ↳ {rec.get('detail', '')}")
         else:
             lines.append(f"   ↳ lean {r['lean']} (no IV read this run)")
-    lines.append("_Not financial advice, and not a fatwa. Price it in your broker before trading._")
+    lines.append("_Not financial advice. Price it in your broker before trading._")
     return "\n".join(lines)
 
 

@@ -30,7 +30,7 @@ def test_message_carries_the_recommendation():
     assert "Iron Condor" in msg
     assert "IV rank" in msg
     assert "credit" in msg
-    assert "not a fatwa" in msg
+    assert "Not financial advice" in msg
 
 
 def test_message_degrades_gracefully_without_a_recommendation():

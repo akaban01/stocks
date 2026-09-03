@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "generated_at": "2026-09-02T23:29:01Z",
   "generated_at_utc": "2026-09-02 23:29 UTC",
   "horizon_days": 10,
@@ -38,6 +38,13 @@
     "STAND_ASIDE": 10,
     "NO_DATA": 16,
     "SELL_PREMIUM": 1
+  },
+  "long_dated": {
+    "tickers": 0,
+    "candidates": 0,
+    "preferred": 0,
+    "expiries": [],
+    "target_days": null
   },
   "top_actions": [
     {
@@ -137,8 +144,12 @@
       "em_pct": "One-sigma expected move over the horizon from realized volatility. Roughly 68% of outcomes land inside ±1σ, 95% inside ±2σ.",
       "squeeze": "The TTM squeeze: Bollinger Bands sitting inside the Keltner Channels. On means energy is building; fired means it just released, which is the actual entry trigger.",
       "lean": "A faint directional hint from squeeze momentum. A tiebreaker between two structures, never a reason to take a position.",
+      "long_dated": "The ≈13-month expiry the Spreads tab is built on. It is whichever listed expiry sits closest to 395 days out, because exchanges list long-dated options on January cycles rather than on a rolling 13-month schedule — so the real number of days is always shown next to it.",
+      "leaps_vega": "Over a year, the level of implied volatility moves a long-dated spread far more than time decay does. A 13-month debit spread is mostly a bet on direction and partly a bet on volatility rising; a 13-month credit spread earns its theta almost entirely in the final months.",
+      "reward_to_risk": "Maximum profit divided by maximum loss. On a long-dated spread it is the number that matters most, because you are committing the capital for the whole period rather than recycling it monthly.",
+      "risk_form": "What actually secures a position: a debit you have already paid, margin against a short option, or shares you already own. It decides how the trade can hurt you, which is a different question from how likely it is to win.",
       "earnings": "Calendar days to the next report. Inside the expiry, IV is elevated for a reason and collapses the morning after — that cuts both ways depending on which side you're on.",
-      "debt_cash_ratio": "The Shariah financial screen: interest-bearing debt and cash as a share of market cap, both required under ~33%."
+      "debt_cash_ratio": "The balance-sheet screen: interest-bearing debt and cash as a share of market cap, both required under ~33%."
     },
     "playbook": {
       "long_straddle": "Buy the at-the-money call and the at-the-money put. You win if the move is big enough, either way; you lose if it sits still. The trade for cheap options in front of a coiled chart.",
@@ -153,12 +164,17 @@
       "covered_call": "Against shares you already own, sell a call above the price. Turns rich premium into income and caps your upside at the strike.",
       "stand_aside": "No edge worth paying for. The best trade is often none.",
       "shares_only": "Trade the underlying instead of options.",
-      "no_data": "No usable option chain this run — nothing to price."
+      "no_data": "No usable option chain this run — nothing to price.",
+      "leaps_bull_call": "Buy a call about 13 months out, sell a higher one in the same expiry. A bullish position with a year to be right and a cost you know on day one — the short leg pays for part of the long one and caps the win.",
+      "leaps_bear_put": "Buy a long-dated put, sell a lower one. The same shape pointed down: a year of room for a thesis, at a defined cost.",
+      "poor_mans_covered_call": "Buy a deep in-the-money call 13 months out as a cheaper stand-in for 100 shares, then sell a near-dated call against it and roll that short leg each month. Covered-call income on a fraction of the capital — and the long call, not stock, is what secures it.",
+      "leaps_bull_put": "Sell a long-dated put well below the price, buy a lower one for protection. You collect the credit up front and keep it if the stock holds up — but the capital is committed for a year and the decay arrives mostly at the end.",
+      "leaps_bear_call": "Sell a long-dated call well above the price, buy a higher one. The credit is yours if the stock stays under the short strike for the year."
     }
   },
   "disclaimer": {
     "general": "Educational tool, not financial advice. Expected-move bands and probabilities are statistical estimates from past and implied volatility — not predictions. Option prices are last-known mids and will have moved; price every trade in your broker before placing it.",
-    "compliance": "Not a fatwa. The halal screen covers the underlying company (industry plus debt and cash ratios, AAOIFI / S&P Islamic style), not the instrument. Conventional options are themselves contested in Islamic finance — selling them, trading on margin and short selling draw the most objection. Seek your own ruling, and re-verify each name with a dedicated screener (Zoya, Musaffa).",
+    "risk": "Every position here can lose. A debit spread can expire worthless and take the whole premium with it; a credit spread can lose several times what it collected. Position sizes are computed against the risk budgets in config.yaml, not against your account or your tolerance for a losing year.",
     "method": "Indicators are computed without look-ahead: every value uses only data up to and including its own bar. IV rank and percentile are proxies ranked against realized-volatility history, because free data sources do not publish implied-volatility history."
   },
   "signals": [
@@ -264,7 +280,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "MU",
@@ -342,9 +364,9 @@
             "over_budget": true,
             "note": "One spread already risks $10,015, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
           },
-          "compliance": {
-            "tier": "contested",
-            "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
+          "risk_form": {
+            "tier": "defined_debit",
+            "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
           }
         },
         "alternatives": [
@@ -414,9 +436,9 @@
               "over_budget": true,
               "note": "One spread already risks $3,575, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
+            "risk_form": {
+              "tier": "defined_debit",
+              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
             }
           },
           {
@@ -484,9 +506,9 @@
               "over_budget": true,
               "note": "One spread already risks $3,702, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
+            "risk_form": {
+              "tier": "defined_debit",
+              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
             }
           }
         ],
@@ -504,7 +526,8 @@
           "Term structure in contango (+14.5% front→back)."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 2,
@@ -608,7 +631,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "AMD",
@@ -645,9 +674,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -666,7 +695,8 @@
         "warnings": [
           "Thin options market (ATM spread ~5% of mid, OI 93) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 3,
@@ -770,7 +800,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "GOOGL",
@@ -848,9 +884,9 @@
             "over_budget": true,
             "note": "One spread already risks $614, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
           },
-          "compliance": {
-            "tier": "contested",
-            "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
+          "risk_form": {
+            "tier": "defined_debit",
+            "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
           }
         },
         "alternatives": [
@@ -920,9 +956,9 @@
               "over_budget": true,
               "note": "One spread already risks $1,835, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
-            "compliance": {
-              "tier": "contested",
-              "note": "You pay a known premium up front and can never owe more than it — the form most often argued to be acceptable, though the contract itself remains contested."
+            "risk_form": {
+              "tier": "defined_debit",
+              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
             }
           }
         ],
@@ -940,7 +976,8 @@
           "Term structure in contango (+3.7% front→back)."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 4,
@@ -1044,7 +1081,13 @@
             "date": "2027-03-19",
             "dte": 198
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "QCOM",
@@ -1081,9 +1124,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1103,7 +1146,8 @@
         "warnings": [
           "Thin options market (ATM spread ~17% of mid, OI 795) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 5,
@@ -1170,9 +1214,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1183,7 +1227,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 6,
@@ -1250,9 +1295,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1263,7 +1308,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 7,
@@ -1367,7 +1413,13 @@
             "date": "2027-06-17",
             "dte": 288
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "LRCX",
@@ -1404,9 +1456,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1426,7 +1478,8 @@
         "warnings": [
           "Thin options market (ATM spread ~14% of mid, OI 3) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 8,
@@ -1530,7 +1583,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "INTC",
@@ -1567,9 +1626,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1581,7 +1640,8 @@
           "Calls bid over puts by 3.1 vol points — upside is the expensive side."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 9,
@@ -1685,7 +1745,13 @@
             "date": "2027-04-16",
             "dte": 226
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "ARM",
@@ -1722,9 +1788,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1742,7 +1808,8 @@
         "warnings": [
           "Thin options market (ATM spread ~8% of mid, OI 32) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 10,
@@ -1846,7 +1913,13 @@
             "date": "2027-03-19",
             "dte": 198
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "MSFT",
@@ -1883,9 +1956,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -1897,7 +1970,8 @@
           "Term structure in contango (+5.6% front→back)."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 11,
@@ -2001,7 +2075,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "AAPL",
@@ -2078,9 +2158,9 @@
             "over_budget": true,
             "note": "One spread already risks $900, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
           },
-          "compliance": {
-            "tier": "more_contested",
-            "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
+          "risk_form": {
+            "tier": "short_premium",
+            "note": "You collect a premium for taking on an obligation, held against margin. The long wings cap the loss — without them it is open-ended."
           }
         },
         "alternatives": [
@@ -2176,9 +2256,9 @@
               "over_budget": true,
               "note": "One spread already risks $786, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
-            "compliance": {
-              "tier": "more_contested",
-              "note": "Selling options collects a premium for taking on an obligation, normally against margin — the form scholars object to most."
+            "risk_form": {
+              "tier": "short_premium",
+              "note": "You collect a premium for taking on an obligation, held against margin. The long wings cap the loss — without them it is open-ended."
             }
           },
           {
@@ -2246,9 +2326,9 @@
               "over_budget": true,
               "note": "One spread already risks $32,298, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
             },
-            "compliance": {
-              "tier": "contested",
-              "note": "Written against shares you already own rather than on margin, which some scholars treat more leniently than a naked short option."
+            "risk_form": {
+              "tier": "covered",
+              "note": "The short call is secured by shares you already own rather than by margin, so assignment delivers stock you hold instead of creating a short."
             }
           }
         ],
@@ -2270,7 +2350,8 @@
         "warnings": [
           "The credit is only 10% of the spread width — thin compensation. Widen the wings or pass."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 12,
@@ -2374,7 +2455,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "META",
@@ -2411,9 +2498,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -2424,7 +2511,8 @@
           "Setup score 66/100, direction bullish (weak)."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 13,
@@ -2528,7 +2616,13 @@
             "date": "2027-03-19",
             "dte": 198
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "TXN",
@@ -2565,9 +2659,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -2585,7 +2679,8 @@
         "warnings": [
           "Thin options market (ATM spread ~26% of mid, OI 90) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 14,
@@ -2689,7 +2784,13 @@
             "date": "2027-03-19",
             "dte": 198
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "AMAT",
@@ -2726,9 +2827,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -2746,7 +2847,8 @@
         "warnings": [
           "Thin options market (ATM spread ~24% of mid, OI 4) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 15,
@@ -2850,7 +2952,13 @@
             "date": "2027-02-19",
             "dte": 170
           }
-        ]
+        ],
+        "long_expiry": null,
+        "long_dte": null,
+        "long_iv": null,
+        "long_spread_pct": null,
+        "long_open_interest": null,
+        "long_liquidity": "unknown"
       },
       "recommendation": {
         "ticker": "AMZN",
@@ -2887,9 +2995,9 @@
             "risk_budget": 500.0,
             "contracts": 0
           },
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -2901,7 +3009,8 @@
           "Term structure in contango (+4.1% front→back)."
         ],
         "warnings": []
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 16,
@@ -2968,9 +3077,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -2981,7 +3090,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 17,
@@ -3048,9 +3158,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3061,7 +3171,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 18,
@@ -3128,9 +3239,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3141,7 +3252,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 19,
@@ -3208,9 +3320,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3221,7 +3333,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 20,
@@ -3288,9 +3401,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3301,7 +3414,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 21,
@@ -3368,9 +3482,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3381,7 +3495,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 22,
@@ -3448,9 +3563,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3461,7 +3576,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 23,
@@ -3528,9 +3644,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3541,7 +3657,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 24,
@@ -3608,9 +3725,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3621,7 +3738,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 25,
@@ -3688,9 +3806,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3701,7 +3819,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 26,
@@ -3768,9 +3887,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3781,7 +3900,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 27,
@@ -3848,9 +3968,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3861,7 +3981,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 28,
@@ -3928,9 +4049,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -3941,7 +4062,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     },
     {
       "rank": 29,
@@ -4008,9 +4130,9 @@
           "credit_to_width": null,
           "manage": {},
           "sizing": {},
-          "compliance": {
+          "risk_form": {
             "tier": "n/a",
-            "note": "No position — nothing to rule on."
+            "note": "No position — nothing to secure."
           }
         },
         "alternatives": [],
@@ -4021,7 +4143,8 @@
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
-      }
+      },
+      "long_dated": null
     }
   ]
 }

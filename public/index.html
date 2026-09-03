@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Halal Spread Scanner</title>
-<meta name="description" content="Volatility-squeeze scanner over a Shariah-screened universe, with an explicit options strategy per name: buy premium when IV is cheap, sell it when IV is rich.">
+<title>Spread Scanner</title>
+<meta name="description" content="Volatility-squeeze scanner with an explicit options strategy per name — buy premium when IV is cheap, sell it when IV is rich — plus the ≈13-month spreads priced off the same chains.">
 <link rel="stylesheet" href="assets/styles.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📈</text></svg>">
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Halal Spread Scanner</h1>
+  <h1>Spread Scanner</h1>
   <div class="meta">
     Updated <b><span id="updated">—</span></b>
     · horizon <b><span id="horizon">—</span></b>
@@ -23,6 +23,7 @@
 
   <nav class="tabs" role="tablist">
     <button data-tab="playbook" role="tab" aria-selected="true">What to do</button>
+    <button data-tab="spreads" role="tab" aria-selected="false">Spreads</button>
     <button data-tab="scanner" role="tab" aria-selected="false">Scanner</button>
     <button data-tab="charts" role="tab" aria-selected="false">Charts</button>
     <button data-tab="validation" role="tab" aria-selected="false">Does it work?</button>
@@ -48,6 +49,24 @@
       <div class="cards" id="cards"></div>
 
       <div class="disclaimer" id="disclaimer"></div>
+    </section>
+
+    <!-- -------------------------------------------------------- spreads -->
+    <section class="panel" data-tab="spreads" role="tabpanel" hidden>
+      <div class="lede">
+        Every <b>≈13-month spread</b> the chains support — the same names, held for a year instead of
+        a fortnight. Out here <b>time decay barely works for you</b> and the level of implied
+        volatility does most of the moving, so none of these are income trades: they are directional
+        positions with a defined cost. Click any row for the full legs, the management rules and the
+        caveats for that name.
+      </div>
+      <div class="meta" id="spreadmeta"></div>
+      <div class="filters" id="spreadfilters"></div>
+      <div id="spreadtable"></div>
+      <p class="faint" style="font-size:.82rem;margin-top:12px">
+        Long-dated options are listed on January cycles, so the expiry nearest 13 months out can sit
+        anywhere from ~9 to ~18 months away. The real days-to-expiry is in every row.
+      </p>
     </section>
 
     <!-- -------------------------------------------------------- scanner -->
@@ -99,10 +118,11 @@
       <div class="cols">
         <div class="panelcard">
           <h3>Backend — data only</h3>
-          <p>Each weekday after the US close a GitHub Action fetches the Shariah ETF holdings,
-          re-screens them on industry plus debt and cash ratios, downloads daily prices, recomputes the
-          indicators without look-ahead, reads the option chains for the top-ranked names, runs the
-          strategy engine, and writes JSON:</p>
+          <p>Each weekday after the US close a GitHub Action fetches the ETF holdings that define
+          the universe, re-screens them on industry plus debt and cash ratios, downloads daily prices,
+          recomputes the indicators without look-ahead, reads the option chains for the top-ranked
+          names — the front month and a ≈13-month expiry — runs both strategy engines, and writes
+          JSON:</p>
           <ul>
             <li><code>data/scan.json</code> — signals, IV read, recommendations, and this copy</li>
             <li><code>data/charts.json</code> — downsampled price history</li>

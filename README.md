@@ -1,8 +1,8 @@
-# Halal Short-Term Spread Scanner
+# Short-Term Spread Scanner
 
-A volatility-**squeeze / breakout** scanner over a **halal (Shariah-screened)**
-watchlist that tells you, for each name, **exactly what to place** — the strategy,
-the strikes, the price, the risk and the exit.
+A volatility-**squeeze / breakout** scanner over a screened watchlist that tells
+you, for each name, **exactly what to place** — the strategy, the strikes, the
+price, the risk and the exit.
 
 Two questions decide an options trade, and this answers both:
 
@@ -41,7 +41,7 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 
 | File | Written by | Contains |
 |---|---|---|
-| `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
+| `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
 | `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker |
 | `public/data/backtest.json` | `backtest.py` | does the score work? |
@@ -140,7 +140,7 @@ Every ticker in `scan.json` carries a `recommendation` block:
     "credit_to_width": 0.21,
     "manage":   { "profit_target_pct": 50, "stop_loss_multiple": 2.0, "close_by_dte": 21 },
     "sizing":   { "risk_budget": 500, "contracts": 0, "over_budget": true },
-    "compliance": { "tier": "more_contested", "note": "..." }
+    "risk_form": { "tier": "short_premium", "note": "..." }   // what secures it
   },
   "alternatives": [ /* other ways to express the same view, fully priced */ ],
   "avoid":  [ { "name": "Long straddles", "reason": "..." } ],
@@ -171,27 +171,80 @@ Modifiers, applied on top:
   when `strategy.allow_undefined_risk: true`, the chain is deep, and no earnings
   fall inside the expiry.
 
-> ⚠️ **Options are contested in Islamic finance.** The halal screen covers the
-> underlying *company*, not the instrument. Every plan carries a `compliance` note
-> (`least_contested` for shares, `contested` for defined-risk debit structures,
-> `more_contested` for short premium on margin) — that is a flag for your own
-> research, not a ruling. Seek your own.
+Every plan also carries a `risk_form` note saying **what actually secures it** —
+a debit you have already paid (`defined_debit`), margin against a short option
+(`short_premium`), shares you already own (`covered`), or a long option
+(`option_covered`, the diagonal). That is a different question from how likely
+the trade is to win, and it is the one that decides how the position can hurt you.
 
-## Halal universe & screening
+## The Spreads tab — the same names at ~13 months
+
+The strategy engine above answers *what to place this month*. The **Spreads** tab
+answers a different question on the same chains: **if you wanted this name for the
+next year, which spread expresses it?** That is not the same trade, and
+[`spread_scanner/leaps.py`](spread_scanner/leaps.py) is a separate engine because
+almost every assumption changes:
+
+- **Time decay barely works for you.** A 13-month short option decays a rounding
+  error per day. Selling premium out here is not an income trade — it is a
+  directional trade you happen to get paid for.
+- **Vega dominates.** Over a year the *level* of implied volatility moves the
+  position far more than a week of theta does.
+- **Every long-dated spread is directional.** A year-long iron condor collects
+  negligible theta against a full year of gap risk, so there is no honest neutral
+  structure. When the scanner has no directional read on a name, the tab
+  recommends **nothing** and lists the candidates for reference instead.
+- **Strikes go by moneyness, not sigma.** One sigma over 13 months is 40%+ of spot
+  on a volatile name; a vertical placed there is a synthetic long. Long-dated
+  strikes are percentages of spot (`VERTICAL_WIDTH`, `CREDIT_OTM`, `ITM_DEPTH`).
+
+Five structures are priced off the real long-dated chain:
+
+| Structure | Legs | What it is |
+|---|---|---|
+| **LEAPS Bull Call / Bear Put Spread** | ATM long, ~15% OTM short | Direction with a year of room, at a cost fixed on day one |
+| **Poor Man's Covered Call** | ~20% ITM long-dated call + short **front-month** call | Covered-call income on a fraction of the capital — the long call, not stock, secures the short one |
+| **LEAPS Bull Put / Bear Call Spread** | ~20% OTM short + wing | Paid up front to be right slowly, capital committed for the year |
+
+The tab is a sortable table — ticker, structure, expiry, legs, net debit/credit,
+max profit, max loss, reward-to-risk, breakeven, probability of profit and
+position size — and any row opens the full legs, the management rules and that
+name's caveats.
+
+**Where the numbers are honest about themselves:**
+
+- **"13 months" is a target, not a listing.** Exchanges list LEAPS on January
+  cycles, so the nearest real expiry to 395 days can sit anywhere from ~9 to ~18
+  months out. The engine takes the closest listed expiry inside that window and
+  reports its **true DTE**; when it is far off the target, it says so.
+- **IV rank is a front-month reading.** A 13-month contract is priced off a
+  flatter part of the volatility surface, so "cheap" or "rich" is a weaker signal
+  out here. Every block ships that caveat along with the long expiry's own ATM IV.
+- **The diagonal gets no probability of profit.** Its legs expire thirteen months
+  apart, so a single-sigma number would be quietly wrong rather than imprecise.
+  Its max profit is the *conservative* case — assigned on the very first short
+  call, counting none of the monthly rolls that are the point of the structure.
+- **Liquidity is read on the long chain, not the front month.** LEAPS quote several
+  times wider, and you pay that spread twice, a year apart.
+- **Sizing runs against its own budget** (`strategy.long_risk_budget_usd`, default
+  $2,500), because a LEAPS spread costs several times a monthly one.
+
+Set `options.long_dated.enabled: false` to skip the extra chain call per ticker.
+
+## Universe & screening
 
 The scanner builds its universe in two automated stages, so you never hand-pick
 tickers:
 
 **1. Fetch — pre-screened ETF holdings.** Each run pulls the current top holdings
-of Shariah-compliant ETFs (default **SPUS** + **HLAL**) and unions them by weight
-([`spread_scanner/universe.py`](spread_scanner/universe.py)). These funds are
-screened by professionals *and* a Shariah board, so it's an authoritative starting
-list. If the fetch fails, it falls back to the curated `tickers:` list in the config.
+of the ETFs in `universe.etfs` (default **SPUS** + **HLAL**) and unions them by
+weight ([`spread_scanner/universe.py`](spread_scanner/universe.py)). Starting from
+a fund's published holdings means the list is maintained by someone else. If the
+fetch fails, it falls back to the curated `tickers:` list in the config.
 
 **2. Verify — the financial-ratio formula.** Every fetched name is re-checked
-([`spread_scanner/halal.py`](spread_scanner/halal.py)) against the recognized
-quantitative methodology (AAOIFI / S&P Dow Jones Islamic style). Using market cap
-as the denominator, a name passes when:
+([`spread_scanner/halal.py`](spread_scanner/halal.py)) on its industry and its
+balance sheet. Using market cap as the denominator, a name passes when:
 
 ```
 permissible industry  (no banks, insurance, alcohol, tobacco, gambling, weapons…)
@@ -204,10 +257,9 @@ The resulting **Debt%** and **Cash%** show in every report so you can see the
 verification. Set `halal_screen.financial_formula.mode: annotate` to keep names
 that fail (just flagging the ratios) instead of dropping them.
 
-> ⚠️ **Approximation, not a fatwa.** The standards use a trailing-average market
-> cap and a precise definition of "interest-bearing securities"; we use spot
-> values. The **non-compliant-income < 5%** purification rule isn't automated.
-> Re-verify each name with a dedicated screener (Zoya, Musaffa) before trading.
+> ⚠️ **Approximate.** The ratios use spot values from `yfinance` rather than the
+> trailing averages a formal screen would use, and "interest-bearing securities"
+> is approximated by total cash. Treat the screen as a filter, not a verdict.
 
 ## Configure
 
@@ -216,7 +268,7 @@ Edit [`config.yaml`](config.yaml):
 ```yaml
 universe:
   source: etf            # 'etf' = auto-fetch holdings; 'config' = use tickers: below
-  etfs: [SPUS, HLAL]     # Shariah ETFs to pull from
+  etfs: [SPUS, HLAL]     # ETFs to pull holdings from
   max_holdings: 30
 halal_screen:
   financial_formula:
@@ -281,8 +333,9 @@ alone. To turn it on: **Settings → Pages → Build and deployment → Source =
 Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
 workflow already requests the `pages`/`id-token` permissions it needs.
 
-The page has five tabs: **What to do** (the strategy cards), **Scanner** (the
-sortable ranked table), **Charts**, **Does it work?** (backtest + calibration) and
+The page has six tabs: **What to do** (the strategy cards), **Spreads** (the
+≈13-month table), **Scanner** (the sortable ranked table), **Charts**,
+**Does it work?** (backtest + calibration) and
 **Reference** (the glossary and strategy playbook, both read from `scan.json`).
 
 ### Working on the frontend
@@ -369,7 +422,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 109 network-free tests
+python -m pytest -q          # 157 network-free tests
 ```
 
 Everything is tested without touching the network. `tests/conftest.py` builds
@@ -377,7 +430,7 @@ Everything is tested without touching the network. `tests/conftest.py` builds
 real credits, breakevens and probabilities rather than stubs.
 
 Coverage: the indicator math (incl. the rolling-percentile NaN edge case), the
-Shariah screen (incl. the "Non-Alcoholic" regression), expected-move scaling,
+industry/ratio screen (incl. the "Non-Alcoholic" regression), expected-move scaling,
 squeeze-fired detection, holdings parsing, backtest stats, the IV rank / premium
 score / classification helpers, every branch of the strategy decision table
 (including the liquidity and earnings guardrails), the spread arithmetic
@@ -400,6 +453,7 @@ spread_scanner/
   scanner.py                 Setup Score + expected-move bands
   options.py                 IV rank, risk premium, term structure, skew, liquidity
   strategy.py                the decision table -> one explicit plan per ticker
+  leaps.py                   the same chains at ~13 months -> the Spreads tab
   report.py                  the JSON payload (and the UI copy that ships with it)
   charts.py    backtest.py   the other payloads
   alerts.py                  Slack / Discord webhook
@@ -408,13 +462,13 @@ public/                      the frontend (hand-written) + data/ (generated)
 
 ---
 
-⚠️ **Educational tool, not financial advice, and not a fatwa.**
+⚠️ **Educational tool, not financial advice.**
 
 Expected-move bands and probabilities are statistical estimates derived from past
 and implied volatility — they are not predictions, and past volatility does not
 guarantee future behaviour. Option prices in the JSON are last-known mids and will
-have moved; price every trade in your broker before placing it. The halal screen
-approximates AAOIFI / S&P Islamic methodology on the underlying company and does not
-automate the 5%-income purification rule — and conventional options are themselves
-contested in Islamic finance. Re-verify each name (Zoya, Musaffa) and seek your own
-ruling on the instrument.
+have moved; price every trade in your broker before placing it. Every position
+here can lose: a debit spread can expire worthless and take the whole premium with
+it, and a credit spread can lose several times what it collected. The position
+sizes are computed against the risk budgets in `config.yaml`, not against your
+account.

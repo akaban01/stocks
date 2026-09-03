@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from spread_scanner import report, strategy
+from spread_scanner import leaps, report, strategy
 from conftest import make_row, make_view
 
 PARAMS = {"horizon_days": 10, "vol_lookback": 20, "percentile_lookback": 120}
@@ -39,7 +39,7 @@ def test_scan_payload_has_the_documented_shape(tmp_path):
     assert payload["counts"]["NO_DATA"] == 2
     for key in ("actions", "premium_states", "glossary", "playbook"):
         assert payload["reference"][key], f"reference.{key} is empty"
-    assert payload["disclaimer"]["compliance"]
+    assert payload["disclaimer"]["risk"]
 
 
 def test_signals_carry_their_own_options_block_and_recommendation(tmp_path):
@@ -154,3 +154,47 @@ def test_every_premium_state_has_a_rule_the_ui_can_show():
     assert states <= set(report.PREMIUM_STATES)
     for meta in report.PREMIUM_STATES.values():
         assert meta["label"] and meta["rule"] and meta["detail"]
+
+
+# ------------------------------------------------- the long-dated block
+
+def test_long_dated_blocks_ride_along_on_their_signal():
+    df = _frame()
+    views = {"AAA": make_view("AAA", iv=58, hv=28, iv_rank=88)}
+    recs = strategy.recommend_all(df.to_dict("records"), views)
+    blocks = leaps.long_spreads_all(df.to_dict("records"), views,
+                                    biases={"AAA": ("bullish", "strong")})
+    payload = report.build_scan(df, PARAMS, recommendations=recs, option_views=views,
+                                long_spreads=blocks,
+                                playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK})
+
+    by = {s["ticker"]: s for s in payload["signals"]}
+    assert by["AAA"]["long_dated"]["candidates"]
+    assert by["AAA"]["long_dated"]["preferred"] == "leaps_bull_put"
+    # A name with no option view has no long-dated block — not an empty one.
+    assert by["BBB"]["long_dated"] is None
+
+    summary = payload["long_dated"]
+    assert summary["tickers"] == 1
+    assert summary["candidates"] == len(by["AAA"]["long_dated"]["candidates"])
+    assert summary["preferred"] == 1
+    assert summary["expiries"] == [by["AAA"]["long_dated"]["expiry"]]
+
+    # Every candidate's structure is explained by the shipped playbook copy.
+    for c in by["AAA"]["long_dated"]["candidates"]:
+        assert payload["reference"]["playbook"][c["key"]]
+
+
+def test_a_scan_with_no_long_dated_chains_still_has_a_well_formed_summary():
+    df = _frame()
+    payload = report.build_scan(df, PARAMS)
+    assert payload["long_dated"] == {"tickers": 0, "candidates": 0, "preferred": 0,
+                                     "expiries": [], "target_days": None}
+    assert all(s["long_dated"] is None for s in payload["signals"])
+
+
+def test_the_shipped_copy_carries_no_religious_framing():
+    """The screen itself is unchanged; the dashboard copy is not framed around it."""
+    blob = json.dumps(report.build_scan(_frame(), PARAMS)).lower()
+    for word in ("halal", "shariah", "sharia", "fatwa", "islamic", "musaffa", "zoya"):
+        assert word not in blob, f"{word!r} still ships in the payload"
