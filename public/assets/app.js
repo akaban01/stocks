@@ -911,10 +911,20 @@
       term_structure: "Term structure", skew: "Skew", liquidity: "Liquidity",
       pop: "Probability of profit", credit_to_width: "Credit to width",
       em_pct: "Expected move (±1σ)", squeeze: "TTM squeeze", lean: "Lean",
-      earnings: "Earnings", debt_cash_ratio: "Debt % / Cash %"
+      earnings: "Earnings", debt_cash_ratio: "Debt % / Cash %",
+      long_dated: "The long-dated expiry", leaps_vega: "Vega over a year",
+      reward_to_risk: "Reward to risk", annualised_return: "Reward to risk, annualised",
+      risk_form: "What secures a position"
     };
+    // Any key without an entry above reads as a sentence rather than as the raw
+    // snake_case name, so a new glossary term is never published looking like one.
+    function title(k) {
+      if (titles[k]) return titles[k];
+      var words = k.replace(/_/g, " ");
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    }
     host.innerHTML = "<dl class=\"glossary\">" + Object.keys(g).map(function (k) {
-      return "<dt>" + esc(titles[k] || k) + "</dt><dd>" + esc(g[k]) + "</dd>";
+      return "<dt>" + esc(title(k)) + "</dt><dd>" + esc(g[k]) + "</dd>";
     }).join("") + "</dl>";
 
     var play = ref("playbook", {});
