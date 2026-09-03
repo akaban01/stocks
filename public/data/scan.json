@@ -1,7 +1,7 @@
 {
   "schema_version": "2.1.0",
-  "generated_at": "2026-09-02T23:29:01Z",
-  "generated_at_utc": "2026-09-02 23:29 UTC",
+  "generated_at": "2026-09-03T10:19:07Z",
+  "generated_at_utc": "2026-09-03 10:19 UTC",
   "horizon_days": 10,
   "params": {
     "horizon_days": 10,
@@ -34,44 +34,19 @@
     "source": "default"
   },
   "counts": {
-    "BUY_PREMIUM": 2,
-    "STAND_ASIDE": 10,
-    "NO_DATA": 16,
-    "SELL_PREMIUM": 1
+    "STAND_ASIDE": 13,
+    "NO_DATA": 16
   },
   "long_dated": {
-    "tickers": 0,
-    "candidates": 0,
-    "preferred": 0,
-    "expiries": [],
-    "target_days": null
+    "tickers": 13,
+    "candidates": 2,
+    "preferred": 1,
+    "expiries": [
+      "2027-09-17"
+    ],
+    "target_days": 395
   },
-  "top_actions": [
-    {
-      "ticker": "MU",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Straddle",
-      "headline": "MU: BUY premium — IV rank 3, cheap → Long Straddle",
-      "detail": "Buy 1× 2026-09-25 955 call; Buy 1× 2026-09-25 955 put — net debit $10,015.00 per spread",
-      "confidence": 0.72
-    },
-    {
-      "ticker": "AAPL",
-      "action": "SELL_PREMIUM",
-      "strategy": "Bull Put Spread",
-      "headline": "AAPL: SELL premium — IV rank 55, rich → Bull Put Spread",
-      "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $99.50 per spread",
-      "confidence": 0.66
-    },
-    {
-      "ticker": "GOOGL",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Strangle",
-      "headline": "GOOGL: BUY premium — IV rank 36, fair → Long Strangle",
-      "detail": "Buy 1× 2026-09-25 355 call; Buy 1× 2026-09-25 320 put — net debit $613.50 per spread",
-      "confidence": 0.55
-    }
-  ],
+  "top_actions": [],
   "reference": {
     "actions": {
       "BUY_PREMIUM": {
@@ -202,88 +177,88 @@
       "debt_ratio": 0.005904850737493044,
       "cash_ratio": 0.024099126359809982,
       "earnings_in_days": 27.0,
-      "implied_move_pct": 10.21,
-      "vol_verdict": "fair",
-      "iv_annual": 51.27,
-      "iv_rank": 3.1,
-      "premium_score": 19.5,
+      "implied_move_pct": 0.02,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.1,
+      "iv_rank": 0.0,
+      "premium_score": 4.5,
       "premium_state": "cheap",
-      "liquidity": "fair",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Straddle",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
       "options": {
-        "iv_annual": 51.27,
+        "iv_annual": 0.1,
         "hv_annual": 49.9,
-        "implied_move_pct": 10.21,
+        "implied_move_pct": 0.02,
         "hist_move_pct": 9.94,
-        "iv_rank": 3.1,
-        "iv_percentile": 3.0,
-        "vrp": 1.38,
-        "iv_hv_ratio": 1.03,
-        "verdict": "fair",
-        "premium_score": 19.5,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -49.79,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 4.5,
         "premium_state": "cheap",
-        "term_slope": 0.1451,
+        "term_slope": 2.9,
         "term_structure": "contango",
-        "skew": -0.19,
+        "skew": -0.29,
         "skew_label": "balanced",
-        "atm_spread_pct": 6.3,
-        "atm_open_interest": 172,
-        "liquidity": "fair",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
         "long_spread_pct": null,
         "long_open_interest": null,
@@ -291,244 +266,83 @@
       },
       "recommendation": {
         "ticker": "MU",
-        "action": "BUY_PREMIUM",
-        "headline": "MU: BUY premium — IV rank 3, cheap → Long Straddle",
-        "detail": "Buy 1× 2026-09-25 955 call; Buy 1× 2026-09-25 955 put — net debit $10,015.00 per spread",
-        "confidence": 0.72,
+        "action": "STAND_ASIDE",
+        "headline": "MU: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "confidence": 0.0,
         "premium_state": "cheap",
-        "premium_score": 19.5,
+        "premium_score": 4.5,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
-          "key": "long_straddle",
-          "name": "Long Straddle",
-          "action": "BUY_PREMIUM",
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap and the chart is coiled — pay for the move, either direction.",
-          "playbook": "Buy the at-the-money call and the at-the-money put. You win if the move is big enough, either way; you lose if it sits still. The trade for cheap options in front of a coiled chart.",
-          "vega": "long",
-          "theta": "negative",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "buy",
-              "right": "call",
-              "strike": 955.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 51.375,
-              "bid": 49.75,
-              "ask": 53.0,
-              "iv": 52.04,
-              "open_interest": 172,
-              "label": "Buy 1× 2026-09-25 955 call"
-            },
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 955.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 48.775,
-              "bid": 47.6,
-              "ask": 49.95,
-              "iv": 50.49,
-              "open_interest": 104,
-              "label": "Buy 1× 2026-09-25 955 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 23,
-          "net": 10015.0,
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
           "max_profit": null,
-          "max_loss": 10015.0,
-          "breakevens": [
-            854.85,
-            1055.15
-          ],
-          "profit_zone": "outside",
-          "pop": 0.413,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
           "credit_to_width": null,
-          "manage": {
-            "profit_target": "close at +50% to +100% of the debit",
-            "profit_target_pct": 50,
-            "stop": "cut at −50% of the debit",
-            "stop_loss_pct": 50,
-            "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-            "close_by_dte": 7
-          },
+          "manage": {},
           "sizing": {
             "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 10015.0,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $10,015, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            "contracts": 0
           },
           "risk_form": {
-            "tier": "defined_debit",
-            "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
           }
         },
-        "alternatives": [
-          {
-            "key": "long_strangle",
-            "name": "Long Strangle",
-            "action": "BUY_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Cheap options plus a coiled chart — the budget version of the both-ways bet.",
-            "playbook": "Buy an out-of-the-money call and an out-of-the-money put. Cheaper than a straddle and needs a bigger move to pay — the budget version of the same both-ways bet.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 1050.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 19.7,
-                "bid": 19.0,
-                "ask": 20.4,
-                "iv": 52.9,
-                "open_interest": 435,
-                "label": "Buy 1× 2026-09-25 1050 call"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 865.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 16.05,
-                "bid": 15.25,
-                "ask": 16.85,
-                "iv": 52.27,
-                "open_interest": 52,
-                "label": "Buy 1× 2026-09-25 865 put"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 23,
-            "net": 3575.0,
-            "max_profit": null,
-            "max_loss": 3575.0,
-            "breakevens": [
-              829.25,
-              1085.75
-            ],
-            "profit_zone": "outside",
-            "pop": 0.295,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 3575.0,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $3,575, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "risk_form": {
-              "tier": "defined_debit",
-              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-            }
-          },
-          {
-            "key": "bull_call_spread",
-            "name": "Bull Call Spread",
-            "action": "BUY_PREMIUM",
-            "bias": "bullish",
-            "thesis": "Options are reasonably priced and the break is up — pay a capped premium for a capped move.",
-            "playbook": "Buy a call, sell a higher one. A capped, cheaper bullish bet — the short leg pays for part of the long one.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 955.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 51.375,
-                "bid": 49.75,
-                "ask": 53.0,
-                "iv": 52.04,
-                "open_interest": 172,
-                "label": "Buy 1× 2026-09-25 955 call"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 1080.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 14.35,
-                "bid": 13.7,
-                "ask": 15.0,
-                "iv": 53.6,
-                "open_interest": 201,
-                "label": "Sell 1× 2026-09-25 1080 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 23,
-            "net": 3702.5,
-            "max_profit": 8797.5,
-            "max_loss": 3702.5,
-            "breakevens": [
-              992.02
-            ],
-            "profit_zone": "above",
-            "pop": 0.363,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 3702.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $3,702, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "risk_form": {
-              "tier": "defined_debit",
-              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-            }
-          }
-        ],
+        "alternatives": [],
         "avoid": [
           {
-            "name": "Selling premium (condors, credit spreads)",
-            "reason": "IV rank 3 — you'd collect too little for the risk."
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 3/100 (cheap premium, blended score 20).",
-          "Options price a 10.2% move over the horizon vs 9.9% realized (1.03× IV/HV).",
+          "IV rank 0/100 (cheap premium, blended score 4).",
+          "Options price a 0.0% move over the horizon vs 9.9% realized.",
           "Squeeze on for 4 days — still building, not yet fired.",
           "Setup score 92/100, direction bullish (weak).",
-          "Term structure in contango (+14.5% front→back)."
+          "Term structure in contango (+290.0% front→back)."
         ],
-        "warnings": []
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.1,
+        "liquidity": "unknown",
+        "atm_spread_pct": null,
+        "atm_open_interest": null,
+        "premium_state": "cheap",
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 2,
@@ -553,101 +367,101 @@
       "debt_ratio": 0.005730835480240186,
       "cash_ratio": 0.01757179241071154,
       "earnings_in_days": 61.0,
-      "implied_move_pct": 9.48,
-      "vol_verdict": "fair",
-      "iv_annual": 47.58,
-      "iv_rank": 30.2,
-      "premium_score": 42.0,
-      "premium_state": "fair",
+      "implied_move_pct": 0.08,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.39,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 47.58,
+        "iv_annual": 0.39,
         "hv_annual": 42.1,
-        "implied_move_pct": 9.48,
+        "implied_move_pct": 0.08,
         "hist_move_pct": 8.39,
-        "iv_rank": 30.2,
-        "iv_percentile": 13.8,
-        "vrp": 5.44,
-        "iv_hv_ratio": 1.13,
-        "verdict": "fair",
-        "premium_score": 42.0,
-        "premium_state": "fair",
-        "term_slope": 0.0092,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -41.75,
+        "iv_hv_ratio": 0.01,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
         "term_structure": "flat",
-        "skew": 0.09,
+        "skew": -0.39,
         "skew_label": "balanced",
-        "atm_spread_pct": 5.4,
-        "atm_open_interest": 93,
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.2,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "AMD",
         "action": "STAND_ASIDE",
-        "headline": "AMD: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "AMD: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 42.0,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -655,7 +469,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~5% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -684,20 +498,40 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~5% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 30/100 (fair premium, blended score 42).",
-          "Options price a 9.5% move over the horizon vs 8.4% realized (1.13× IV/HV).",
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.1% move over the horizon vs 8.4% realized (0.01× IV/HV).",
           "Squeeze on for 7 days — still building, not yet fired.",
           "Setup score 92/100, direction bearish (weak)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~5% of mid, OI 93) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.2,
+        "front_iv_annual": 0.39,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 3,
@@ -722,390 +556,109 @@
       "debt_ratio": 0.02929718545688572,
       "cash_ratio": 0.05881071912790501,
       "earnings_in_days": 55.0,
-      "implied_move_pct": 5.54,
-      "vol_verdict": "rich",
-      "iv_annual": 27.82,
-      "iv_rank": 36.4,
-      "premium_score": 57.0,
-      "premium_state": "fair",
-      "liquidity": "fair",
-      "action": "BUY_PREMIUM",
-      "strategy": "Long Strangle",
-      "options": {
-        "iv_annual": 27.82,
-        "hv_annual": 20.3,
-        "implied_move_pct": 5.54,
-        "hist_move_pct": 4.04,
-        "iv_rank": 36.4,
-        "iv_percentile": 44.4,
-        "vrp": 7.52,
-        "iv_hv_ratio": 1.37,
-        "verdict": "rich",
-        "premium_score": 57.0,
-        "premium_state": "fair",
-        "term_slope": 0.037,
-        "term_structure": "contango",
-        "skew": -1.03,
-        "skew_label": "balanced",
-        "atm_spread_pct": 7.0,
-        "atm_open_interest": 453,
-        "liquidity": "fair",
-        "expiry": "2026-09-25",
-        "days_to_expiry": 23,
-        "expiries": [
-          {
-            "date": "2026-09-04",
-            "dte": 2
-          },
-          {
-            "date": "2026-09-09",
-            "dte": 7
-          },
-          {
-            "date": "2026-09-11",
-            "dte": 9
-          },
-          {
-            "date": "2026-09-18",
-            "dte": 16
-          },
-          {
-            "date": "2026-09-25",
-            "dte": 23
-          },
-          {
-            "date": "2026-10-02",
-            "dte": 30
-          },
-          {
-            "date": "2026-10-09",
-            "dte": 37
-          },
-          {
-            "date": "2026-10-16",
-            "dte": 44
-          },
-          {
-            "date": "2026-11-20",
-            "dte": 79
-          },
-          {
-            "date": "2026-12-18",
-            "dte": 107
-          },
-          {
-            "date": "2027-01-15",
-            "dte": 135
-          },
-          {
-            "date": "2027-02-19",
-            "dte": 170
-          }
-        ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
-      },
-      "recommendation": {
-        "ticker": "GOOGL",
-        "action": "BUY_PREMIUM",
-        "headline": "GOOGL: BUY premium — IV rank 36, fair → Long Strangle",
-        "detail": "Buy 1× 2026-09-25 355 call; Buy 1× 2026-09-25 320 put — net debit $613.50 per spread",
-        "confidence": 0.55,
-        "premium_state": "fair",
-        "premium_score": 57.0,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "long_strangle",
-          "name": "Long Strangle",
-          "action": "BUY_PREMIUM",
-          "bias": "neutral",
-          "thesis": "Cheap options plus a coiled chart — the budget version of the both-ways bet.",
-          "playbook": "Buy an out-of-the-money call and an out-of-the-money put. Cheaper than a straddle and needs a bigger move to pay — the budget version of the same both-ways bet.",
-          "vega": "long",
-          "theta": "negative",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "buy",
-              "right": "call",
-              "strike": 355.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 3.26,
-              "bid": 2.82,
-              "ask": 3.7,
-              "iv": 28.98,
-              "open_interest": 2193,
-              "label": "Buy 1× 2026-09-25 355 call"
-            },
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 320.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 2.875,
-              "bid": 2.7,
-              "ask": 3.05,
-              "iv": 27.33,
-              "open_interest": 1372,
-              "label": "Buy 1× 2026-09-25 320 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 23,
-          "net": 613.5,
-          "max_profit": null,
-          "max_loss": 613.5,
-          "breakevens": [
-            313.87,
-            361.13
-          ],
-          "profit_zone": "outside",
-          "pop": 0.315,
-          "credit_to_width": null,
-          "manage": {
-            "profit_target": "close at +50% to +100% of the debit",
-            "profit_target_pct": 50,
-            "stop": "cut at −50% of the debit",
-            "stop_loss_pct": 50,
-            "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-            "close_by_dte": 7
-          },
-          "sizing": {
-            "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 613.5,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $614, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-          },
-          "risk_form": {
-            "tier": "defined_debit",
-            "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-          }
-        },
-        "alternatives": [
-          {
-            "key": "long_straddle",
-            "name": "Long Straddle",
-            "action": "BUY_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Options are cheap and the chart is coiled — pay for the move, either direction.",
-            "playbook": "Buy the at-the-money call and the at-the-money put. You win if the move is big enough, either way; you lose if it sits still. The trade for cheap options in front of a coiled chart.",
-            "vega": "long",
-            "theta": "negative",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 335.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 10.775,
-                "bid": 10.4,
-                "ask": 11.15,
-                "iv": 29.25,
-                "open_interest": 453,
-                "label": "Buy 1× 2026-09-25 335 call"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 335.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 7.575,
-                "bid": 7.1,
-                "ask": 8.05,
-                "iv": 26.39,
-                "open_interest": 607,
-                "label": "Buy 1× 2026-09-25 335 put"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 23,
-            "net": 1835.0,
-            "max_profit": null,
-            "max_loss": 1835.0,
-            "breakevens": [
-              316.65,
-              353.35
-            ],
-            "profit_zone": "outside",
-            "pop": 0.434,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "close at +50% to +100% of the debit",
-              "profit_target_pct": 50,
-              "stop": "cut at −50% of the debit",
-              "stop_loss_pct": 50,
-              "time_stop": "be out with ~7 days to expiry — theta accelerates into the last week",
-              "close_by_dte": 7
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 1835.0,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $1,835, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "risk_form": {
-              "tier": "defined_debit",
-              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
-            }
-          }
-        ],
-        "avoid": [
-          {
-            "name": "Selling premium",
-            "reason": "A squeeze this tight can expand fast — bad time to be short vega."
-          }
-        ],
-        "why": [
-          "IV rank 36/100 (fair premium, blended score 57).",
-          "Options price a 5.5% move over the horizon vs 4.0% realized (1.37× IV/HV).",
-          "Squeeze on for 1 days — still building, not yet fired.",
-          "Setup score 88/100, direction bearish (weak).",
-          "Term structure in contango (+3.7% front→back)."
-        ],
-        "warnings": []
-      },
-      "long_dated": null
-    },
-    {
-      "rank": 4,
-      "ticker": "QCOM",
-      "price": 169.96,
-      "score": 79.1,
-      "squeeze_on": true,
-      "squeeze_days": 4,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.075,
-      "hv_annual": 30.5,
-      "hv_pctile": 0.25,
-      "em_pct": 6.08,
-      "horizon_days": 10,
-      "down_1sigma": 159.63,
-      "up_1sigma": 180.29,
-      "down_2sigma": 149.3,
-      "up_2sigma": 190.62,
-      "lean": "Bullish",
-      "note": "",
-      "debt_ratio": 0.08411945602006145,
-      "cash_ratio": 0.04574511986618967,
-      "earnings_in_days": 56.0,
-      "implied_move_pct": 8.68,
-      "vol_verdict": "rich",
-      "iv_annual": 43.59,
-      "iv_rank": 29.7,
-      "premium_score": 58.6,
-      "premium_state": "fair",
+      "implied_move_pct": 0.16,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.78,
+      "iv_rank": 0.0,
+      "premium_score": 12.8,
+      "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 43.59,
-        "hv_annual": 30.5,
-        "implied_move_pct": 8.68,
-        "hist_move_pct": 6.08,
-        "iv_rank": 29.7,
-        "iv_percentile": 59.1,
-        "vrp": 13.08,
-        "iv_hv_ratio": 1.43,
-        "verdict": "rich",
-        "premium_score": 58.6,
-        "premium_state": "fair",
-        "term_slope": -0.0115,
-        "term_structure": "flat",
-        "skew": 3.67,
-        "skew_label": "put_skew",
-        "atm_spread_pct": 16.9,
-        "atm_open_interest": 795,
+        "iv_annual": 0.78,
+        "hv_annual": 20.3,
+        "implied_move_pct": 0.16,
+        "hist_move_pct": 4.04,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -19.52,
+        "iv_hv_ratio": 0.04,
+        "verdict": "cheap",
+        "premium_score": 12.8,
+        "premium_state": "cheap",
+        "term_slope": -0.5,
+        "term_structure": "backwardation",
+        "skew": 0.0,
+        "skew_label": "balanced",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
+          },
+          {
+            "date": "2026-09-09",
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
-          },
-          {
-            "date": "2027-03-19",
-            "dte": 198
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.2,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
-        "ticker": "QCOM",
+        "ticker": "GOOGL",
         "action": "STAND_ASIDE",
-        "headline": "QCOM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "GOOGL: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 58.6,
-        "bias": "bullish",
+        "premium_state": "cheap",
+        "premium_score": 12.8,
+        "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
           "key": "stand_aside",
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~17% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1134,24 +687,457 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~17% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 30/100 (fair premium, blended score 59).",
-          "Options price a 8.7% move over the horizon vs 6.1% realized (1.43× IV/HV).",
-          "Squeeze on for 4 days — still building, not yet fired.",
-          "Setup score 79/100, direction bullish (weak).",
-          "Puts bid over calls by 3.7 vol points — the put side pays more to sell."
+          "IV rank 0/100 (cheap premium, blended score 13).",
+          "Options price a 0.2% move over the horizon vs 4.0% realized (0.04× IV/HV).",
+          "Squeeze on for 1 days — still building, not yet fired.",
+          "Setup score 88/100, direction bearish (weak).",
+          "Term structure in backwardation (-50.0% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~17% of mid, OI 795) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      },
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.2,
+        "front_iv_annual": 0.78,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": "leaps_bear_put",
+        "summary": "The bearish lean plus cheap premium points at the LEAPS Bear Put Spread on the 2027-09-17 expiry (379 days out).",
+        "candidates": [
+          {
+            "key": "leaps_bull_call",
+            "name": "LEAPS Bull Call Spread",
+            "action": "BUY_PREMIUM",
+            "bias": "bullish",
+            "thesis": "A year of room for the upside thesis, at a cost that is fixed the day you put it on.",
+            "playbook": "Buy a call about 13 months out, sell a higher one in the same expiry. A bullish position with a year to be right and a cost you know on day one — the short leg pays for part of the long one and caps the win.",
+            "vega": "long",
+            "theta": "negative",
+            "risk": "defined",
+            "legs": [
+              {
+                "action": "buy",
+                "right": "call",
+                "strike": 335.0,
+                "expiry": "2027-09-17",
+                "qty": 1,
+                "mid": 55.65,
+                "bid": 0.0,
+                "ask": 0.0,
+                "iv": 0.0,
+                "open_interest": 0,
+                "label": "Buy 1× 2027-09-17 335 call"
+              },
+              {
+                "action": "sell",
+                "right": "call",
+                "strike": 345.0,
+                "expiry": "2027-09-17",
+                "qty": 1,
+                "mid": 50.62,
+                "bid": 0.0,
+                "ask": 0.0,
+                "iv": 0.39,
+                "open_interest": 0,
+                "label": "Sell 1× 2027-09-17 345 call"
+              }
+            ],
+            "expiry": "2027-09-17",
+            "dte": 379,
+            "net": 503.0,
+            "max_profit": 497.0,
+            "max_loss": 503.0,
+            "breakevens": [
+              340.03
+            ],
+            "profit_zone": "above",
+            "pop": 0.0,
+            "credit_to_width": null,
+            "manage": {
+              "profit_target": "take 50–70% of the maximum profit — the last of it takes months to arrive",
+              "profit_target_pct": 60,
+              "stop": "cut at −50% of the debit, or sooner if the reason you put it on stops being true",
+              "stop_loss_pct": 50,
+              "time_stop": "roll or close with ~90 days left; the final quarter is where a long-dated spread loses its remaining time value fastest",
+              "close_by_dte": 90
+            },
+            "sizing": {
+              "risk_budget": 2500.0,
+              "contracts": 4,
+              "risk_per_spread": 503.0,
+              "total_risk": 2012.0,
+              "over_budget": false,
+              "note": "4× risks $2,012 of a $2,500 budget."
+            },
+            "risk_form": {
+              "tier": "defined_debit",
+              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
+            }
+          },
+          {
+            "key": "leaps_bear_put",
+            "name": "LEAPS Bear Put Spread",
+            "action": "BUY_PREMIUM",
+            "bias": "bearish",
+            "thesis": "A year of room for the downside thesis, at a cost that is fixed the day you put it on.",
+            "playbook": "Buy a long-dated put, sell a lower one. The same shape pointed down: a year of room for a thesis, at a defined cost.",
+            "vega": "long",
+            "theta": "negative",
+            "risk": "defined",
+            "legs": [
+              {
+                "action": "buy",
+                "right": "put",
+                "strike": 335.0,
+                "expiry": "2027-09-17",
+                "qty": 1,
+                "mid": 38.25,
+                "bid": 0.0,
+                "ask": 0.0,
+                "iv": 0.2,
+                "open_interest": 0,
+                "label": "Buy 1× 2027-09-17 335 put"
+              },
+              {
+                "action": "sell",
+                "right": "put",
+                "strike": 330.0,
+                "expiry": "2027-09-17",
+                "qty": 1,
+                "mid": 37.2,
+                "bid": 0.0,
+                "ask": 0.0,
+                "iv": 0.39,
+                "open_interest": 0,
+                "label": "Sell 1× 2027-09-17 330 put"
+              }
+            ],
+            "expiry": "2027-09-17",
+            "dte": 379,
+            "net": 105.0,
+            "max_profit": 395.0,
+            "max_loss": 105.0,
+            "breakevens": [
+              333.95
+            ],
+            "profit_zone": "below",
+            "pop": 0.0,
+            "credit_to_width": null,
+            "manage": {
+              "profit_target": "take 50–70% of the maximum profit — the last of it takes months to arrive",
+              "profit_target_pct": 60,
+              "stop": "cut at −50% of the debit, or sooner if the reason you put it on stops being true",
+              "stop_loss_pct": 50,
+              "time_stop": "roll or close with ~90 days left; the final quarter is where a long-dated spread loses its remaining time value fastest",
+              "close_by_dte": 90
+            },
+            "sizing": {
+              "risk_budget": 2500.0,
+              "contracts": 20,
+              "risk_per_spread": 105.0,
+              "total_risk": 2100.0,
+              "over_budget": false,
+              "note": "20× risks $2,100 of a $2,500 budget."
+            },
+            "risk_form": {
+              "tier": "defined_debit",
+              "note": "You pay a known premium up front and can never lose more than it. The debit is the whole risk; nothing can be called on later."
+            }
+          }
+        ],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
+    },
+    {
+      "rank": 4,
+      "ticker": "QCOM",
+      "price": 169.96,
+      "score": 77.8,
+      "squeeze_on": true,
+      "squeeze_days": 3,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.083,
+      "hv_annual": 32.4,
+      "hv_pctile": 0.258,
+      "em_pct": 6.46,
+      "horizon_days": 10,
+      "down_1sigma": 158.98,
+      "up_1sigma": 180.94,
+      "down_2sigma": 148.01,
+      "up_2sigma": 191.91,
+      "lean": "Bullish",
+      "note": "",
+      "debt_ratio": 0.08411945602006145,
+      "cash_ratio": 0.04574511986618967,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": 0.01,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.05,
+      "iv_rank": 0.0,
+      "premium_score": 12.8,
+      "premium_state": "cheap",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
+      "options": {
+        "iv_annual": 0.05,
+        "hv_annual": 32.4,
+        "implied_move_pct": 0.01,
+        "hist_move_pct": 6.46,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -32.37,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 12.8,
+        "premium_state": "cheap",
+        "term_slope": -0.4,
+        "term_structure": "backwardation",
+        "skew": 3.08,
+        "skew_label": "put_skew",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
+        "expiry": "2026-09-25",
+        "days_to_expiry": 22,
+        "expiries": [
+          {
+            "date": "2026-09-04",
+            "dte": 1
+          },
+          {
+            "date": "2026-09-11",
+            "dte": 8
+          },
+          {
+            "date": "2026-09-18",
+            "dte": 15
+          },
+          {
+            "date": "2026-09-25",
+            "dte": 22
+          },
+          {
+            "date": "2026-10-02",
+            "dte": 29
+          },
+          {
+            "date": "2026-10-09",
+            "dte": 36
+          },
+          {
+            "date": "2026-10-16",
+            "dte": 43
+          },
+          {
+            "date": "2026-11-20",
+            "dte": 78
+          },
+          {
+            "date": "2026-12-18",
+            "dte": 106
+          },
+          {
+            "date": "2027-01-15",
+            "dte": 134
+          },
+          {
+            "date": "2027-02-19",
+            "dte": 169
+          },
+          {
+            "date": "2027-03-19",
+            "dte": 197
+          }
+        ],
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.01,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
+      },
+      "recommendation": {
+        "ticker": "QCOM",
+        "action": "STAND_ASIDE",
+        "headline": "QCOM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "confidence": 0.0,
+        "premium_state": "cheap",
+        "premium_score": 12.8,
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {
+            "risk_budget": 500.0,
+            "contracts": 0
+          },
+          "risk_form": {
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
+          }
+        },
+        "alternatives": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
+        "why": [
+          "IV rank 0/100 (cheap premium, blended score 13).",
+          "Options price a 0.0% move over the horizon vs 6.5% realized.",
+          "Squeeze on for 3 days — still building, not yet fired.",
+          "Setup score 78/100, direction bullish (weak).",
+          "Term structure in backwardation (-40.0% front→back).",
+          "Puts bid over calls by 3.1 vol points — the put side pays more to sell."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
+      },
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.01,
+        "front_iv_annual": 0.05,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
+    },
+    {
+      "rank": 5,
+      "ticker": "SPUS",
+      "price": 58.62,
+      "score": 76.4,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.008,
+      "hv_annual": 10.3,
+      "hv_pctile": 0.008,
+      "em_pct": 2.05,
+      "horizon_days": 10,
+      "down_1sigma": 57.42,
+      "up_1sigma": 59.82,
+      "down_2sigma": 56.21,
+      "up_2sigma": 61.03,
+      "lean": "Neutral",
+      "note": "",
+      "debt_ratio": null,
+      "cash_ratio": null,
+      "earnings_in_days": null,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "SPUS",
+        "action": "NO_DATA",
+        "headline": "SPUS: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "neutral",
+        "bias_strength": "none",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "risk_form": {
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 76/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
         ]
       },
       "long_dated": null
     },
     {
-      "rank": 5,
+      "rank": 6,
       "ticker": "HLAL",
       "price": 72.67,
       "score": 76.4,
@@ -1232,87 +1218,6 @@
       "long_dated": null
     },
     {
-      "rank": 6,
-      "ticker": "SPUS",
-      "price": 58.62,
-      "score": 75.7,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.017,
-      "hv_annual": 10.4,
-      "hv_pctile": 0.017,
-      "em_pct": 2.07,
-      "horizon_days": 10,
-      "down_1sigma": 57.41,
-      "up_1sigma": 59.83,
-      "down_2sigma": 56.19,
-      "up_2sigma": 61.05,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": null,
-      "cash_ratio": null,
-      "earnings_in_days": null,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "SPUS",
-        "action": "NO_DATA",
-        "headline": "SPUS: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "risk_form": {
-            "tier": "n/a",
-            "note": "No position — nothing to secure."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 76/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      },
-      "long_dated": null
-    },
-    {
       "rank": 7,
       "ticker": "LRCX",
       "price": 288.32,
@@ -1335,88 +1240,88 @@
       "debt_ratio": 0.011424012233748145,
       "cash_ratio": 0.015464154215588914,
       "earnings_in_days": 48.0,
-      "implied_move_pct": 10.23,
-      "vol_verdict": "fair",
-      "iv_annual": 51.37,
-      "iv_rank": 23.0,
-      "premium_score": 34.0,
+      "implied_move_pct": 0.16,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.78,
+      "iv_rank": 0.0,
+      "premium_score": 12.8,
       "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 51.37,
+        "iv_annual": 0.78,
         "hv_annual": 47.7,
-        "implied_move_pct": 10.23,
+        "implied_move_pct": 0.16,
         "hist_move_pct": 9.5,
-        "iv_rank": 23.0,
-        "iv_percentile": 27.7,
-        "vrp": 3.66,
-        "iv_hv_ratio": 1.08,
-        "verdict": "fair",
-        "premium_score": 34.0,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -46.93,
+        "iv_hv_ratio": 0.02,
+        "verdict": "cheap",
+        "premium_score": 12.8,
         "premium_state": "cheap",
-        "term_slope": 0.0469,
-        "term_structure": "contango",
-        "skew": -1.66,
+        "term_slope": -0.5,
+        "term_structure": "backwardation",
+        "skew": 0.78,
         "skew_label": "balanced",
-        "atm_spread_pct": 14.2,
-        "atm_open_interest": 3,
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-03-19",
-            "dte": 198
+            "dte": 197
           },
           {
             "date": "2027-06-17",
-            "dte": 288
+            "dte": 287
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
         "long_spread_pct": null,
         "long_open_interest": null,
@@ -1425,11 +1330,11 @@
       "recommendation": {
         "ticker": "LRCX",
         "action": "STAND_ASIDE",
-        "headline": "LRCX: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "LRCX: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
         "premium_state": "cheap",
-        "premium_score": 34.0,
+        "premium_score": 12.8,
         "bias": "bearish",
         "bias_strength": "strong",
         "plan": {
@@ -1437,7 +1342,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~14% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1466,21 +1371,41 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~14% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 23/100 (cheap premium, blended score 34).",
-          "Options price a 10.2% move over the horizon vs 9.5% realized (1.08× IV/HV).",
+          "IV rank 0/100 (cheap premium, blended score 13).",
+          "Options price a 0.2% move over the horizon vs 9.5% realized (0.02× IV/HV).",
           "The squeeze just released to the down — that release is the trigger.",
           "Setup score 74/100, direction bearish (strong).",
-          "Term structure in contango (+4.7% front→back)."
+          "Term structure in backwardation (-50.0% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~14% of mid, OI 3) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.78,
+        "liquidity": "unknown",
+        "atm_spread_pct": null,
+        "atm_open_interest": null,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "strong",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 8,
@@ -1505,101 +1430,101 @@
       "debt_ratio": 0.10616709454285421,
       "cash_ratio": 0.062449872779860215,
       "earnings_in_days": 49.0,
-      "implied_move_pct": 10.8,
-      "vol_verdict": "rich",
-      "iv_annual": 54.2,
-      "iv_rank": 23.3,
-      "premium_score": 45.0,
-      "premium_state": "fair",
-      "liquidity": "fair",
+      "implied_move_pct": 0.02,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.1,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
+      "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 54.2,
+        "iv_annual": 0.1,
         "hv_annual": 43.7,
-        "implied_move_pct": 10.8,
+        "implied_move_pct": 0.02,
         "hist_move_pct": 8.7,
-        "iv_rank": 23.3,
-        "iv_percentile": 21.1,
-        "vrp": 10.54,
-        "iv_hv_ratio": 1.24,
-        "verdict": "rich",
-        "premium_score": 45.0,
-        "premium_state": "fair",
-        "term_slope": 0.0168,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -43.56,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
         "term_structure": "flat",
-        "skew": -3.07,
-        "skew_label": "call_skew",
-        "atm_spread_pct": 12.4,
-        "atm_open_interest": 2239,
-        "liquidity": "fair",
+        "skew": -1.46,
+        "skew_label": "balanced",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.03,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "INTC",
         "action": "STAND_ASIDE",
-        "headline": "INTC: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "headline": "INTC: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 45.0,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -1607,7 +1532,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1633,16 +1558,42 @@
           }
         },
         "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 23/100 (fair premium, blended score 45).",
-          "Options price a 10.8% move over the horizon vs 8.7% realized (1.24× IV/HV).",
-          "Setup score 68/100, direction bearish (weak).",
-          "Calls bid over puts by 3.1 vol points — upside is the expensive side."
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
         ],
-        "warnings": []
+        "why": [
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.0% move over the horizon vs 8.7% realized.",
+          "Setup score 68/100, direction bearish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.03,
+        "front_iv_annual": 0.1,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 9,
@@ -1667,88 +1618,88 @@
       "debt_ratio": 0.001933579406588359,
       "cash_ratio": 0.015500529346011423,
       "earnings_in_days": 62.0,
-      "implied_move_pct": 11.72,
-      "vol_verdict": "rich",
-      "iv_annual": 58.83,
-      "iv_rank": 32.2,
-      "premium_score": 50.9,
-      "premium_state": "fair",
+      "implied_move_pct": 0.02,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.1,
+      "iv_rank": 0.0,
+      "premium_score": 4.5,
+      "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 58.83,
+        "iv_annual": 0.1,
         "hv_annual": 46.8,
-        "implied_move_pct": 11.72,
+        "implied_move_pct": 0.02,
         "hist_move_pct": 9.31,
-        "iv_rank": 32.2,
-        "iv_percentile": 44.2,
-        "vrp": 12.07,
-        "iv_hv_ratio": 1.26,
-        "verdict": "rich",
-        "premium_score": 50.9,
-        "premium_state": "fair",
-        "term_slope": 0.0031,
-        "term_structure": "flat",
-        "skew": -1.87,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -46.66,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 4.5,
+        "premium_state": "cheap",
+        "term_slope": 14.6,
+        "term_structure": "contango",
+        "skew": 1.46,
         "skew_label": "balanced",
-        "atm_spread_pct": 7.7,
-        "atm_open_interest": 32,
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-03-19",
-            "dte": 198
+            "dte": 197
           },
           {
             "date": "2027-04-16",
-            "dte": 226
+            "dte": 225
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
         "long_spread_pct": null,
         "long_open_interest": null,
@@ -1757,11 +1708,11 @@
       "recommendation": {
         "ticker": "ARM",
         "action": "STAND_ASIDE",
-        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "ARM: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 50.9,
+        "premium_state": "cheap",
+        "premium_score": 4.5,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -1769,7 +1720,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~8% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1798,19 +1749,40 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~8% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 32/100 (fair premium, blended score 51).",
-          "Options price a 11.7% move over the horizon vs 9.3% realized (1.26× IV/HV).",
-          "Setup score 68/100, direction bearish (weak)."
+          "IV rank 0/100 (cheap premium, blended score 4).",
+          "Options price a 0.0% move over the horizon vs 9.3% realized.",
+          "Setup score 68/100, direction bearish (weak).",
+          "Term structure in contango (+1460.0% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~8% of mid, OI 32) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.1,
+        "liquidity": "unknown",
+        "atm_spread_pct": null,
+        "atm_open_interest": null,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 10,
@@ -1835,101 +1807,101 @@
       "debt_ratio": 0.03491662410297373,
       "cash_ratio": 0.02082940516279831,
       "earnings_in_days": 55.0,
-      "implied_move_pct": 4.8,
-      "vol_verdict": "fair",
-      "iv_annual": 24.11,
-      "iv_rank": 25.0,
-      "premium_score": 37.1,
-      "premium_state": "fair",
-      "liquidity": "fair",
+      "implied_move_pct": 0.08,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.39,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
+      "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 24.11,
+        "iv_annual": 0.39,
         "hv_annual": 21.3,
-        "implied_move_pct": 4.8,
+        "implied_move_pct": 0.08,
         "hist_move_pct": 4.25,
-        "iv_rank": 25.0,
-        "iv_percentile": 48.3,
-        "vrp": 2.78,
-        "iv_hv_ratio": 1.13,
-        "verdict": "fair",
-        "premium_score": 37.1,
-        "premium_state": "fair",
-        "term_slope": 0.0564,
-        "term_structure": "contango",
-        "skew": 0.43,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -20.94,
+        "iv_hv_ratio": 0.02,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
+        "term_structure": "flat",
+        "skew": -0.39,
         "skew_label": "balanced",
-        "atm_spread_pct": 4.4,
-        "atm_open_interest": 198,
-        "liquidity": "fair",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-03-19",
-            "dte": 198
+            "dte": 197
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.1,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "MSFT",
         "action": "STAND_ASIDE",
-        "headline": "MSFT: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "headline": "MSFT: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 37.1,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
@@ -1937,7 +1909,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1963,16 +1935,42 @@
           }
         },
         "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 25/100 (fair premium, blended score 37).",
-          "Options price a 4.8% move over the horizon vs 4.2% realized (1.13× IV/HV).",
-          "Setup score 68/100, direction bullish (weak).",
-          "Term structure in contango (+5.6% front→back)."
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
         ],
-        "warnings": []
+        "why": [
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.1% move over the horizon vs 4.2% realized (0.02× IV/HV).",
+          "Setup score 68/100, direction bullish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.1,
+        "front_iv_annual": 0.39,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 11,
@@ -1997,362 +1995,171 @@
       "debt_ratio": 0.0177846193274379,
       "cash_ratio": 0.013157338030122331,
       "earnings_in_days": 56.0,
-      "implied_move_pct": 5.0,
-      "vol_verdict": "rich",
-      "iv_annual": 25.12,
-      "iv_rank": 55.1,
-      "premium_score": 68.0,
-      "premium_state": "rich",
-      "liquidity": "good",
-      "action": "SELL_PREMIUM",
-      "strategy": "Bull Put Spread",
+      "implied_move_pct": 0.01,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.03,
+      "iv_rank": 0.0,
+      "premium_score": 12.8,
+      "premium_state": "cheap",
+      "liquidity": "poor",
+      "action": "STAND_ASIDE",
+      "strategy": "Stand aside",
       "options": {
-        "iv_annual": 25.12,
+        "iv_annual": 0.03,
         "hv_annual": 18.3,
-        "implied_move_pct": 5.0,
+        "implied_move_pct": 0.01,
         "hist_move_pct": 3.65,
-        "iv_rank": 55.1,
-        "iv_percentile": 65.9,
-        "vrp": 6.82,
-        "iv_hv_ratio": 1.37,
-        "verdict": "rich",
-        "premium_score": 68.0,
-        "premium_state": "rich",
-        "term_slope": -0.0096,
-        "term_structure": "flat",
-        "skew": 1.06,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -18.27,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 12.8,
+        "premium_state": "cheap",
+        "term_slope": -0.6667,
+        "term_structure": "backwardation",
+        "skew": 1.53,
         "skew_label": "balanced",
-        "atm_spread_pct": 4.1,
-        "atm_open_interest": 1955,
-        "liquidity": "good",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "AAPL",
-        "action": "SELL_PREMIUM",
-        "headline": "AAPL: SELL premium — IV rank 55, rich → Bull Put Spread",
-        "detail": "Sell 1× 2026-09-25 305 put; Buy 1× 2026-09-25 295 put — net credit $99.50 per spread",
-        "confidence": 0.66,
-        "premium_state": "rich",
-        "premium_score": 68.0,
+        "action": "STAND_ASIDE",
+        "headline": "AAPL: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "confidence": 0.0,
+        "premium_state": "cheap",
+        "premium_score": 12.8,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
-          "key": "bull_put_spread",
-          "name": "Bull Put Spread",
-          "action": "SELL_PREMIUM",
-          "bias": "bullish",
-          "thesis": "Premium is rich and the lean is up — get paid to be right about a direction you don't need to nail.",
-          "playbook": "Sell a put, buy a lower one. You collect credit and win if the stock stays above the short put — a bullish way to be short rich premium.",
-          "vega": "short",
-          "theta": "positive",
-          "risk": "defined",
-          "legs": [
-            {
-              "action": "sell",
-              "right": "put",
-              "strike": 305.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 1.895,
-              "bid": 1.83,
-              "ask": 1.96,
-              "iv": 26.21,
-              "open_interest": 1205,
-              "label": "Sell 1× 2026-09-25 305 put"
-            },
-            {
-              "action": "buy",
-              "right": "put",
-              "strike": 295.0,
-              "expiry": "2026-09-25",
-              "qty": 1,
-              "mid": 0.9,
-              "bid": 0.87,
-              "ask": 0.93,
-              "iv": 28.13,
-              "open_interest": 1095,
-              "label": "Buy 1× 2026-09-25 295 put"
-            }
-          ],
-          "expiry": "2026-09-25",
-          "dte": 23,
-          "net": -99.5,
-          "max_profit": 99.5,
-          "max_loss": 900.5,
-          "breakevens": [
-            304.0
-          ],
-          "profit_zone": "above",
-          "pop": 0.848,
-          "credit_to_width": 0.1,
-          "manage": {
-            "profit_target": "buy it back at 50% of the credit received",
-            "profit_target_pct": 50,
-            "stop": "close if the loss reaches 2× the credit received",
-            "stop_loss_multiple": 2.0,
-            "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-            "close_by_dte": 21
-          },
+          "key": "stand_aside",
+          "name": "Stand aside",
+          "action": "STAND_ASIDE",
+          "bias": "neutral",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "playbook": "No edge worth paying for. The best trade is often none.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
           "sizing": {
             "risk_budget": 500.0,
-            "contracts": 0,
-            "risk_per_spread": 900.5,
-            "total_risk": 0.0,
-            "over_budget": true,
-            "note": "One spread already risks $900, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
+            "contracts": 0
           },
           "risk_form": {
-            "tier": "short_premium",
-            "note": "You collect a premium for taking on an obligation, held against margin. The long wings cap the loss — without them it is open-ended."
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
           }
         },
-        "alternatives": [
-          {
-            "key": "iron_condor",
-            "name": "Iron Condor",
-            "action": "SELL_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Premium is rich with no directional edge — collect it inside a defined-risk box.",
-            "playbook": "Sell an out-of-the-money call spread and an out-of-the-money put spread. You collect premium and keep it if price stays between them. Defined risk on both sides.",
-            "vega": "short",
-            "theta": "positive",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "sell",
-                "right": "put",
-                "strike": 305.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 1.895,
-                "bid": 1.83,
-                "ask": 1.96,
-                "iv": 26.21,
-                "open_interest": 1205,
-                "label": "Sell 1× 2026-09-25 305 put"
-              },
-              {
-                "action": "buy",
-                "right": "put",
-                "strike": 295.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 0.9,
-                "bid": 0.87,
-                "ask": 0.93,
-                "iv": 28.13,
-                "open_interest": 1095,
-                "label": "Buy 1× 2026-09-25 295 put"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 345.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 1.975,
-                "bid": 1.89,
-                "ask": 2.06,
-                "iv": 25.15,
-                "open_interest": 2024,
-                "label": "Sell 1× 2026-09-25 345 call"
-              },
-              {
-                "action": "buy",
-                "right": "call",
-                "strike": 355.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 0.835,
-                "bid": 0.78,
-                "ask": 0.89,
-                "iv": 25.4,
-                "open_interest": 576,
-                "label": "Buy 1× 2026-09-25 355 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 23,
-            "net": -213.5,
-            "max_profit": 213.5,
-            "max_loss": 786.5,
-            "breakevens": [
-              302.87,
-              347.13
-            ],
-            "profit_zone": "inside",
-            "pop": 0.721,
-            "credit_to_width": 0.213,
-            "manage": {
-              "profit_target": "buy it back at 50% of the credit received",
-              "profit_target_pct": 50,
-              "stop": "close if the loss reaches 2× the credit received",
-              "stop_loss_multiple": 2.0,
-              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-              "close_by_dte": 21
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 786.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $786, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "risk_form": {
-              "tier": "short_premium",
-              "note": "You collect a premium for taking on an obligation, held against margin. The long wings cap the loss — without them it is open-ended."
-            }
-          },
-          {
-            "key": "covered_call",
-            "name": "Covered Call",
-            "action": "SELL_PREMIUM",
-            "bias": "neutral",
-            "thesis": "Rich premium against shares you already hold — income, with the upside capped.",
-            "playbook": "Against shares you already own, sell a call above the price. Turns rich premium into income and caps your upside at the strike.",
-            "vega": "short",
-            "theta": "positive",
-            "risk": "defined",
-            "legs": [
-              {
-                "action": "own",
-                "right": "share",
-                "strike": null,
-                "expiry": null,
-                "qty": 100,
-                "mid": 324.96,
-                "bid": null,
-                "ask": null,
-                "iv": null,
-                "open_interest": null,
-                "label": "Own 100 shares at ~324.96"
-              },
-              {
-                "action": "sell",
-                "right": "call",
-                "strike": 345.0,
-                "expiry": "2026-09-25",
-                "qty": 1,
-                "mid": 1.975,
-                "bid": 1.89,
-                "ask": 2.06,
-                "iv": 25.15,
-                "open_interest": 2024,
-                "label": "Sell 1× 2026-09-25 345 call"
-              }
-            ],
-            "expiry": "2026-09-25",
-            "dte": 23,
-            "net": -3249797.5,
-            "max_profit": 2201.5,
-            "max_loss": 32298.5,
-            "breakevens": [
-              322.98
-            ],
-            "profit_zone": "above",
-            "pop": 0.526,
-            "credit_to_width": null,
-            "manage": {
-              "profit_target": "buy it back at 50% of the credit received",
-              "profit_target_pct": 50,
-              "stop": "close if the loss reaches 2× the credit received",
-              "stop_loss_multiple": 2.0,
-              "time_stop": "close or roll at ~21 days to expiry — gamma risk rises fast after that",
-              "close_by_dte": 21
-            },
-            "sizing": {
-              "risk_budget": 500.0,
-              "contracts": 0,
-              "risk_per_spread": 32298.5,
-              "total_risk": 0.0,
-              "over_budget": true,
-              "note": "One spread already risks $32,298, above the $500 budget. Narrow the wings, go further out of the money, or skip it."
-            },
-            "risk_form": {
-              "tier": "covered",
-              "note": "The short call is secured by shares you already own rather than by margin, so assignment delivers stock you hold instead of creating a short."
-            }
-          }
-        ],
+        "alternatives": [],
         "avoid": [
           {
-            "name": "Long straddles / strangles",
-            "reason": "IV rank 55 and the market is pricing a 5.0% move vs 3.6% realized — you'd be paying up for the move you want."
-          },
-          {
-            "name": "Short strangle (naked)",
-            "reason": "Open-ended risk — keep the wings on unless the chain is deep and you accept it."
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 55/100 (rich premium, blended score 68).",
-          "Options price a 5.0% move over the horizon vs 3.6% realized (1.37× IV/HV).",
-          "Setup score 67/100, direction bullish (weak)."
+          "IV rank 0/100 (cheap premium, blended score 13).",
+          "Options price a 0.0% move over the horizon vs 3.6% realized.",
+          "Setup score 67/100, direction bullish (weak).",
+          "Term structure in backwardation (-66.7% front→back)."
         ],
         "warnings": [
-          "The credit is only 10% of the spread width — thin compensation. Widen the wings or pass."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.03,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 12,
@@ -2377,101 +2184,101 @@
       "debt_ratio": 0.07436855016971011,
       "cash_ratio": 0.059763397378540764,
       "earnings_in_days": 55.0,
-      "implied_move_pct": 6.99,
-      "vol_verdict": "rich",
-      "iv_annual": 35.09,
-      "iv_rank": 47.4,
-      "premium_score": 50.5,
-      "premium_state": "fair",
-      "liquidity": "good",
+      "implied_move_pct": 0.08,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.39,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
+      "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 35.09,
+        "iv_annual": 0.39,
         "hv_annual": 30.4,
-        "implied_move_pct": 6.99,
+        "implied_move_pct": 0.08,
         "hist_move_pct": 6.06,
-        "iv_rank": 47.4,
-        "iv_percentile": 39.7,
-        "vrp": 4.68,
-        "iv_hv_ratio": 1.15,
-        "verdict": "rich",
-        "premium_score": 50.5,
-        "premium_state": "fair",
-        "term_slope": 0.0142,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -30.02,
+        "iv_hv_ratio": 0.01,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
         "term_structure": "flat",
-        "skew": -0.03,
+        "skew": 0.0,
         "skew_label": "balanced",
-        "atm_spread_pct": 4.4,
-        "atm_open_interest": 548,
-        "liquidity": "good",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
-        "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
+        "long_iv": 0.1,
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "META",
         "action": "STAND_ASIDE",
-        "headline": "META: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "headline": "META: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 50.5,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bullish",
         "bias_strength": "weak",
         "plan": {
@@ -2479,7 +2286,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2505,15 +2312,42 @@
           }
         },
         "alternatives": [],
-        "avoid": [],
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
+        ],
         "why": [
-          "IV rank 47/100 (fair premium, blended score 50).",
-          "Options price a 7.0% move over the horizon vs 6.1% realized (1.15× IV/HV).",
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.1% move over the horizon vs 6.1% realized (0.01× IV/HV).",
           "Setup score 66/100, direction bullish (weak)."
         ],
-        "warnings": []
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": 0.1,
+        "front_iv_annual": 0.39,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bullish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 0%.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 13,
@@ -2538,88 +2372,88 @@
       "debt_ratio": 0.06038792737136217,
       "cash_ratio": 0.030086527424155296,
       "earnings_in_days": 54.0,
-      "implied_move_pct": 7.85,
-      "vol_verdict": "rich",
-      "iv_annual": 39.42,
-      "iv_rank": 44.2,
-      "premium_score": 63.6,
-      "premium_state": "fair",
+      "implied_move_pct": 0.02,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.1,
+      "iv_rank": 0.0,
+      "premium_score": 4.5,
+      "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 39.42,
+        "iv_annual": 0.1,
         "hv_annual": 27.7,
-        "implied_move_pct": 7.85,
+        "implied_move_pct": 0.02,
         "hist_move_pct": 5.52,
-        "iv_rank": 44.2,
-        "iv_percentile": 67.5,
-        "vrp": 11.69,
-        "iv_hv_ratio": 1.42,
-        "verdict": "rich",
-        "premium_score": 63.6,
-        "premium_state": "fair",
-        "term_slope": 0.0104,
-        "term_structure": "flat",
-        "skew": 2.35,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -27.63,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 4.5,
+        "premium_state": "cheap",
+        "term_slope": 14.6,
+        "term_structure": "contango",
+        "skew": 1.46,
         "skew_label": "balanced",
-        "atm_spread_pct": 25.5,
-        "atm_open_interest": 90,
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           },
           {
             "date": "2027-03-19",
-            "dte": 198
+            "dte": 197
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
         "long_spread_pct": null,
         "long_open_interest": null,
@@ -2628,11 +2462,11 @@
       "recommendation": {
         "ticker": "TXN",
         "action": "STAND_ASIDE",
-        "headline": "TXN: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "TXN: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 63.6,
+        "premium_state": "cheap",
+        "premium_score": 4.5,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -2640,7 +2474,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~26% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2669,125 +2503,146 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~26% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 44/100 (fair premium, blended score 64).",
-          "Options price a 7.8% move over the horizon vs 5.5% realized (1.42× IV/HV).",
-          "Setup score 62/100, direction bearish (weak)."
+          "IV rank 0/100 (cheap premium, blended score 4).",
+          "Options price a 0.0% move over the horizon vs 5.5% realized.",
+          "Setup score 62/100, direction bearish (weak).",
+          "Term structure in contango (+1460.0% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~26% of mid, OI 90) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.1,
+        "liquidity": "unknown",
+        "atm_spread_pct": null,
+        "atm_open_interest": null,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 14,
       "ticker": "AMAT",
       "price": 438.46,
-      "score": 58.9,
+      "score": 58.7,
       "squeeze_on": false,
       "squeeze_days": 0,
       "squeeze_fired": false,
       "fired_dir": "",
-      "bandwidth_pctile": 0.583,
-      "hv_annual": 42.8,
-      "hv_pctile": 0.025,
-      "em_pct": 8.54,
+      "bandwidth_pctile": 0.575,
+      "hv_annual": 43.8,
+      "hv_pctile": 0.033,
+      "em_pct": 8.73,
       "horizon_days": 10,
-      "down_1sigma": 401.04,
-      "up_1sigma": 475.88,
-      "down_2sigma": 363.61,
-      "up_2sigma": 513.31,
+      "down_1sigma": 400.18,
+      "up_1sigma": 476.74,
+      "down_2sigma": 361.9,
+      "up_2sigma": 515.02,
       "lean": "Bearish",
       "note": "",
       "debt_ratio": 0.021111576894032244,
       "cash_ratio": 0.026534604181461408,
       "earnings_in_days": 70.0,
-      "implied_move_pct": 10.11,
-      "vol_verdict": "rich",
-      "iv_annual": 50.76,
-      "iv_rank": 29.1,
-      "premium_score": 45.6,
-      "premium_state": "fair",
+      "implied_move_pct": 0.08,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.39,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
       "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 50.76,
-        "hv_annual": 42.8,
-        "implied_move_pct": 10.11,
-        "hist_move_pct": 8.54,
-        "iv_rank": 29.1,
-        "iv_percentile": 51.7,
-        "vrp": 7.91,
-        "iv_hv_ratio": 1.18,
-        "verdict": "rich",
-        "premium_score": 45.6,
-        "premium_state": "fair",
-        "term_slope": -0.0124,
+        "iv_annual": 0.39,
+        "hv_annual": 43.8,
+        "implied_move_pct": 0.08,
+        "hist_move_pct": 8.73,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -43.44,
+        "iv_hv_ratio": 0.01,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
         "term_structure": "flat",
-        "skew": -0.38,
+        "skew": 0.39,
         "skew_label": "balanced",
-        "atm_spread_pct": 23.6,
-        "atm_open_interest": 4,
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
         "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           },
           {
             "date": "2027-03-19",
-            "dte": 198
+            "dte": 197
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
         "long_spread_pct": null,
         "long_open_interest": null,
@@ -2796,11 +2651,11 @@
       "recommendation": {
         "ticker": "AMAT",
         "action": "STAND_ASIDE",
-        "headline": "AMAT: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "AMAT: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 45.6,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -2808,7 +2663,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~24% of mid. Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2837,19 +2692,39 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~24% of mid — slippage on entry and exit would cost more than the edge."
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
-          "IV rank 29/100 (fair premium, blended score 46).",
-          "Options price a 10.1% move over the horizon vs 8.5% realized (1.18× IV/HV).",
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.1% move over the horizon vs 8.7% realized (0.01× IV/HV).",
           "Setup score 59/100, direction bearish (weak)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~24% of mid, OI 4) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
         ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.39,
+        "liquidity": "unknown",
+        "atm_spread_pct": null,
+        "atm_open_interest": null,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "No bid/ask depth on the long-dated at-the-money contract, so the prices below are indicative only.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 15,
@@ -2874,101 +2749,101 @@
       "debt_ratio": 0.09149385757418431,
       "cash_ratio": 0.044718129532759686,
       "earnings_in_days": 56.0,
-      "implied_move_pct": 5.65,
-      "vol_verdict": "fair",
-      "iv_annual": 28.38,
-      "iv_rank": 26.1,
-      "premium_score": 37.9,
-      "premium_state": "fair",
-      "liquidity": "good",
+      "implied_move_pct": 0.0,
+      "vol_verdict": "cheap",
+      "iv_annual": 0.01,
+      "iv_rank": 0.0,
+      "premium_score": 10.0,
+      "premium_state": "cheap",
+      "liquidity": "poor",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
-        "iv_annual": 28.38,
+        "iv_annual": 0.01,
         "hv_annual": 25.3,
-        "implied_move_pct": 5.65,
+        "implied_move_pct": 0.0,
         "hist_move_pct": 5.04,
-        "iv_rank": 26.1,
-        "iv_percentile": 51.7,
-        "vrp": 3.07,
-        "iv_hv_ratio": 1.12,
-        "verdict": "fair",
-        "premium_score": 37.9,
-        "premium_state": "fair",
-        "term_slope": 0.0412,
-        "term_structure": "contango",
-        "skew": 0.61,
+        "iv_rank": 0.0,
+        "iv_percentile": 0.0,
+        "vrp": -25.3,
+        "iv_hv_ratio": 0.0,
+        "verdict": "cheap",
+        "premium_score": 10.0,
+        "premium_state": "cheap",
+        "term_slope": 0.0,
+        "term_structure": "flat",
+        "skew": 1.55,
         "skew_label": "balanced",
-        "atm_spread_pct": 4.0,
-        "atm_open_interest": 910,
-        "liquidity": "good",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "liquidity": "poor",
         "expiry": "2026-09-25",
-        "days_to_expiry": 23,
+        "days_to_expiry": 22,
         "expiries": [
           {
             "date": "2026-09-04",
-            "dte": 2
+            "dte": 1
           },
           {
             "date": "2026-09-09",
-            "dte": 7
+            "dte": 6
           },
           {
             "date": "2026-09-11",
-            "dte": 9
+            "dte": 8
           },
           {
             "date": "2026-09-18",
-            "dte": 16
+            "dte": 15
           },
           {
             "date": "2026-09-25",
-            "dte": 23
+            "dte": 22
           },
           {
             "date": "2026-10-02",
-            "dte": 30
+            "dte": 29
           },
           {
             "date": "2026-10-09",
-            "dte": 37
+            "dte": 36
           },
           {
             "date": "2026-10-16",
-            "dte": 44
+            "dte": 43
           },
           {
             "date": "2026-11-20",
-            "dte": 79
+            "dte": 78
           },
           {
             "date": "2026-12-18",
-            "dte": 107
+            "dte": 106
           },
           {
             "date": "2027-01-15",
-            "dte": 135
+            "dte": 134
           },
           {
             "date": "2027-02-19",
-            "dte": 170
+            "dte": 169
           }
         ],
-        "long_expiry": null,
-        "long_dte": null,
+        "long_expiry": "2027-09-17",
+        "long_dte": 379,
         "long_iv": null,
-        "long_spread_pct": null,
-        "long_open_interest": null,
-        "long_liquidity": "unknown"
+        "long_spread_pct": 0.0,
+        "long_open_interest": 0,
+        "long_liquidity": "poor"
       },
       "recommendation": {
         "ticker": "AMZN",
         "action": "STAND_ASIDE",
-        "headline": "AMZN: stand aside — premium is fairly priced and the chart isn't coiled enough to pay for a position.",
-        "detail": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+        "headline": "AMZN: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
-        "premium_state": "fair",
-        "premium_score": 37.9,
+        "premium_state": "cheap",
+        "premium_score": 10.0,
         "bias": "bearish",
         "bias_strength": "weak",
         "plan": {
@@ -2976,7 +2851,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Premium is fairly priced and the chart isn't coiled enough to pay for a position.",
+          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~0% of mid. Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -3002,16 +2877,42 @@
           }
         },
         "alternatives": [],
-        "avoid": [],
-        "why": [
-          "IV rank 26/100 (fair premium, blended score 38).",
-          "Options price a 5.7% move over the horizon vs 5.0% realized (1.12× IV/HV).",
-          "Setup score 57/100, direction bearish (weak).",
-          "Term structure in contango (+4.1% front→back)."
+        "avoid": [
+          {
+            "name": "Any multi-leg spread here",
+            "reason": "The at-the-money bid/ask is ~0% of mid — slippage on entry and exit would cost more than the edge."
+          }
         ],
-        "warnings": []
+        "why": [
+          "IV rank 0/100 (cheap premium, blended score 10).",
+          "Options price a 0.0% move over the horizon vs 5.0% realized.",
+          "Setup score 57/100, direction bearish (weak)."
+        ],
+        "warnings": [
+          "Thin options market (ATM spread ~0% of mid, OI 0) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+        ]
       },
-      "long_dated": null
+      "long_dated": {
+        "expiry": "2027-09-17",
+        "dte": 379,
+        "target_days": 395,
+        "iv_annual": null,
+        "front_iv_annual": 0.01,
+        "liquidity": "poor",
+        "atm_spread_pct": 0.0,
+        "atm_open_interest": 0,
+        "premium_state": "cheap",
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "preferred": null,
+        "summary": "The long-dated chain has no strikes at the distances these structures need.",
+        "candidates": [],
+        "warnings": [
+          "The long-dated chain is thin (ATM spread ~0% of mid, OI 0). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry.",
+          "About 4 earnings reports fall inside this 379-day expiry. A long-dated spread is priced through all of them; none of them is the trade."
+        ]
+      }
     },
     {
       "rank": 16,
@@ -3501,87 +3402,6 @@
     },
     {
       "rank": 22,
-      "ticker": "LLY",
-      "price": 1160.08,
-      "score": 48.1,
-      "squeeze_on": false,
-      "squeeze_days": 0,
-      "squeeze_fired": false,
-      "fired_dir": "",
-      "bandwidth_pctile": 0.35,
-      "hv_annual": 32.8,
-      "hv_pctile": 0.392,
-      "em_pct": 6.54,
-      "horizon_days": 10,
-      "down_1sigma": 1084.19,
-      "up_1sigma": 1235.97,
-      "down_2sigma": 1008.29,
-      "up_2sigma": 1311.87,
-      "lean": "Bearish",
-      "note": "",
-      "debt_ratio": 0.05307729515408344,
-      "cash_ratio": 0.008651595154640925,
-      "earnings_in_days": 56.0,
-      "implied_move_pct": null,
-      "vol_verdict": null,
-      "iv_annual": null,
-      "iv_rank": null,
-      "premium_score": null,
-      "premium_state": null,
-      "liquidity": null,
-      "action": "NO_DATA",
-      "strategy": "Not priced",
-      "options": null,
-      "recommendation": {
-        "ticker": "LLY",
-        "action": "NO_DATA",
-        "headline": "LLY: not priced — no IV read this run",
-        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-        "confidence": 0.0,
-        "premium_state": "unknown",
-        "premium_score": null,
-        "bias": "bearish",
-        "bias_strength": "weak",
-        "plan": {
-          "key": "no_data",
-          "name": "Not priced",
-          "action": "NO_DATA",
-          "bias": "neutral",
-          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
-          "playbook": "No usable option chain this run — nothing to price.",
-          "vega": "flat",
-          "theta": "flat",
-          "risk": "none",
-          "legs": [],
-          "expiry": null,
-          "dte": null,
-          "net": null,
-          "max_profit": null,
-          "max_loss": null,
-          "breakevens": [],
-          "profit_zone": "",
-          "pop": null,
-          "credit_to_width": null,
-          "manage": {},
-          "sizing": {},
-          "risk_form": {
-            "tier": "n/a",
-            "note": "No position — nothing to secure."
-          }
-        },
-        "alternatives": [],
-        "avoid": [],
-        "why": [
-          "Setup score 48/100 from price action alone — no implied-volatility read, so no premium call can be made."
-        ],
-        "warnings": [
-          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
-        ]
-      },
-      "long_dated": null
-    },
-    {
-      "rank": 23,
       "ticker": "XOM",
       "price": 164.15,
       "score": 45.4,
@@ -3662,7 +3482,7 @@
       "long_dated": null
     },
     {
-      "rank": 24,
+      "rank": 23,
       "ticker": "SHOP",
       "price": 141.87,
       "score": 43.3,
@@ -3743,7 +3563,7 @@
       "long_dated": null
     },
     {
-      "rank": 25,
+      "rank": 24,
       "ticker": "NOW",
       "price": 136.72,
       "score": 42.9,
@@ -3824,7 +3644,7 @@
       "long_dated": null
     },
     {
-      "rank": 26,
+      "rank": 25,
       "ticker": "NVDA",
       "price": 224.41,
       "score": 34.0,
@@ -3905,7 +3725,7 @@
       "long_dated": null
     },
     {
-      "rank": 27,
+      "rank": 26,
       "ticker": "JNJ",
       "price": 275.21,
       "score": 31.7,
@@ -3978,6 +3798,87 @@
         "avoid": [],
         "why": [
           "Setup score 32/100 from price action alone — no implied-volatility read, so no premium call can be made."
+        ],
+        "warnings": [
+          "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
+        ]
+      },
+      "long_dated": null
+    },
+    {
+      "rank": 27,
+      "ticker": "LLY",
+      "price": 1160.08,
+      "score": 30.4,
+      "squeeze_on": false,
+      "squeeze_days": 0,
+      "squeeze_fired": false,
+      "fired_dir": "",
+      "bandwidth_pctile": 0.35,
+      "hv_annual": 36.8,
+      "hv_pctile": 0.758,
+      "em_pct": 7.34,
+      "horizon_days": 10,
+      "down_1sigma": 1074.96,
+      "up_1sigma": 1245.2,
+      "down_2sigma": 989.84,
+      "up_2sigma": 1330.32,
+      "lean": "Bearish",
+      "note": "",
+      "debt_ratio": 0.05307729515408344,
+      "cash_ratio": 0.008651595154640925,
+      "earnings_in_days": 56.0,
+      "implied_move_pct": null,
+      "vol_verdict": null,
+      "iv_annual": null,
+      "iv_rank": null,
+      "premium_score": null,
+      "premium_state": null,
+      "liquidity": null,
+      "action": "NO_DATA",
+      "strategy": "Not priced",
+      "options": null,
+      "recommendation": {
+        "ticker": "LLY",
+        "action": "NO_DATA",
+        "headline": "LLY: not priced — no IV read this run",
+        "detail": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+        "confidence": 0.0,
+        "premium_state": "unknown",
+        "premium_score": null,
+        "bias": "bearish",
+        "bias_strength": "weak",
+        "plan": {
+          "key": "no_data",
+          "name": "Not priced",
+          "action": "NO_DATA",
+          "bias": "neutral",
+          "thesis": "No option chain was priced for this ticker in this run (only the top-ranked names are priced).",
+          "playbook": "No usable option chain this run — nothing to price.",
+          "vega": "flat",
+          "theta": "flat",
+          "risk": "none",
+          "legs": [],
+          "expiry": null,
+          "dte": null,
+          "net": null,
+          "max_profit": null,
+          "max_loss": null,
+          "breakevens": [],
+          "profit_zone": "",
+          "pop": null,
+          "credit_to_width": null,
+          "manage": {},
+          "sizing": {},
+          "risk_form": {
+            "tier": "n/a",
+            "note": "No position — nothing to secure."
+          }
+        },
+        "alternatives": [],
+        "avoid": [],
+        "why": [
+          "Setup score 30/100 from price action alone — no implied-volatility read, so no premium call can be made."
         ],
         "warnings": [
           "Without IV there is no way to say whether options here are cheap or rich. Raise `options.top_n` in the config to price more names."
