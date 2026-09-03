@@ -1,19 +1,19 @@
 {
   "schema_version": "2.1.0",
-  "generated_at": "2026-09-03T10:32:57Z",
+  "generated_at": "2026-09-03T23:21:03Z",
   "universe": 31,
   "history_years": 5,
   "horizon_days": 10,
   "ok": true,
-  "bars": 36836,
-  "coverage_pct": 66.1,
+  "bars": 36847,
+  "coverage_pct": 66.2,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
   "score_move_corr": -0.04,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7004,
+      "bars": 6996,
       "avg_abs_move_pct": 6.4,
       "median_abs_move_pct": 4.5,
       "coverage_pct": 53.5,
@@ -22,7 +22,7 @@
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 14962,
+      "bars": 14978,
       "avg_abs_move_pct": 6.4,
       "median_abs_move_pct": 4.5,
       "coverage_pct": 63.2,
@@ -31,7 +31,7 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 14870,
+      "bars": 14873,
       "avg_abs_move_pct": 6.9,
       "median_abs_move_pct": 4.9,
       "coverage_pct": 75.1,
@@ -42,7 +42,7 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2560,
+      "bars": 2558,
       "avg_abs_move_pct": 6.7,
       "median_abs_move_pct": 4.9,
       "coverage_pct": 56.1,
@@ -51,18 +51,18 @@
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 34276,
+      "bars": 34289,
       "avg_abs_move_pct": 6.6,
       "median_abs_move_pct": 4.7,
       "coverage_pct": 66.9,
-      "expansion": 0.89,
+      "expansion": 0.88,
       "broke_band_pct": 33.1
     }
   },
   "verdict": {
     "holds": true,
-    "edge_pts": 21.5,
-    "text": "Coiled bars broke their own ±1σ band 46% of the time against 25% for calm bars (+22 pts) — the squeeze thesis holds."
+    "edge_pts": 21.6,
+    "text": "Coiled bars broke their own ±1σ band 47% of the time against 25% for calm bars (+22 pts) — the squeeze thesis holds."
   },
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
   "caveat": "Overlapping forward windows make these observations autocorrelated, so read the percentages as descriptive rather than as independent-sample statistics. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results."
