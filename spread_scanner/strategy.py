@@ -166,12 +166,18 @@ def _norm_cdf(x: float) -> float:
 
 
 def _p_above(spot: float, strike: float, sigma: float) -> float | None:
-    """P(S_T > strike) under a zero-drift lognormal with volatility `sigma`
-    over the life of the trade. The −σ²/2 drift term is dropped: at these
-    horizons it moves the answer by well under a point."""
+    """P(S_T > strike) under a driftless lognormal (E[S_T] = spot) with total
+    volatility `sigma` over the life of the trade — i.e. N(d₂).
+
+    The −σ²/2 term is the Itô correction that keeps the *price* driftless rather
+    than its logarithm, and it is not optional. Dropping it (as this once did)
+    overstates the probability of finishing above any strike — by ~2 points at a
+    front-month expiry, ~8 at thirteen months, and ~14 on a high-vol name a year
+    and a half out. That tilts every read toward the upside: it flattered the
+    bullish structures and penalised the bearish ones by the same amount."""
     if sigma <= 0 or spot <= 0 or strike <= 0:
         return None
-    return 1 - _norm_cdf(math.log(strike / spot) / sigma)
+    return _norm_cdf((math.log(spot / strike) - sigma * sigma / 2) / sigma)
 
 
 def pop_estimate(spot: float, breakevens: list[float], zone: str, sigma: float) -> float | None:

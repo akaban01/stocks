@@ -167,7 +167,10 @@
       netTxt = (plan.net > 0 ? "Debit " : "Credit ") + money(plan.net);
     }
     var risk = [
-      ["Max profit", has(plan.max_profit) ? money(plan.max_profit, 0) : (plan.net !== null && plan.max_profit === null ? "uncapped" : "—")],
+      // "Uncapped" is a property of the payoff, not of missing data: a long
+      // straddle has no max profit but still has a max loss (the debit). A plan
+      // whose legs could not be priced has neither, and must not claim uncapped.
+      ["Max profit", has(plan.max_profit) ? money(plan.max_profit, 0) : (has(plan.max_loss) ? "uncapped" : "—")],
       ["Max loss", has(plan.max_loss) ? money(plan.max_loss, 0) : (plan.risk === "undefined" ? "undefined" : "—")],
       ["Breakeven", plan.breakevens && plan.breakevens.length
         ? plan.breakevens.map(function (b) { return num(b, 2); }).join(" / ") : "—"],
@@ -497,6 +500,17 @@
     return plan.max_profit / plan.max_loss;
   }
 
+  // The same return, put on a yearly footing. Without it a 13-month spread at
+  // 0.6x looks better than a monthly one at 0.3x, when the monthly trade earns
+  // that 0.3x twelve times over the same capital. Simple (not compounded)
+  // annualisation: it assumes you could repeat the trade, which is exactly the
+  // assumption a reader comparing the two tabs is making.
+  function annualisedReturn(plan) {
+    var rr = rewardToRisk(plan);
+    if (rr === null || !has(plan.dte) || !plan.dte) return null;
+    return rr * 365 / plan.dte;
+  }
+
   // One row per candidate, with the parent ticker's block carried along so the
   // detail panel can show that name's summary and caveats.
   function spreadRows() {
@@ -542,7 +556,7 @@
     { k: "max_profit", h: "Max profit", r: true, v: function (r) { return r.plan.max_profit; },
       f: function (r) {
         if (has(r.plan.max_profit)) return money(r.plan.max_profit, 0);
-        return has(r.plan.net) ? "uncapped" : "—";
+        return has(r.plan.max_loss) ? "uncapped" : "—";
       } },
     { k: "max_loss", h: "Max loss", r: true, v: function (r) { return r.plan.max_loss; },
       f: function (r) {
@@ -553,6 +567,14 @@
       f: function (r) {
         var v = rewardToRisk(r.plan);
         return v === null ? "—" : num(v, 2) + "×";
+      } },
+    { k: "ror", h: "RoR / yr", r: true, v: function (r) { return annualisedReturn(r.plan); },
+      f: function (r) {
+        var v = annualisedReturn(r.plan);
+        if (v === null) return "—";
+        return '<span title="Max profit over max loss, put on a yearly footing so it ' +
+          'compares with a monthly trade. Assumes the position could be repeated; it is not ' +
+          'a forecast.">' + pct(v * 100, 0) + "</span>";
       } },
     { k: "breakevens", h: "Breakeven", r: true,
       v: function (r) { return (r.plan.breakevens || [])[0]; },
@@ -889,10 +911,20 @@
       term_structure: "Term structure", skew: "Skew", liquidity: "Liquidity",
       pop: "Probability of profit", credit_to_width: "Credit to width",
       em_pct: "Expected move (±1σ)", squeeze: "TTM squeeze", lean: "Lean",
-      earnings: "Earnings", debt_cash_ratio: "Debt % / Cash %"
+      earnings: "Earnings", debt_cash_ratio: "Debt % / Cash %",
+      long_dated: "The long-dated expiry", leaps_vega: "Vega over a year",
+      reward_to_risk: "Reward to risk", annualised_return: "Reward to risk, annualised",
+      risk_form: "What secures a position"
     };
+    // Any key without an entry above reads as a sentence rather than as the raw
+    // snake_case name, so a new glossary term is never published looking like one.
+    function title(k) {
+      if (titles[k]) return titles[k];
+      var words = k.replace(/_/g, " ");
+      return words.charAt(0).toUpperCase() + words.slice(1);
+    }
     host.innerHTML = "<dl class=\"glossary\">" + Object.keys(g).map(function (k) {
-      return "<dt>" + esc(titles[k] || k) + "</dt><dd>" + esc(g[k]) + "</dd>";
+      return "<dt>" + esc(title(k)) + "</dt><dd>" + esc(g[k]) + "</dd>";
     }).join("") + "</dl>";
 
     var play = ref("playbook", {});

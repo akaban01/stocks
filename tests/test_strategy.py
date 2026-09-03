@@ -208,12 +208,40 @@ def test_probability_of_profit_is_a_probability_and_points_the_right_way():
 
 
 def test_pop_helper_matches_the_normal_model():
-    # ±1σ either side: ~68% inside, ~32% outside.
-    assert strategy.pop_estimate(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
-                         "inside", 0.2) == pytest.approx(0.683, abs=0.01)
-    assert strategy.pop_estimate(100.0, [100 * math.exp(-0.2), 100 * math.exp(0.2)],
-                         "outside", 0.2) == pytest.approx(0.317, abs=0.01)
-    assert strategy.pop_estimate(100.0, [100.0], "above", 0.2) == pytest.approx(0.5, abs=0.01)
+    """N(d₂) under a driftless price: E[S_T] = spot, so the *median* sits a
+    little below spot and P(finish above spot) is a little under half."""
+    # A band centred on the median (spot·e^{-σ²/2}) holds the textbook ~68%.
+    med = 100 * math.exp(-0.2 ** 2 / 2)
+    band = [med * math.exp(-0.2), med * math.exp(0.2)]
+    assert strategy.pop_estimate(100.0, band, "inside", 0.2) == pytest.approx(0.683, abs=0.01)
+    assert strategy.pop_estimate(100.0, band, "outside", 0.2) == pytest.approx(0.317, abs=0.01)
+    # Finishing above spot itself is N(-σ/2), not one half — the Itô correction.
+    assert strategy.pop_estimate(100.0, [100.0], "above", 0.2) == pytest.approx(
+        0.5 * (1 + math.erf(-0.1 / math.sqrt(2))), abs=0.005)
+
+
+def test_pop_is_not_inflated_by_dropping_the_ito_correction():
+    """Regression. The helper once put the *median* at spot, which overstates the
+    chance of finishing above any strike — harmless over a month, badly wrong
+    over a year. The bias is directional, not uniformly optimistic: it inflated
+    the structures that profit on the upside and deflated the ones that profit on
+    the downside."""
+    spot, strike = 200.0, 155.0
+
+    def naive(sig):                      # what the helper used to return
+        return 1 - 0.5 * (1 + math.erf((math.log(strike / spot) / sig) / math.sqrt(2)))
+
+    month, year = 0.115, 0.429           # total sigma at ~24 and ~409 days, iv ~45%
+    for sigma in (month, year):
+        assert strategy.pop_estimate(spot, [strike], "above", sigma) < naive(sigma), \
+            "the corrected model must never read higher than the naive one"
+
+    # The error it removes is a rounding detail at a month and material at a year.
+    short_gap = naive(month) - strategy.pop_estimate(spot, [strike], "above", month)
+    long_gap = naive(year) - strategy.pop_estimate(spot, [strike], "above", year)
+    assert short_gap < 0.03
+    assert 0.06 < long_gap < 0.10
+    assert long_gap > short_gap * 3
 
 
 # ------------------------------------------------------------ presentation

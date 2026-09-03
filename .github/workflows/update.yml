@@ -69,9 +69,24 @@ jobs:
                   f"{sig['ticker']}: preferred {ld['preferred']} is not among {keys}"
               for c in ld["candidates"]:
                   assert c["legs"] and c["playbook"], f"{sig['ticker']}: {c['key']} is incomplete"
+          # The payload ships its own UI copy so an explanation can never drift from
+          # the field it explains. That only holds if the copy in the file is the
+          # copy the code currently defines — check it, here rather than in the
+          # tests, because this runs *after* the step that regenerates the file.
+          from spread_scanner import leaps, report, strategy
+          want = {"actions": report.ACTIONS, "premium_states": report.PREMIUM_STATES,
+                  "glossary": report.GLOSSARY,
+                  "playbook": {**strategy.PLAYBOOK, **leaps.PLAYBOOK}}
+          for key, expected in want.items():
+              got = scan["reference"].get(key, {})
+              drifted = [k for k in expected if got.get(k) != expected[k]]
+              assert not drifted, f"reference.{key} is stale for: {drifted}"
+          assert scan["disclaimer"] == report.DISCLAIMER, "disclaimer copy is stale"
+
           ld = scan["long_dated"]
           print(f"scan.json OK — {len(scan['signals'])} signals, counts {scan['counts']}, "
-                f"{ld['candidates']} long-dated spreads across {ld['tickers']} names")
+                f"{ld['candidates']} long-dated spreads across {ld['tickers']} names, "
+                "shipped copy matches the code")
           for name in ("charts", "backtest"):
               p = Path(f"public/data/{name}.json")
               if p.exists():

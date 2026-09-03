@@ -112,9 +112,12 @@ GLOSSARY = {
     "liquidity": "How tradable the chain is, from the at-the-money bid/ask spread and open interest. Wide "
                  "markets quietly cost more than the edge is worth, so thin names get simpler structures "
                  "or none at all.",
-    "pop": "Model probability of finishing in the profit zone, from a zero-drift lognormal at the chain's "
-           "own implied volatility. An estimate, not a guarantee — and a high probability of a small win "
-           "is not the same as a good trade.",
+    "pop": "Model probability of finishing in the profit zone: N(d₂) under a lognormal whose expected "
+           "price is today's, at the chain's own implied volatility. Because the price rather than its "
+           "logarithm is held flat, the median outcome sits slightly below spot — so the chance of "
+           "finishing above spot is a little under half, and more so the longer the expiry. An estimate, "
+           "not a guarantee; it also reads the volatility at the money rather than at each strike, and a "
+           "high probability of a small win is not the same as a good trade.",
     "credit_to_width": "Credit collected divided by the width of the spread. Under ~20% you are being paid "
                        "too little for the risk.",
     "em_pct": "One-sigma expected move over the horizon from realized volatility. Roughly 68% of outcomes "
@@ -131,9 +134,14 @@ GLOSSARY = {
                   "than time decay does. A 13-month debit spread is mostly a bet on direction and "
                   "partly a bet on volatility rising; a 13-month credit spread earns its theta "
                   "almost entirely in the final months.",
-    "reward_to_risk": "Maximum profit divided by maximum loss. On a long-dated spread it is the "
-                      "number that matters most, because you are committing the capital for the "
-                      "whole period rather than recycling it monthly.",
+    "reward_to_risk": "Maximum profit divided by maximum loss — what the trade pays if it works, "
+                      "against what it costs if it does not.",
+    "annualised_return": "The same reward-to-risk put on a yearly footing (× 365 ÷ days to "
+                         "expiry), so a thirteen-month spread can be compared with a monthly one. "
+                         "A 0.6× return over 409 days is not better than 0.3× over 30 days, "
+                         "because the monthly trade recycles the same capital twelve times. It "
+                         "assumes the position could be repeated, which is an assumption, not a "
+                         "forecast — and it says nothing about how likely either is to win.",
     "risk_form": "What actually secures a position: a debit you have already paid, margin against a "
                  "short option, or shares you already own. It decides how the trade can hurt you, "
                  "which is a different question from how likely it is to win.",
