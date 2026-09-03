@@ -346,7 +346,7 @@
             1055.15
           ],
           "profit_zone": "outside",
-          "pop": 0.414,
+          "pop": 0.413,
           "credit_to_width": null,
           "manage": {
             "profit_target": "close at +50% to +100% of the debit",
@@ -418,7 +418,7 @@
               1085.75
             ],
             "profit_zone": "outside",
-            "pop": 0.296,
+            "pop": 0.295,
             "credit_to_width": null,
             "manage": {
               "profit_target": "close at +50% to +100% of the debit",
@@ -488,7 +488,7 @@
               992.02
             ],
             "profit_zone": "above",
-            "pop": 0.387,
+            "pop": 0.363,
             "credit_to_width": null,
             "manage": {
               "profit_target": "close at +50% to +100% of the debit",
@@ -938,7 +938,7 @@
               353.35
             ],
             "profit_zone": "outside",
-            "pop": 0.435,
+            "pop": 0.434,
             "credit_to_width": null,
             "manage": {
               "profit_target": "close at +50% to +100% of the debit",
@@ -2140,7 +2140,7 @@
             304.0
           ],
           "profit_zone": "above",
-          "pop": 0.855,
+          "pop": 0.848,
           "credit_to_width": 0.1,
           "manage": {
             "profit_target": "buy it back at 50% of the credit received",
@@ -2238,7 +2238,7 @@
               347.13
             ],
             "profit_zone": "inside",
-            "pop": 0.72,
+            "pop": 0.721,
             "credit_to_width": 0.213,
             "manage": {
               "profit_target": "buy it back at 50% of the credit received",
@@ -2308,7 +2308,7 @@
               322.98
             ],
             "profit_zone": "above",
-            "pop": 0.539,
+            "pop": 0.526,
             "credit_to_width": null,
             "manage": {
               "profit_target": "buy it back at 50% of the credit received",

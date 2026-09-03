@@ -57,6 +57,10 @@ MIN_ITM_FRACTION = 0.05
 
 EARNINGS_PER_YEAR = 4
 
+# A credit worth less than this share of the spread width is thin compensation —
+# doubly so out here, where the capital is committed for the whole period.
+MIN_CREDIT_TO_WIDTH = 0.20
+
 PLAYBOOK = {
     "leaps_bull_call": "Buy a call about 13 months out, sell a higher one in the same expiry. A "
                        "bullish position with a year to be right and a cost you know on day one — "
@@ -143,7 +147,12 @@ def _debit_vertical(view: OptionView, bullish: bool) -> Plan | None:
         risk_form={"basis": "debit"}, manage=_manage_debit(),
     )
     debit = net_cost(legs)
-    if debit is not None and debit > 0:
+    if debit is not None:
+        # A debit vertical that prices as a credit, or costs more than the width,
+        # is a quote problem, not a free trade. Drop it rather than publish a row
+        # whose risk numbers cannot be computed.
+        if debit <= 0 or debit >= width * 100:
+            return None
         plan.max_loss = debit
         plan.max_profit = round(width * 100 - debit, 2)
         plan.breakevens = [round(long_q.strike + (debit / 100) * (1 if bullish else -1), 2)]
@@ -181,7 +190,11 @@ def _credit_vertical(view: OptionView, bullish: bool) -> Plan | None:
         risk_form={"basis": "credit"}, manage=_manage_credit(),
     )
     net = net_cost(legs)
-    if net is not None and net < 0:
+    if net is not None:
+        # Same guard on the other side: a credit spread quoted as a debit, or one
+        # collecting more than the width, cannot be priced and is not published.
+        if net >= 0 or -net >= width * 100:
+            return None
         credit = -net
         plan.max_profit = round(credit, 2)
         plan.max_loss = round(width * 100 - credit, 2)
@@ -222,7 +235,11 @@ def _poor_mans_covered_call(view: OptionView, front_sigma: float) -> Plan | None
         risk_form={"basis": "long_option"}, manage=_manage_diagonal(),
     )
     debit = net_cost(legs)
-    if debit is not None and debit > 0:
+    if debit is not None:
+        # The diagonal is always a net debit, and the assigned-at-the-short-call
+        # case has to be able to make money, or there is nothing here to trade.
+        if debit <= 0 or debit >= (short_q.strike - long_q.strike) * 100:
+            return None
         plan.max_loss = debit
         # The figure everyone quotes: assigned on the short call at the front
         # expiry, the long call sold to cover it. It ignores the extrinsic value
@@ -283,8 +300,18 @@ def _warnings(view: OptionView, row: dict, candidates: list[Plan]) -> list[str]:
                    "is a weaker signal than it is on the near expiry"
                    + (f" — this expiry's own ATM IV is {view.long_iv:.0f}%."
                       if view.long_iv is not None else "."))
-    out.append(f"About {EARNINGS_PER_YEAR} earnings reports fall inside this expiry. A long-dated "
-               "spread is priced through all of them; none of them is the trade.")
+    reports = round(EARNINGS_PER_YEAR * dte / 365)
+    out.append(f"About {reports} earnings report{'s' if reports != 1 else ''} fall inside this "
+               f"{dte}-day expiry. A long-dated spread is priced through all of them; none of "
+               "them is the trade.")
+    thin = [p for p in candidates
+            if p.credit_to_width is not None and p.credit_to_width < MIN_CREDIT_TO_WIDTH]
+    if thin:
+        worst = min(thin, key=lambda p: p.credit_to_width)
+        out.append(f"{'One of these credit spreads collects' if len(thin) == 1 else 'Some of these credit spreads collect'} "
+                   f"very little for the risk — the {worst.name} takes only "
+                   f"{worst.credit_to_width:.0%} of its width, and holds the capital for "
+                   f"{dte} days to do it. Widen the wings or pass.")
     if any(p.key == "poor_mans_covered_call" for p in candidates):
         out.append("The Poor Man's Covered Call's max profit below is the conservative case — "
                    "assigned on the very first short call. Rolling that short leg out each month "

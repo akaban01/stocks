@@ -146,7 +146,8 @@ def test_probability_of_profit_uses_the_long_expiry_not_the_front_month():
     short_k = plan["legs"][0]["strike"]
     credit = -plan["net"]
     be = short_k - credit / 100
-    expected = 1 - 0.5 * (1 + math.erf((math.log(be / 200.0) / long_sigma) / math.sqrt(2)))
+    d2 = (math.log(200.0 / be) - long_sigma * long_sigma / 2) / long_sigma
+    expected = 0.5 * (1 + math.erf(d2 / math.sqrt(2)))
     assert plan["pop"] == pytest.approx(expected, abs=0.01)
 
 
@@ -268,7 +269,7 @@ def test_a_pick_is_never_named_unless_it_was_actually_built(kw, bias):
 # ------------------------------------------------------------------ warnings
 
 def test_every_block_warns_about_the_earnings_inside_the_expiry():
-    assert any("earnings reports fall inside this expiry" in w
+    assert any("earnings report" in w and "fall inside this" in w
                for w in block()["warnings"])
 
 
@@ -323,3 +324,87 @@ def test_no_candidate_prices_at_nan():
         for field in ("net", "max_profit", "max_loss", "pop"):
             v = c[field]
             assert v is None or math.isfinite(v), f"{c['key']}.{field} is not finite"
+
+
+# ------------------------------------------------- structurally impossible quotes
+
+def _repriced(marks):
+    """A view whose long-dated chain carries deliberately broken marks.
+    `marks` maps (right, strike) -> mid."""
+    v = make_view(spot=200.0)
+    side = v.chain[v.long_expiry]
+    for (right, strike), mid in marks.items():
+        for k in side[right]:
+            if abs(k - strike) < 0.01:
+                side[right][k].mid = mid
+    return v
+
+
+def _keys(view, bias="bullish"):
+    b = leaps.long_spreads(make_row(), view, 2500.0, bias, "strong")
+    return [] if b is None else [c["key"] for c in b["candidates"]]
+
+
+def test_a_credit_spread_quoted_as_a_debit_is_dropped_not_published():
+    """Crossed or stale marks can invert a spread's sign. Publishing it anyway
+    left a row with no max profit, no max loss and no breakeven — which the table
+    then rendered as an *uncapped* win on a structure that is capped and can
+    lose. Dropping it is the only honest option."""
+    assert "leaps_bull_put" in _keys(make_view(spot=200.0))
+    broken = _repriced({("put", 160.0): 1.00, ("put", 145.0): 9.00})
+    assert "leaps_bull_put" not in _keys(broken)
+
+
+def test_a_debit_vertical_costing_more_than_its_width_is_dropped():
+    """Paying more than the spread can ever pay out is not a trade, it is a bad
+    quote: max profit would be negative."""
+    assert "leaps_bull_call" in _keys(make_view(spot=200.0))
+    broken = _repriced({("call", 200.0): 60.00, ("call", 230.0): 1.00})
+    assert "leaps_bull_call" not in _keys(broken)
+
+
+def test_a_diagonal_that_cannot_profit_when_assigned_is_dropped():
+    expensive = _repriced({("call", 160.0): 90.00})
+    assert "poor_mans_covered_call" not in _keys(expensive)
+
+
+def test_no_published_candidate_is_ever_missing_its_risk_numbers():
+    """The invariant behind the guards: every row in the table can be read."""
+    for kw in ({}, {"spot": 31.5, "step": 2.5}, {"iv": 15.0, "hv": 14.0},
+               {"spot": 1180.0, "step": 20.0}, {"long_dte": 500}):
+        b = leaps.long_spreads(make_row(), make_view(**kw), 2500.0, "bullish", "strong")
+        for c in (b or {}).get("candidates", []):
+            if c["net"] is None:
+                continue                      # a leg with no two-sided market
+            assert c["max_loss"] is not None, f"{c['key']} published without a max loss"
+            assert c["max_profit"] is not None and c["max_profit"] > 0, \
+                f"{c['key']} published without a positive max profit"
+            assert c["breakevens"], f"{c['key']} published without a breakeven"
+
+
+# ------------------------------------------------------------- warning accuracy
+
+@pytest.mark.parametrize("dte,expected", [(280, 3), (365, 4), (409, 4), (500, 5)])
+def test_the_earnings_count_follows_the_actual_expiry(dte, expected):
+    """These expiries run from ~9 to ~18 months, so a hardcoded "about 4" was
+    wrong at both ends."""
+    b = block(long_dte=dte)
+    warning = next(w for w in b["warnings"] if "earnings report" in w)
+    assert f"About {expected} earnings report" in warning
+    assert f"{dte}-day expiry" in warning
+
+
+def test_a_thin_credit_is_called_out_the_way_the_near_term_engine_does():
+    from spread_scanner import strategy
+    b = block(spot=31.5, iv=18.0, step=2.5, bias="bullish")
+    thin = [c for c in b["candidates"]
+            if c["credit_to_width"] is not None
+            and c["credit_to_width"] < leaps.MIN_CREDIT_TO_WIDTH]
+    assert thin, "fixture must actually produce a thin credit for this to test anything"
+    warning = next(w for w in b["warnings"] if "of its width" in w)
+    assert "holds the capital for" in warning, "the year-long commitment is the point"
+    assert leaps.MIN_CREDIT_TO_WIDTH == strategy.MIN_CREDIT_TO_WIDTH
+
+
+def test_a_healthy_credit_is_not_flagged():
+    assert not any("of its width" in w for w in block(spot=200.0, bias="bullish")["warnings"])

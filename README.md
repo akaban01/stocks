@@ -136,7 +136,7 @@ Every ticker in `scan.json` carries a `recommendation` block:
     "net": -208.0,                   // + = debit paid, − = credit received
     "max_profit": 208.0, "max_loss": 792.0,
     "breakevens": [97.92, 137.08], "profit_zone": "inside",
-    "pop": 0.74,                     // model probability, zero-drift lognormal
+    "pop": 0.74,                     // N(d₂): lognormal with E[S_T] = spot
     "credit_to_width": 0.21,
     "manage":   { "profit_target_pct": 50, "stop_loss_multiple": 2.0, "close_by_dte": 21 },
     "sizing":   { "risk_budget": 500, "contracts": 0, "over_budget": true },
@@ -207,8 +207,8 @@ Five structures are priced off the real long-dated chain:
 | **LEAPS Bull Put / Bear Call Spread** | ~20% OTM short + wing | Paid up front to be right slowly, capital committed for the year |
 
 The tab is a sortable table — ticker, structure, expiry, legs, net debit/credit,
-max profit, max loss, reward-to-risk, breakeven, probability of profit and
-position size — and any row opens the full legs, the management rules and that
+max profit, max loss, reward-to-risk, that return annualised, breakeven,
+probability of profit and position size — and any row opens the full legs, the management rules and that
 name's caveats.
 
 **Where the numbers are honest about themselves:**
@@ -228,6 +228,19 @@ name's caveats.
   times wider, and you pay that spread twice, a year apart.
 - **Sizing runs against its own budget** (`strategy.long_risk_budget_usd`, default
   $2,500), because a LEAPS spread costs several times a monthly one.
+- **Reward-to-risk is also shown annualised.** A 13-month spread returning 0.6×
+  is not better than a monthly one returning 0.3×: the monthly trade recycles the
+  same capital twelve times. The `RoR / yr` column makes that comparison
+  visible. It is a simple annualisation that assumes the trade could be
+  repeated — an assumption, not a forecast.
+- **The probability model is N(d₂)**, under a lognormal whose expected *price* is
+  today's. Holding the price flat rather than its logarithm puts the median
+  slightly below spot, so the chance of finishing above spot is a little under
+  half — and more so the longer the expiry. Dropping that −σ²/2 term, as the
+  helper originally did, overstates the chance of finishing above any strike by
+  ~2 points at a front month, ~8 at thirteen months and ~14 on a high-vol name
+  eighteen months out. Probabilities also read volatility at the money rather
+  than at each strike; on these structures that is worth under a point.
 
 Set `options.long_dated.enabled: false` to skip the extra chain call per ticker.
 
