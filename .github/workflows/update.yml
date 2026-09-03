@@ -2,9 +2,21 @@ name: Update spread scanner
 
 on:
   schedule:
-    # 21:30 UTC on weekdays — ~30 min after the US market close (4pm ET).
-    # GitHub cron is always UTC; adjust if you follow a different market.
-    - cron: "30 21 * * 1-5"
+    # 21:23 UTC on weekdays. The US close is 21:00 UTC in winter and 20:00 in
+    # summer, so this sits after both. GitHub cron is always UTC.
+    #
+    # The odd minute is deliberate: scheduled workflows are the lowest priority
+    # on shared runners and are queued behind everything else, worst at :00 and
+    # :30. Observed fire times for the old "30 21" were 21:48, 23:27, 23:28,
+    # 00:42, 02:02, 03:13 and once 05:31 — a delay of up to eight hours. The
+    # option feed empties out somewhere between 03:15 and 05:30 UTC, so that
+    # last one produced a scan with no quotes in it.
+    #
+    # The delay is not something a schedule can fix, so the run also refuses to
+    # publish a scan whose option data came back empty (see the validation step
+    # below). If winter runs start failing that check, this is too close to the
+    # close — move it later. The check makes that safe to find out.
+    - cron: "23 21 * * 1-5"
   workflow_dispatch:          # lets you run it manually from the Actions tab
 
 permissions:
@@ -51,6 +63,7 @@ jobs:
           python - <<'PY'
           import json, sys
           from pathlib import Path
+          from spread_scanner import leaps, report, strategy
           scan = json.loads(Path("public/data/scan.json").read_text(encoding="utf-8"))
           assert scan["schema_version"].startswith("2."), scan["schema_version"]
           assert scan["signals"], "scan.json has no signals"
@@ -69,11 +82,19 @@ jobs:
                   f"{sig['ticker']}: preferred {ld['preferred']} is not among {keys}"
               for c in ld["candidates"]:
                   assert c["legs"] and c["playbook"], f"{sig['ticker']}: {c['key']} is incomplete"
+          # A scan whose option feed returned nothing is worth less than the last
+          # good scan it would replace, so fail before the commit step and leave
+          # the previous one published.
+          health = report.option_data_health(scan["signals"])
+          assert health["ok"], health["reason"]
+          if health["priced"]:
+              print(f"option data OK — {health['usable']}/{health['priced']} priced names "
+                    f"have real quotes, median ATM IV {health['median_iv']}%")
+
           # The payload ships its own UI copy so an explanation can never drift from
           # the field it explains. That only holds if the copy in the file is the
           # copy the code currently defines — check it, here rather than in the
           # tests, because this runs *after* the step that regenerates the file.
-          from spread_scanner import leaps, report, strategy
           want = {"actions": report.ACTIONS, "premium_states": report.PREMIUM_STATES,
                   "glossary": report.GLOSSARY,
                   "playbook": {**strategy.PLAYBOOK, **leaps.PLAYBOOK}}

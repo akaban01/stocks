@@ -30,6 +30,12 @@ import pandas as pd
 
 SCHEMA_VERSION = "2.1.0"
 
+# An equity option quoted below this annualized implied volatility is not a
+# quote. Outside US market hours the feed returns every contract with a floor
+# value — 0.01% to 0.8% observed — and zero bid, ask and open interest: data
+# shaped like data, with nothing in it.
+MIN_PLAUSIBLE_IV = 5.0
+
 # ---------------------------------------------------------------------------
 # UI copy. It lives here — not in the frontend — so the meaning of a field and
 # the field itself ship together and can never drift apart.
@@ -240,6 +246,39 @@ def _headline_actions(signals: list[dict], limit: int = 5) -> list[dict]:
 
 
 # -------------------------------------------------------------- the main write
+
+def option_data_health(signals: list[dict]) -> dict:
+    """Did the option feed return real quotes, or empty contracts?
+
+    Only meaningful once something has been priced: a scan with the options
+    layer switched off has no option data to judge, which is a different thing
+    from having bad option data. The check is deliberately blunt — it asks
+    whether the feed was working at all, not whether any individual name looks
+    odd — because the failure it exists to catch is total."""
+    priced = [s for s in signals if s.get("options")]
+    usable = [s for s in priced
+              if (s["options"].get("iv_annual") or 0) >= MIN_PLAUSIBLE_IV]
+    ivs = sorted((s["options"].get("iv_annual") or 0) for s in priced)
+    health = {
+        "priced": len(priced),
+        "usable": len(usable),
+        "median_iv": ivs[len(ivs) // 2] if ivs else None,
+        "ok": True,
+        "reason": "",
+    }
+    # Half is a wide margin: a working feed prices every name it reaches, and a
+    # broken one prices none of them. Nothing observed has landed in between.
+    if priced and len(usable) * 2 < len(priced):
+        health["ok"] = False
+        health["reason"] = (
+            f"only {len(usable)} of {len(priced)} priced names came back with a plausible "
+            f"implied volatility (median {health['median_iv']}%, floor {MIN_PLAUSIBLE_IV}%). "
+            "That is what the feed returns outside US market hours: every contract present, "
+            "with no bid, no ask and no open interest. A scan built on it is worth less than "
+            "the last good one it would replace."
+        )
+    return health
+
 
 def _long_dated_summary(signals: list[dict]) -> dict:
     """Headline counts for the Spreads tab, so it can say what it has before
