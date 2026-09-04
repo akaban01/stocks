@@ -273,3 +273,44 @@ def test_recommend_all_covers_every_row_even_unpriced_ones():
     assert set(out) == {"AAA", "BBB", "CCC"}
     assert out["AAA"]["action"] == "SELL_PREMIUM"
     assert out["BBB"]["action"] == "NO_DATA"
+
+
+# --------------------------------------------- sizing against the risk budget
+
+def _condor_plan(max_loss):
+    """A defined-risk plan carrying just the fields size_position reads."""
+    p = strategy.Plan(key="iron_condor", name="Iron Condor", action="SELL_PREMIUM",
+                      bias="neutral", thesis="", playbook="", vega="short",
+                      theta="positive", risk="defined")
+    p.max_loss = max_loss
+    p.net = -abs(max_loss) / 4
+    return p
+
+
+def test_sizing_takes_a_trade_that_fits_the_budget():
+    """The README documents this exact case, so it is asserted rather than
+    described: $792 of risk against a $1,000 budget is one contract."""
+    out = strategy.size_position(_condor_plan(792.0), 1000.0)
+    assert out["contracts"] == 1 and out["over_budget"] is False
+    assert out["risk_per_spread"] == 792.0 and out["total_risk"] == 792.0
+
+
+def test_sizing_refuses_a_trade_dearer_than_the_budget():
+    out = strategy.size_position(_condor_plan(1350.0), 1000.0)
+    assert out["contracts"] == 0 and out["over_budget"] is True
+    assert "$1,350" in out["note"] and "$1,000" in out["note"]
+
+
+def test_raising_the_budget_can_turn_a_refusal_into_a_position():
+    """The whole point of the budget being configurable. GOOGL's long strangle
+    on the 2026-09-03 scan risked $584: refused at $500, one contract at
+    $1,000. Nothing about the trade changes — only what you will risk on it."""
+    plan = _condor_plan(584.0)
+    assert strategy.size_position(plan, 500.0)["contracts"] == 0
+    assert strategy.size_position(plan, 1000.0)["contracts"] == 1
+
+
+def test_sizing_never_suggests_more_than_the_cap():
+    """A cheap spread against a large budget is still bounded."""
+    out = strategy.size_position(_condor_plan(1.0), 1_000_000.0)
+    assert out["contracts"] == strategy.MAX_CONTRACTS
