@@ -106,7 +106,7 @@ strategy:
   # Turns the scan + the IV read into ONE explicit instruction per ticker:
   # buy premium / sell premium / stand aside, with the exact legs, net price,
   # max loss, breakevens and management rules. See spread_scanner/strategy.py.
-  risk_budget_usd: 500      # max loss per position; sets the suggested contract count
+  risk_budget_usd: 1000     # max loss per position; sets the suggested contract count
   long_risk_budget_usd: 2500
                             # the same, for the ≈13-month spreads. Separate because
                             # a LEAPS spread costs several times a monthly one and

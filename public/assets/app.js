@@ -33,6 +33,11 @@
   function money(v, digits) { return has(v) && !isNaN(v) ? "$" + num(Math.abs(v), digits === undefined ? 2 : digits) : "—"; }
   function pct(v, digits) { return has(v) && !isNaN(v) ? num(v, digits === undefined ? 1 : digits) + "%" : "—"; }
 
+  // The actions that mean "there is a trade here" — as opposed to standing
+  // aside or having no chain to read. The headline counts these and the sizing
+  // tally filters by them, so they are named once rather than twice.
+  var ACTIONABLE = { BUY_PREMIUM: true, SELL_PREMIUM: true, NEUTRAL_INCOME: true };
+
   function tone(action) {
     return ({ BUY_PREMIUM: "buy", SELL_PREMIUM: "sell", NEUTRAL_INCOME: "neutral",
               STAND_ASIDE: "wait", NO_DATA: "none" })[action] || "none";
@@ -358,12 +363,37 @@
 
     var counts = d.counts || {};
     var actionable = (counts.BUY_PREMIUM || 0) + (counts.SELL_PREMIUM || 0) + (counts.NEUTRAL_INCOME || 0);
-    $("#summary").innerHTML = actionable
-      ? "<b>" + actionable + "</b> of " + (d.signals || []).length +
-        " screened names have a trade worth placing today. Each card below is the whole instruction: " +
-        "the exact legs, what it costs, what it can lose, and when to be out."
-      : "No name is mispriced enough today to pay for a position. That is a result, not a gap in the data — " +
-        "the cards below show what was read and why each was passed over.";
+
+    // "Mispriced" and "affordable" are different questions and the headline used
+    // to answer only the first while sounding like it answered the second. On a
+    // day when every candidate risks more than the budget, "4 names have a trade
+    // worth placing" was contradicted by the very cards it was introducing —
+    // each one sized at zero contracts. Both numbers now get said out loud.
+    var fits = 0, cheapest = null, budget = null;
+    (d.signals || []).forEach(function (s) {
+      var sizing = ((s.recommendation || {}).plan || {}).sizing;
+      if (!sizing || !ACTIONABLE[(s.recommendation || {}).action]) return;
+      if (budget === null && has(sizing.risk_budget)) budget = sizing.risk_budget;
+      if (sizing.contracts > 0) fits++;
+      else if (has(sizing.risk_per_spread) &&
+               (cheapest === null || sizing.risk_per_spread < cheapest)) {
+        cheapest = sizing.risk_per_spread;
+      }
+    });
+
+    var lead = "<b>" + actionable + "</b> of " + (d.signals || []).length +
+               " screened names are mispriced today";
+    var withBudget = budget === null ? "your risk budget" : "your " + money(budget, 0) + " risk budget";
+    $("#summary").innerHTML = !actionable
+      ? "No name is mispriced enough today to pay for a position. That is a result, not a gap in the data — " +
+        "the cards below show what was read and why each was passed over."
+      : fits
+        ? lead + ", and <b>" + fits + "</b> " + (fits === 1 ? "fits" : "fit") + " " + withBudget +
+          ". Each card below is the whole instruction: the exact legs, what it costs, what it can " +
+          "lose, and when to be out."
+        : lead + ", but <b>none</b> fit " + withBudget +
+          (cheapest === null ? "" : " — the cheapest single spread risks " + money(cheapest, 0)) +
+          ". The cards below show each trade and what it would cost.";
 
     if (!(d.signals || []).length) {
       $("#cards").innerHTML = '<p class="empty">No signals in the last run — no tickers returned usable data.</p>';

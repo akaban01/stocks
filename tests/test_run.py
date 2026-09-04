@@ -1,6 +1,7 @@
 """End-to-end wiring: run.py from CLI args to the JSON on disk, no network."""
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -195,3 +196,40 @@ def test_etf_universe_records_no_fallback_when_the_fetch_succeeds(
                      .read_text(encoding="utf-8"))["universe"]
     assert uni["source"] == "etf" and uni["requested_source"] == "etf"
     assert uni["fallback"] is None
+
+
+def test_the_configured_budget_reaches_the_published_sizing(offline, tmp_path):
+    """config.yaml's strategy.risk_budget_usd is what the cards are sized
+    against, so a change to it has to show up in the payload — that number is
+    also what the dashboard headline quotes back to the reader."""
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        "halal_screen: {financial_formula: {enabled: true, mode: filter}}\n"
+        "options: {enabled: true, top_n: 3}\n"
+        "strategy: {risk_budget_usd: 1000}\n"
+        "charts: {enabled: false}\n"
+        "alerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(TICKERS)}]\n", encoding="utf-8")
+    assert run.main(["--config", str(cfg)]) == 0
+
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    budgets = {s["recommendation"]["plan"]["sizing"]["risk_budget"]
+               for s in scan["signals"]
+               if (s["recommendation"]["plan"].get("sizing") or {}).get("risk_budget")}
+    assert budgets == {1000.0}
+
+
+def test_shipped_config_still_parses_and_carries_a_budget():
+    """The repo's own config.yaml is what every scheduled run uses; a typo in
+    it would only surface in production."""
+    import yaml
+    cfg = yaml.safe_load(Path("config.yaml").read_text(encoding="utf-8"))
+    strat = cfg["strategy"]
+    assert isinstance(strat["risk_budget_usd"], (int, float))
+    assert strat["risk_budget_usd"] > 0
+    # The long-dated budget is deliberately separate and larger: a LEAPS spread
+    # costs several times a monthly one and holds the capital for a year.
+    assert strat["long_risk_budget_usd"] > strat["risk_budget_usd"]

@@ -139,7 +139,7 @@ Every ticker in `scan.json` carries a `recommendation` block:
     "pop": 0.74,                     // N(d₂): lognormal with E[S_T] = spot
     "credit_to_width": 0.21,
     "manage":   { "profit_target_pct": 50, "stop_loss_multiple": 2.0, "close_by_dte": 21 },
-    "sizing":   { "risk_budget": 500, "contracts": 0, "over_budget": true },
+    "sizing":   { "risk_budget": 1000, "contracts": 1, "over_budget": false },
     "risk_form": { "tier": "short_premium", "note": "..." }   // what secures it
   },
   "alternatives": [ /* other ways to express the same view, fully priced */ ],
@@ -323,7 +323,7 @@ options:
   enabled: true          # read option chains -> IV rank, term structure, skew
   top_n: 15              # how many top-ranked names to price (2-3 calls each)
 strategy:
-  risk_budget_usd: 500   # max loss per position; sets the suggested contract count
+  risk_budget_usd: 1000  # max loss per position; sets the suggested contract count
   allow_undefined_risk: false   # true = offer naked short strangles as an alternative
 params:
   horizon_days: 10       # ~2 weeks of trading days — the short-term window
