@@ -473,3 +473,34 @@ def test_one_unquoted_leg_is_enough_to_drop_a_candidate():
             leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong")["candidates"]]
     assert "leaps_bull_call" not in keys
     assert "leaps_bull_put" in keys, "the put-side structures are untouched"
+
+
+def test_pmcc_annualises_over_the_short_leg_not_the_long_one():
+    """`max_profit` prices the assigned-on-the-first-short-call case, which
+    arrives at the *front* expiry. Annualising it over the long leg's thirteen
+    months understated the return by the ratio between the two — on the live
+    AMD block that was 0.01× a year against 0.18×."""
+    view = make_view(spot=200.0)
+    plan = plan_for("poor_mans_covered_call", spot=200.0)
+
+    assert plan["profit_horizon_dte"] == view.days_to_expiry
+    assert plan["dte"] == view.long_dte
+    assert plan["profit_horizon_dte"] < plan["dte"], (
+        "the fixture must have a front expiry well inside the long one for "
+        "this distinction to mean anything")
+
+    # What the frontend now divides by, and what it used to.
+    rr = plan["max_profit"] / plan["max_loss"]
+    corrected = rr * 365 / plan["profit_horizon_dte"]
+    old = rr * 365 / plan["dte"]
+    assert corrected > old * 5
+
+
+def test_single_expiry_structures_leave_the_horizon_unset():
+    """Every vertical earns its maximum at its own expiry, so `dte` is already
+    the right denominator and there is nothing to override."""
+    for key in ("leaps_bull_call", "leaps_bear_put",
+                "leaps_bull_put", "leaps_bear_call"):
+        plan = plan_for(key)
+        assert plan["profit_horizon_dte"] is None, key
+        assert len({leg["expiry"] for leg in plan["legs"]}) == 1, key

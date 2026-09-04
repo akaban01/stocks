@@ -1,0 +1,40 @@
+name: Tests
+
+# The scanner workflow runs these too, but only on its own schedule — after a
+# change has already been merged and published. This one runs them on the pull
+# request, which is the point at which a broken change is still cheap.
+#
+# Deliberately separate rather than a `pull_request` trigger on update.yml: that
+# workflow commits refreshed data and deploys the dashboard, neither of which
+# should happen from a fork's branch.
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # The suite is network-free by design, so it needs no secrets and no
+      # market data — a pull request from a fork runs it exactly as master does.
+      - name: Run tests
+        run: python -m pytest -q
