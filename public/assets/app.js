@@ -335,6 +335,13 @@
     $("#horizon").textContent = d.horizon_days + " trading days";
     $("#scanned").textContent = ((d.universe || {}).scanned || (d.signals || []).length) + " screened tickers";
 
+    // A universe that fell back to the config watchlist still produces a full,
+    // valid scan — it is just not scanning what the page implies it is. That
+    // difference was previously visible only in the workflow log.
+    var uniFallback = (d.universe || {}).fallback;
+    $("#universe-warning").hidden = !uniFallback;
+    if (uniFallback) $("#universe-warning").textContent = uniFallback;
+
     var w = d.weights || {};
     $("#weights").textContent = w.values && w.values.compression !== undefined
       ? "compression " + Math.round(w.values.compression * 100) + "% · vol-room " +
@@ -507,8 +514,13 @@
   // assumption a reader comparing the two tabs is making.
   function annualisedReturn(plan) {
     var rr = rewardToRisk(plan);
-    if (rr === null || !has(plan.dte) || !plan.dte) return null;
-    return rr * 365 / plan.dte;
+    // Annualise over the period the max profit is actually earned in. For a
+    // vertical that is the expiry; for the diagonal it is the short leg's,
+    // because the max profit quoted is the assigned-on-the-first-call case.
+    var days = has(plan.profit_horizon_dte) && plan.profit_horizon_dte
+      ? plan.profit_horizon_dte : plan.dte;
+    if (rr === null || !has(days) || !days) return null;
+    return rr * 365 / days;
   }
 
   // One row per candidate, with the parent ticker's block carried along so the

@@ -247,7 +247,10 @@ def _poor_mans_covered_call(view: OptionView, front_sigma: float) -> Plan | None
                "out against it every cycle.",
         playbook=PLAYBOOK["poor_mans_covered_call"],
         vega="long", theta="positive", risk="defined",
-        legs=legs, expiry=long_exp, dte=long_dte, profit_zone="above",
+        legs=legs, expiry=long_exp, dte=long_dte,
+        # Assignment on the first short call is the case max_profit prices, and
+        # that arrives at the front expiry — weeks out, not the long leg's year.
+        profit_horizon_dte=view.days_to_expiry, profit_zone="above",
         # Not "covered": there are no shares here. The long call is what secures
         # the short one, and saying otherwise would misdescribe the risk.
         risk_form={"basis": "long_option"}, manage=_manage_diagonal(),

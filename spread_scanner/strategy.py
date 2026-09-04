@@ -123,6 +123,12 @@ class Plan:
     legs: list[Leg] = field(default_factory=list)
     expiry: str | None = None
     dte: int | None = None
+    # Over how many days `max_profit` is actually earned. Equal to `dte` for
+    # every single-expiry structure, so it is only set where the two differ:
+    # a diagonal's best case lands at its *short* leg's expiry, not the long
+    # one's, and annualising it over the long leg understates it by the ratio
+    # between them. None means "same as dte".
+    profit_horizon_dte: int | None = None
     net: float | None = None            # + = debit paid, − = credit received ($/spread)
     max_profit: float | None = None     # None = unlimited
     max_loss: float | None = None       # None = undefined

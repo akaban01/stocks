@@ -151,3 +151,47 @@ def test_hv_context_gives_the_options_layer_a_year_of_readings():
 def test_hv_context_skips_frames_without_closes():
     now, hist = run._hv_context({"BARE": pd.DataFrame({"Volume": [1, 2]})}, {"vol_lookback": 20})
     assert now == {} and hist == {}
+
+
+def _etf_config(tmp_path, tickers):
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: etf, etfs: [SPUS, HLAL], max_holdings: 30,"
+        " fallback_to_config: true}\n"
+        "halal_screen: {financial_formula: {enabled: true, mode: filter}}\n"
+        "options: {enabled: true, top_n: 3}\n"
+        "strategy: {risk_budget_usd: 1000}\n"
+        "charts: {enabled: false}\n"
+        "alerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(tickers)}]\n", encoding="utf-8")
+    return cfg
+
+
+def test_etf_universe_records_the_fallback_when_the_fetch_comes_back_empty(
+        offline, tmp_path, monkeypatch):
+    """A failed holdings fetch still produces a complete, valid scan — of the
+    config watchlist rather than the funds. That substitution was visible only
+    in the workflow log, so a dashboard served from the fallback was
+    indistinguishable from one served from live holdings."""
+    monkeypatch.setattr(run.universe, "fetch_halal_universe", lambda *a, **k: [])
+    assert run.main(["--config", str(_etf_config(tmp_path, TICKERS))]) == 0
+
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    uni = scan["universe"]
+    assert uni["requested_source"] == "etf"
+    assert uni["source"] == "config", "the effective source is what actually got scanned"
+    assert uni["fallback"] and "SPUS, HLAL" in uni["fallback"]
+    assert {s["ticker"] for s in scan["signals"]} == set(TICKERS)
+
+
+def test_etf_universe_records_no_fallback_when_the_fetch_succeeds(
+        offline, tmp_path, monkeypatch):
+    monkeypatch.setattr(run.universe, "fetch_halal_universe", lambda *a, **k: list(TICKERS))
+    assert run.main(["--config", str(_etf_config(tmp_path, ["ZZZ"]))]) == 0
+
+    uni = json.loads((tmp_path / "site" / "data" / "scan.json")
+                     .read_text(encoding="utf-8"))["universe"]
+    assert uni["source"] == "etf" and uni["requested_source"] == "etf"
+    assert uni["fallback"] is None

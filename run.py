@@ -112,6 +112,12 @@ def main(argv: list[str] | None = None) -> int:
     uni_cfg = cfg.get("universe") or {}
     screen_details: dict = {}
 
+    # What the universe was *asked* to be vs. what it turned out to be. When a
+    # fetch fails these diverge, and the difference has to reach the payload:
+    # a scan silently running on the config fallback looks exactly like one
+    # running on live ETF holdings, and did so for weeks.
+    universe_fallback = None
+
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
     elif uni_cfg.get("source") == "etf":
@@ -122,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  got {len(tickers)} holdings: {', '.join(tickers) or '(none)'}")
         if not tickers and uni_cfg.get("fallback_to_config", True):
             print("  fetch empty — falling back to config tickers.")
+            universe_fallback = (
+                f"Could not read holdings from {', '.join(etfs)}, so this scan "
+                "ran on the watchlist in config.yaml instead of the funds' "
+                "current holdings.")
             tickers = cfg.get("tickers") or []
     else:
         tickers = cfg.get("tickers") or []
@@ -257,7 +267,11 @@ def main(argv: list[str] | None = None) -> int:
         option_views=views,
         long_spreads=long_blocks,
         universe={"scanned": int(len(df)), "requested": len(tickers),
-                  "source": (uni_cfg.get("source") if not args.tickers else "cli"),
+                  "source": ("cli" if args.tickers
+                             else "config" if universe_fallback
+                             else uni_cfg.get("source")),
+                  "requested_source": (uni_cfg.get("source") if not args.tickers else "cli"),
+                  "fallback": universe_fallback,
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
     )

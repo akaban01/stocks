@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.1.0"
+SCHEMA_VERSION = "2.2.0"
 
 # An equity option quoted below this annualized implied volatility is not a
 # quote. Outside US market hours the feed returns every contract with a floor
@@ -142,12 +142,16 @@ GLOSSARY = {
                   "almost entirely in the final months.",
     "reward_to_risk": "Maximum profit divided by maximum loss — what the trade pays if it works, "
                       "against what it costs if it does not.",
-    "annualised_return": "The same reward-to-risk put on a yearly footing (× 365 ÷ days to "
-                         "expiry), so a thirteen-month spread can be compared with a monthly one. "
-                         "A 0.6× return over 409 days is not better than 0.3× over 30 days, "
-                         "because the monthly trade recycles the same capital twelve times. It "
-                         "assumes the position could be repeated, which is an assumption, not a "
-                         "forecast — and it says nothing about how likely either is to win.",
+    "annualised_return": "The same reward-to-risk put on a yearly footing (× 365 ÷ the days the "
+                         "maximum is earned over), so a thirteen-month spread can be compared with "
+                         "a monthly one. A 0.6× return over 409 days is not better than 0.3× over "
+                         "30 days, because the monthly trade recycles the same capital twelve "
+                         "times. For everything but the diagonal those days are simply the days to "
+                         "expiry; the Poor Man's Covered Call is annualised over its short leg, "
+                         "because the maximum quoted for it is the assigned-on-the-first-call case "
+                         "and that arrives at the front expiry. It assumes the position could be "
+                         "repeated, which is an assumption, not a forecast — and it says nothing "
+                         "about how likely either is to win.",
     "risk_form": "What actually secures a position: a debit you have already paid, margin against a "
                  "short option, or shares you already own. It decides how the trade can hurt you, "
                  "which is a different question from how likely it is to win.",
