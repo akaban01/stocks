@@ -542,15 +542,21 @@
   // that 0.3x twelve times over the same capital. Simple (not compounded)
   // annualisation: it assumes you could repeat the trade, which is exactly the
   // assumption a reader comparing the two tabs is making.
+  // Deliberately not defined for a structure whose legs expire on different
+  // dates. Neither denominator is honest for a diagonal: over its own 378 days
+  // the figure understates, because the maximum lands at the short leg's expiry
+  // three weeks out; over those 21 days it wildly overstates, because it then
+  // implies seventeen assignments a year at the same strike. On the 2026-09-04
+  // scan the two readings for PG were 12% and 222%. The quantity the column
+  // means — a return you could plausibly repeat — is simply not defined here:
+  // the diagonal earns from rolling the short leg, and no roll is in max_profit.
+  // `profit_horizon_dte` still ships, and now explains the blank rather than
+  // producing a number.
   function annualisedReturn(plan) {
+    if (multiExpiry(plan)) return null;
     var rr = rewardToRisk(plan);
-    // Annualise over the period the max profit is actually earned in. For a
-    // vertical that is the expiry; for the diagonal it is the short leg's,
-    // because the max profit quoted is the assigned-on-the-first-call case.
-    var days = has(plan.profit_horizon_dte) && plan.profit_horizon_dte
-      ? plan.profit_horizon_dte : plan.dte;
-    if (rr === null || !has(days) || !days) return null;
-    return rr * 365 / days;
+    if (rr === null || !has(plan.dte) || !plan.dte) return null;
+    return rr * 365 / plan.dte;
   }
 
   // One row per candidate, with the parent ticker's block carried along so the
@@ -613,10 +619,22 @@
     { k: "ror", h: "RoR / yr", r: true, v: function (r) { return annualisedReturn(r.plan); },
       f: function (r) {
         var v = annualisedReturn(r.plan);
-        if (v === null) return "—";
-        return '<span title="Max profit over max loss, put on a yearly footing so it ' +
-          'compares with a monthly trade. Assumes the position could be repeated; it is not ' +
-          'a forecast.">' + pct(v * 100, 0) + "</span>";
+        if (v !== null) {
+          return '<span title="Max profit over max loss, put on a yearly footing so it ' +
+            'compares with a monthly trade. Assumes the position could be repeated; it is not ' +
+            'a forecast.">' + pct(v * 100, 0) + "</span>";
+        }
+        if (multiExpiry(r.plan)) {
+          var horizon = has(r.plan.profit_horizon_dte)
+            ? num(r.plan.profit_horizon_dte, 0) + " days"
+            : "the short leg's expiry";
+          return '<span class="dim" title="Not annualised: this trade\u2019s legs expire on ' +
+            'different dates. Its maximum lands at ' + horizon + ', not at the ' +
+            num(r.plan.dte, 0) + '-day expiry in the Expiry column, and it is a single ' +
+            'assignment rather than something you repeat — the structure actually earns by ' +
+            'rolling the short leg, which no figure here counts.">n/a</span>';
+        }
+        return "—";
       } },
     { k: "breakevens", h: "Breakeven", r: true,
       v: function (r) { return (r.plan.breakevens || [])[0]; },
