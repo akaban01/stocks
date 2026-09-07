@@ -86,13 +86,31 @@
 
     <!-- --------------------------------------------------------- charts -->
     <section class="panel" data-tab="charts" role="tabpanel" hidden>
-      <div class="lede">
-        Closing price for every screened name over the download window. Faint vertical lines mark each
-        <b>calendar-year boundary</b>, so you can read the move year to year. The badge is the trailing
-        twelve-month change.
+      <div class="filters" id="chartviews">
+        <button class="chip" data-view="prices" aria-pressed="true">Price history</button>
+        <button class="chip" data-view="seasonality" aria-pressed="false">Seasonality</button>
       </div>
-      <div class="meta" id="chartmeta"></div>
-      <div class="grid-cards" id="chartgrid"><p class="loading">Loading price history…</p></div>
+
+      <div data-view="prices">
+        <div class="lede">
+          Closing price for every screened name over the download window. Faint vertical lines mark each
+          <b>calendar-year boundary</b>, so you can read the move year to year. The badge is the trailing
+          twelve-month change.
+        </div>
+        <div class="meta" id="chartmeta"></div>
+        <div class="grid-cards" id="chartgrid"><p class="loading">Loading price history…</p></div>
+      </div>
+
+      <div data-view="seasonality" hidden>
+        <div class="lede">
+          The same history cut by <b>calendar month</b> instead of by date: every whole month in the
+          window becomes one return, and those returns are grouped into twelve buckets. It answers
+          <b>when in the year</b> these names have tended to rise and fall — useful for timing an entry
+          you were going to make anyway, or for knowing which month you are fighting.
+        </div>
+        <div class="meta" id="seasonmeta"></div>
+        <div id="seasonbody"><p class="loading">Loading price history…</p></div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------- validation -->
@@ -126,7 +144,7 @@
           JSON:</p>
           <ul>
             <li><code>data/scan.json</code> — signals, IV read, recommendations, and this copy</li>
-            <li><code>data/charts.json</code> — downsampled price history</li>
+            <li><code>data/charts.json</code> — downsampled price history, and the same closes grouped by calendar month</li>
             <li><code>data/backtest.json</code> · <code>data/calibration.json</code></li>
             <li><code>data/signals.csv</code> — the flat table, for spreadsheets</li>
           </ul>

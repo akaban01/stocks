@@ -131,7 +131,11 @@ charts:
   # chart shows several years; falls back to the scan's history if it comes back
   # empty.
   enabled: true
-  history_period: 5y        # how much history to chart (yfinance period string)
+  # How much history to chart (yfinance period string). This window also decides
+  # the Seasonality view: one observation per calendar month per year, so 10y is
+  # ten Januaries. Shorten it and the month-by-month record gets noisier, not
+  # just shorter — below three years a month is not ranked at all.
+  history_period: 10y
 
 output:
   # The backend writes JSON only — <dir>/data/*.json. <dir>/index.html and

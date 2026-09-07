@@ -75,6 +75,33 @@ def test_empty_input_still_writes_a_valid_payload(tmp_path):
     assert payload["window"] == {"start": None, "end": None}
 
 
+def test_each_series_carries_its_calendar_month_record(tmp_path):
+    data = {"NVDA": _synth(n=1300, seed=7, start="2019-01-02")}
+    payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))
+    seas = payload["series"][0]["seasonality"]
+    assert [m["month"] for m in seas["months"]] == list(range(1, 13))
+    assert seas["years"]["start"] < seas["years"]["end"]
+    assert seas["best_month"] in range(1, 13)
+    assert seas["worst_month"] in range(1, 13)
+
+
+def test_seasonality_is_also_pooled_across_tickers(tmp_path):
+    data = {"A": _synth(n=1300, seed=8, start="2019-01-02"),
+            "B": _synth(n=1300, seed=9, start="2019-01-02")}
+    payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))
+    pooled = payload["seasonality"]
+    assert pooled["tickers"] == 2
+    jan = pooled["months"][0]
+    assert jan["n"] == jan["years"] * 2          # both names, every year
+
+
+def test_seasonality_is_null_when_there_is_too_little_history(tmp_path):
+    payload = json.loads(
+        charts.write_charts({"X": _synth(n=20, seed=1)}, tmp_path).read_text(encoding="utf-8"))
+    assert payload["series"][0]["seasonality"] is None
+    assert payload["seasonality"] is None
+
+
 def test_window_spans_every_ticker(tmp_path):
     data = {"OLD": _synth(seed=5, start="2020-01-02"), "NEW": _synth(seed=6, start="2023-01-02")}
     payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))

@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.2.0"
+SCHEMA_VERSION = "2.3.0"
 
 # An equity option quoted below this annualized implied volatility is not a
 # quote. Outside US market hours the feed returns every contract with a floor
