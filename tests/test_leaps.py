@@ -475,11 +475,14 @@ def test_one_unquoted_leg_is_enough_to_drop_a_candidate():
     assert "leaps_bull_put" in keys, "the put-side structures are untouched"
 
 
-def test_pmcc_annualises_over_the_short_leg_not_the_long_one():
+def test_pmcc_reports_the_horizon_its_maximum_actually_lands_on():
     """`max_profit` prices the assigned-on-the-first-short-call case, which
-    arrives at the *front* expiry. Annualising it over the long leg's thirteen
-    months understated the return by the ratio between the two — on the live
-    AMD block that was 0.01× a year against 0.18×."""
+    arrives at the FRONT expiry, not the long leg's thirteen months. The field
+    records that gap; it is not a licence to annualise over it.
+
+    Both denominators mislead, in opposite directions, which is why the
+    frontend annualises neither: on the 2026-09-04 scan PG's diagonal read 12%
+    a year over its own 378 days and 222% over the short leg's 21."""
     view = make_view(spot=200.0)
     plan = plan_for("poor_mans_covered_call", spot=200.0)
 
@@ -489,11 +492,18 @@ def test_pmcc_annualises_over_the_short_leg_not_the_long_one():
         "the fixture must have a front expiry well inside the long one for "
         "this distinction to mean anything")
 
-    # What the frontend now divides by, and what it used to.
+    # The gap is wide enough that picking either denominator changes the answer
+    # by an order of magnitude — the reason neither is offered.
     rr = plan["max_profit"] / plan["max_loss"]
-    corrected = rr * 365 / plan["profit_horizon_dte"]
-    old = rr * 365 / plan["dte"]
-    assert corrected > old * 5
+    assert (rr * 365 / plan["profit_horizon_dte"]) > (rr * 365 / plan["dte"]) * 5
+
+
+def test_pmcc_legs_span_two_expiries_so_the_frontend_can_spot_it():
+    """`annualisedReturn` in app.js suppresses the yearly figure by asking
+    whether the legs share an expiry, rather than by naming the structure. That
+    predicate has to hold for every diagonal this engine builds."""
+    plan = plan_for("poor_mans_covered_call")
+    assert len({leg["expiry"] for leg in plan["legs"]}) == 2
 
 
 def test_single_expiry_structures_leave_the_horizon_unset():
