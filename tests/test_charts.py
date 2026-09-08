@@ -137,6 +137,22 @@ def test_a_stale_series_cannot_stretch_the_reported_window(tmp_path):
     assert payload["window"]["start"] > "2020-01-01"               # the label did not follow
 
 
+def test_a_dead_series_cannot_stretch_the_reported_window(tmp_path):
+    # The shape a delisted or renamed ticker takes: its history simply stops.
+    # It never hits the tail_years fallback — its whole run is inside five years
+    # of its own last bar — so only a payload-wide anchor keeps the label right.
+    data = {"DEAD": _synth(n=500, seed=14, start="2016-01-04"),      # ends 2017
+            "LIVE": _synth(n=1305, seed=15, start="2020-12-21")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    dead = [s for s in payload["series"] if s["ticker"] == "DEAD"][0]
+    assert dead["start"] == "2016-01-04" and dead["bars"] == 500   # the card kept its run
+    assert payload["window"]["start"] > "2020-01-01"               # the label did not follow
+    # The window is the period the cards cover, not an envelope over them.
+    assert dead["start"] < payload["window"]["start"]
+
+
 def test_display_years_of_zero_charts_the_whole_download(tmp_path):
     data = {"X": _synth(n=2600, seed=12, start="2016-01-04")}
     payload = json.loads(charts.write_charts(

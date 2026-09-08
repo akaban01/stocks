@@ -20,6 +20,12 @@ the bars through the same point budget smooths away the drawdowns the card
 exists to show. So the download is the long one and the cards are trimmed to
 ``DEFAULT_DISPLAY_YEARS`` — every number on a card describes that shorter
 window, and ``period``/``history_period`` in the payload name each one.
+
+One consequence worth knowing if you read this payload from anything else:
+top-level ``window`` describes the period the cards cover, not an envelope over
+them. A name whose history stopped years ago still draws what it has, so its
+``series[].start`` can predate ``window.start``. Each series carries its own
+``start``/``end``/``bars``, which is what to read per name.
 """
 
 from __future__ import annotations
@@ -125,18 +131,16 @@ def build_charts(data: dict[str, pd.DataFrame], period_label: str = "",
     payload = [series_payload(t, shown[t], points, returns[t]) for t in series]
 
     if shown:
-        # The window the cards cover. A card never reaches back past its own
-        # display cutoff, so neither does this — otherwise one stale series that
-        # fell back to drawing everything it has would label the whole view with
-        # a span twice the period beside it.
-        starts, ends = [], []
-        for s in shown.values():
-            first, last = s.index[0], s.index[-1]
-            cutoff = last - pd.DateOffset(years=display_years) if display_years else first
-            starts.append(max(first, cutoff))
-            ends.append(last)
-        window = {"start": min(starts).strftime("%Y-%m-%d"),
-                  "end": max(ends).strftime("%Y-%m-%d")}
+        # The window the cards cover, anchored on the newest bar in the payload
+        # rather than on each series' own last one. A name whose history stopped
+        # years ago never reaches the tail_years fallback — its whole run sits
+        # inside five years of its *own* final bar — so a per-series anchor would
+        # still let it label the view with a decade-wide span.
+        end = max(s.index[-1] for s in shown.values())
+        cutoff = end - pd.DateOffset(years=display_years) if display_years else None
+        starts = [max(s.index[0], cutoff) if cutoff is not None else s.index[0]
+                  for s in shown.values()]
+        window = {"start": min(starts).strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")}
     else:
         window = {"start": None, "end": None}
 
