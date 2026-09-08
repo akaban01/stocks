@@ -11,7 +11,10 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [master]
+    # Both, because the README's setup instructions say `git branch -M main`
+    # and this repository is on `master`. Following the README used to produce
+    # a repo whose tests never ran on a push.
+    branches: [main, master]
 
 permissions:
   contents: read

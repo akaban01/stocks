@@ -49,6 +49,51 @@
     return node === undefined || node === null ? fallback : node;
   }
 
+  // Sortable table headers. Three tables render them and all three were
+  // mouse-only: no tabindex, no key handler, so the columns simply could not be
+  // sorted from a keyboard. The spread *rows* got this right, which is what
+  // made the omission easy to miss.
+  function sortableTh(key, label, cls, ariaSort) {
+    return '<th data-key="' + esc(key) + '" tabindex="0"' +
+      (cls ? ' class="' + cls + '"' : "") +
+      ' aria-sort="' + (ariaSort || "none") + '">' + esc(label) + "</th>";
+  }
+
+  function wireSort(nodes, handler) {
+    for (var i = 0; i < nodes.length; i++) {
+      if (!nodes[i].dataset.key) continue;         // not a sortable column
+      nodes[i].addEventListener("click", function () { handler(this.dataset.key); });
+      nodes[i].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          handler(this.dataset.key);
+        }
+      });
+    }
+  }
+
+  // The palette lives in styles.css and is read from there. Duplicating the
+  // hex values in here meant a theme change moved the page and left the charts
+  // behind — the one place the two halves could silently disagree.
+  var THEME_FALLBACK = { "--up": "#5fd07a", "--down": "#f0816f", "--wait": "#8b949e",
+                         "--text": "#e6edf3", "--line": "#30363d", "--text-dim": "#9aa5b1" };
+  function theme(name) {
+    var v = "";
+    try {
+      v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    } catch (e) { v = ""; }
+    return v || THEME_FALLBACK[name] || "currentColor";
+  }
+
+  // "r,g,b" for the places that need an alpha over the same colour — the month
+  // heat map cells and the sparkline fill. Same source of truth, one conversion.
+  function themeRgb(name) {
+    var hex = theme(name).replace("#", "");
+    if (hex.length === 3) hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return "128,128,128";
+    return [0, 2, 4].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); }).join(",");
+  }
+
   function localTime(iso, fallback) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return fallback || iso || "—";
@@ -90,6 +135,10 @@
     for (var i = 0; i < buttons.length; i++) {
       var on = buttons[i].dataset.tab === name;
       buttons[i].setAttribute("aria-selected", on ? "true" : "false");
+      // Roving tabindex: one tab stop for the whole strip, arrows move within
+      // it. Six separate tab stops in front of the content is the thing this
+      // pattern exists to avoid.
+      buttons[i].tabIndex = on ? 0 : -1;
     }
     var panels = document.querySelectorAll(".panel");
     for (var j = 0; j < panels.length; j++) panels[j].hidden = panels[j].dataset.tab !== name;
@@ -239,6 +288,21 @@
       esc(String(rf.tier || "").replace(/_/g, " ")) + ")</b> — " + esc(rf.note) + "</div>";
   }
 
+  // The compliance verdict, where a reader will actually see it. `filter` mode
+  // never publishes a failing name, so this is silent unless `annotate` is on.
+  function screenBadge(sig) {
+    var sc = sig.screen;
+    if (!sc || sc.compliant !== false) return "";
+    return '<span class="badge flag" title="' +
+      esc((sc.reasons || []).join("; ")) + '">Fails screen</span>';
+  }
+
+  function screenNote(sig) {
+    var sc = sig.screen;
+    if (!sc || sc.compliant !== false) return "";
+    return noteList("Did not pass the compliance screen", (sc.reasons || []).map(esc), "warns");
+  }
+
   function card(sig) {
     var rec = sig.recommendation || {};
     var plan = rec.plan || {};
@@ -251,6 +315,7 @@
       '<span class="tkr">' + esc(sig.ticker) + "</span>" +
       '<span class="px">' + num(sig.price, 2) + "</span>" +
       '<span class="badge ' + t + '">' + esc(actionMeta.label || rec.action || "—") + "</span>" +
+      screenBadge(sig) +
       '<span class="strat">' + esc(plan.name || "") + "</span>" +
       (conf === null ? "" :
         '<span class="conf">confidence ' + conf + '%<span class="conf-bar">' +
@@ -258,12 +323,13 @@
       "</div>";
 
     var body = [];
-    if (plan.thesis) body.push('<p style="margin:0;font-size:.93rem;color:#c9d1d9">' + esc(plan.thesis) + "</p>");
+    body.push(screenNote(sig));
+    if (plan.thesis) body.push('<p class="prose">' + esc(plan.thesis) + "</p>");
     body.push(ivStrip(sig));
     body.push(legsTable(plan));
     if (plan.playbook) {
       body.push('<div class="notes"><div class="t">What this trade is</div>' +
-        '<p style="margin:0;font-size:.87rem;color:#c9d1d9">' + esc(plan.playbook) + "</p></div>");
+        '<p class="prose sm">' + esc(plan.playbook) + "</p></div>");
     }
     body.push(noteList("Why", (rec.why || []).map(esc)));
     body.push(manageBlock(plan));
@@ -314,7 +380,8 @@
     var sigs = (store.scan.signals || []).filter(function (s) {
       var action = (s.recommendation || {}).action || "NO_DATA";
       if (filters.actions.size && !filters.actions.has(action)) return false;
-      if (filters.query && String(s.ticker).indexOf(filters.query) !== 0) return false;
+      // Substring, not prefix: typing "VDA" should find NVDA.
+      if (filters.query && String(s.ticker).indexOf(filters.query) === -1) return false;
       return true;
     });
     // Actionable names first, then by how much the inputs agree, then by score.
@@ -346,6 +413,21 @@
     var uniFallback = (d.universe || {}).fallback;
     $("#universe-warning").hidden = !uniFallback;
     if (uniFallback) $("#universe-warning").textContent = uniFallback;
+
+    // In `annotate` mode the screen reports and keeps going, so the page can be
+    // showing names that failed it. Say it once at the top, and flag them
+    // individually on their own cards and rows.
+    var screen = d.screen || {};
+    var flagged = screen.flagged || [];
+    $("#screen-warning").hidden = !flagged.length;
+    if (flagged.length) {
+      $("#screen-warning").innerHTML =
+        "<b>" + flagged.length + " name" + (flagged.length === 1 ? "" : "s") +
+        " on this page did not pass the compliance screen</b> — " +
+        flagged.map(esc).join(", ") +
+        ". The screen is running in <code>annotate</code> mode, which reports a "
+        + "failure instead of dropping the name. Each one is marked on its card.";
+    }
 
     var w = d.weights || {};
     $("#weights").textContent = w.values && w.values.compression !== undefined
@@ -458,6 +540,14 @@
         var txt = num(s.earnings_in_days, 0) + "d";
         return s.earnings_in_days <= win ? '<span class="warncell">' + txt + "</span>" : txt;
       } },
+    { k: "screen", h: "Screen", v: function (s) { return (s.screen || {}).compliant === false ? 0 : 1; },
+      f: function (s) {
+        var sc = s.screen;
+        if (!sc) return '<span class="dim">—</span>';
+        return sc.compliant === false
+          ? '<span class="flagtext" title="' + esc((sc.reasons || []).join("; ")) + '">fails</span>'
+          : '<span class="dim">ok</span>';
+      } },
     { k: "debt_ratio", h: "Debt%", r: true, f: function (s) { return has(s.debt_ratio) ? pct(s.debt_ratio * 100, 0) : "—"; } },
     { k: "cash_ratio", h: "Cash%", r: true, f: function (s) { return has(s.cash_ratio) ? pct(s.cash_ratio * 100, 0) : "—"; } }
   ];
@@ -482,7 +572,7 @@
 
     var head = COLUMNS.map(function (c) {
       var sort = c.k === SORT.key ? (SORT.dir === 1 ? "ascending" : "descending") : "none";
-      return '<th data-key="' + c.k + '" aria-sort="' + sort + '">' + esc(c.h) + "</th>";
+      return sortableTh(c.k, c.h, null, sort);
     }).join("");
     var body = sigs.map(function (s) {
       return "<tr>" + COLUMNS.map(function (c) {
@@ -493,15 +583,15 @@
     $("#scantable").innerHTML = '<div class="tablewrap"><table class="scan"><thead><tr>' +
       head + "</tr></thead><tbody>" + body + "</tbody></table></div>";
 
-    var ths = document.querySelectorAll("#scantable th");
-    for (var i = 0; i < ths.length; i++) {
-      ths[i].addEventListener("click", function () {
-        var k = this.dataset.key;
-        if (SORT.key === k) SORT.dir = -SORT.dir;
-        else { SORT.key = k; SORT.dir = (k === "rank" || k === "ticker") ? 1 : -1; }
-        renderScanner();
-      });
-    }
+    wireSort(document.querySelectorAll("#scantable th"), function (k) {
+      if (SORT.key === k) SORT.dir = -SORT.dir;
+      else { SORT.key = k; SORT.dir = (k === "rank" || k === "ticker") ? 1 : -1; }
+      renderScanner();
+      // Keep the caller where they were: re-rendering replaced the node they
+      // were standing on, and focus would otherwise fall back to the document.
+      var again = $('#scantable th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
   }
 
 
@@ -763,7 +853,7 @@
 
     var head = SPREAD_COLUMNS.map(function (c) {
       var sort = c.k === SPREAD_SORT.key ? (SPREAD_SORT.dir === 1 ? "ascending" : "descending") : "none";
-      return '<th data-key="' + c.k + '" aria-sort="' + sort + '">' + esc(c.h) + "</th>";
+      return sortableTh(c.k, c.h, null, sort);
     }).join("");
 
     var body = rows.length ? rows.map(function (r) {
@@ -785,15 +875,13 @@
     // Scoped to this table's own header row: the detail panel below holds a
     // full legs table, and an unscoped query would wire its headers up to sort
     // the spreads table as well.
-    var ths = host.querySelectorAll("table.spreads > thead th");
-    for (var i = 0; i < ths.length; i++) {
-      ths[i].addEventListener("click", function () {
-        var k = this.dataset.key;
-        if (SPREAD_SORT.key === k) SPREAD_SORT.dir = -SPREAD_SORT.dir;
-        else { SPREAD_SORT.key = k; SPREAD_SORT.dir = (k === "ticker" || k === "name") ? 1 : -1; }
-        renderSpreads(true);
-      });
-    }
+    wireSort(host.querySelectorAll("table.spreads > thead th"), function (k) {
+      if (SPREAD_SORT.key === k) SPREAD_SORT.dir = -SPREAD_SORT.dir;
+      else { SPREAD_SORT.key = k; SPREAD_SORT.dir = (k === "ticker" || k === "name") ? 1 : -1; }
+      renderSpreads(true);
+      var again = $('table.spreads > thead th[data-key="' + k + '"]', host);
+      if (again) again.focus();
+    });
 
     var panel = $("#spreaddetail", host);
     var byId = {};
@@ -840,7 +928,7 @@
 
     var pts = closes.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ");
     var up = closes[n - 1] >= closes[0];
-    var color = up ? "#5fd07a" : "#f0816f";
+    var color = theme(up ? "--up" : "--down");
     var area = "M " + X(0).toFixed(1) + "," + baseY.toFixed(1) + " L " +
       pts.split(" ").join(" L ") + " L " + X(n - 1).toFixed(1) + "," + baseY.toFixed(1) + " Z";
 
@@ -919,7 +1007,10 @@
   var MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
                      "August", "September", "October", "November", "December"];
   // The --up / --down tokens, as rgb triples so cell fills can be faded.
-  var UP_RGB = "95,208,122", DOWN_RGB = "240,129,111", THIN_RGB = "139,148,158";
+  // Read once per render off the stylesheet rather than restated here: these
+  // are --up, --down and --wait, and hardcoding them meant a palette change
+  // moved the page and left every chart on the old colours.
+  var UP_RGB = themeRgb("--up"), DOWN_RGB = themeRgb("--down"), THIN_RGB = themeRgb("--wait");
 
   var seasonSort = { key: "ticker", dir: 1 };
 
@@ -1066,8 +1157,7 @@
     function th(k, label, cls) {
       var sort = String(seasonSort.key) === String(k)
         ? (seasonSort.dir === 1 ? "ascending" : "descending") : "none";
-      return '<th data-key="' + k + '" class="' + (cls || "") + '" aria-sort="' + sort + '">' +
-        esc(label) + "</th>";
+      return sortableTh(k, label, cls || "", sort);
     }
     var head = th("ticker", "Name") + th("years", "Yrs", "r") +
       MONTH_NAMES.map(function (n, i) { return th(i + 1, n.slice(0, 3), "r"); }).join("") +
@@ -1188,15 +1278,13 @@
       "annualised. Prices are split- and dividend-adjusted, but nothing here knows about earnings " +
       "dates or index rebalances, which is where a lot of month-shaped behaviour comes from.</p>";
 
-    var ths = document.querySelectorAll("#seasonbody table.heat th");
-    for (var i = 0; i < ths.length; i++) {
-      ths[i].addEventListener("click", function () {
-        var k = this.dataset.key;
-        if (String(seasonSort.key) === String(k)) seasonSort.dir = -seasonSort.dir;
-        else { seasonSort.key = k; seasonSort.dir = k === "ticker" ? 1 : -1; }
-        renderSeasonality(store.charts);
-      });
-    }
+    wireSort(document.querySelectorAll("#seasonbody table.heat th"), function (k) {
+      if (String(seasonSort.key) === String(k)) seasonSort.dir = -seasonSort.dir;
+      else { seasonSort.key = k; seasonSort.dir = k === "ticker" ? 1 : -1; }
+      renderSeasonality(store.charts);
+      var again = $('#seasonbody table.heat th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
   }
 
   function showChartView(view) {
@@ -1227,10 +1315,18 @@
 
   function renderValidation() {
     var host = $("#validation-body");
-    if (host.dataset.done) return;
-    host.dataset.done = "1";
+    // Latched per panel, and only once that panel has actually rendered.
+    // Setting one flag up front meant a single transient failure pinned the tab
+    // on its error message until a reload — including the ordinary case where
+    // calibration.json simply does not exist yet and appears after the next
+    // scheduled run.
+    if (!host.dataset.backtestDone) renderBacktestPanel(host);
+    if (!host.dataset.calibrationDone) renderCalibrationPanel(host);
+  }
 
+  function renderBacktestPanel(host) {
     load("backtest").then(function (d) {
+      host.dataset.backtestDone = "1";
       if (!d.ok) { $("#backtest").innerHTML = '<p class="empty">' + esc(d.note || "No backtest yet.") + "</p>"; return; }
       var b = d.buckets, s = d.squeeze;
       $("#backtest").innerHTML =
@@ -1249,8 +1345,11 @@
     }).catch(function (e) {
       $("#backtest").innerHTML = loadError(e, "backtest", "python backtest.py --years 5");
     });
+  }
 
+  function renderCalibrationPanel(host) {
     load("calibration").then(function (d) {
+      host.dataset.calibrationDone = "1";
       if (!d.ok) { $("#calibration").innerHTML = '<p class="empty">' + esc(d.note || "Not calibrated yet.") + "</p>"; return; }
       var sep = d.separation;
       $("#calibration").innerHTML =
@@ -1268,7 +1367,7 @@
         }).join("") + "</tbody></table>" +
         '<div class="verdict ' + (d.verdict.holds ? "good" : "bad") + '">' + esc(d.verdict.text) + "</div>";
     }).catch(function (e) {
-      $("#calibration").innerHTML = loadError(e, "calibration", "python calibrate.py --years 5");
+      $("#calibration").innerHTML = loadError(e, "calibration", "python calibrate.py");
     });
   }
 
@@ -1311,10 +1410,26 @@
 
   // ------------------------------------------------------------------ boot
 
+  // Left/Right (and Home/End) move between tabs, as a tablist is expected to.
+  function tabKeydown(e) {
+    var keys = { ArrowLeft: -1, ArrowRight: 1, Left: -1, Right: 1 };
+    var buttons = [].slice.call(document.querySelectorAll(".tabs button"));
+    var here = buttons.indexOf(this);
+    var next = null;
+    if (e.key in keys) next = (here + keys[e.key] + buttons.length) % buttons.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = buttons.length - 1;
+    if (next === null) return;
+    e.preventDefault();
+    showTab(buttons[next].dataset.tab);
+    buttons[next].focus();
+  }
+
   function boot() {
     var buttons = document.querySelectorAll(".tabs button");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function () { showTab(this.dataset.tab); });
+      buttons[i].addEventListener("keydown", tabKeydown);
     }
 
     var views = document.querySelectorAll("#chartviews button");
