@@ -7,3 +7,11 @@ env/
 .vscode/
 *.egg-info/
 .DS_Store
+
+# Generated working files. weights.json is the fitted model calibrate.py writes
+# and run.py/backtest.py read; alert.json is the pending webhook message run.py
+# stages for send_alerts.py. Both are regenerated every run and neither belongs
+# in the history — one `git add .` after following the README used to commit
+# the model file into the repo root.
+weights.json
+alert.json

@@ -63,6 +63,11 @@ def _nz(x, default=0.5):
 # these so the live score and the backtest score never drift apart.
 SCORE_WEIGHTS = {"compression": 0.29, "vol_room": 0.48, "squeeze": 0.23}
 SQUEEZE_FLOOR = 0.6  # an active squeeze contributes 0.6..1.0 of its weight (more with duration)
+
+# The share of `percentile_lookback` a ticker must actually have before its
+# Setup Score is published at all. The percentile terms are two thirds of the
+# score and a percentile over a handful of points is not a percentile.
+MIN_PERCENTILE_FRAC = 0.5
 _WEIGHT_KEYS = ("compression", "vol_room", "squeeze")
 
 
@@ -120,7 +125,15 @@ def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
     """Compute a Signal for one ticker, or None if there isn't enough data."""
     df = df.dropna(subset=["Open", "High", "Low", "Close"]).copy()
     min_bars = max(p["percentile_lookback"], p["bb_length"], p["vol_lookback"]) + 5
-    if len(df) < p["bb_length"] + 5:
+    # Two thresholds, because "enough history to compute the indicators" is not
+    # "enough history to rank them". `rolling_percentile` clamps its window to
+    # whatever it has, so 25 bars produced a bandwidth percentile taken over
+    # about five points — noise, published as a 0..100 score and ranked against
+    # names carrying a full year. Below `score_bars` the name is dropped;
+    # between it and `min_bars` it is published, carrying "limited history".
+    score_bars = max(p["bb_length"] + 5,
+                     int(p["percentile_lookback"] * MIN_PERCENTILE_FRAC))
+    if len(df) < score_bars:
         return None
 
     close = df["Close"]

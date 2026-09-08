@@ -37,9 +37,19 @@ Structures built here, all off the real long-dated chain:
 from __future__ import annotations
 
 from .options import LONG_TARGET_DAYS, OptionView
-from .strategy import (Plan, chain_side, make_leg, net_cost, pick_quote, pop_estimate,
-                       resolve_risk_form, sigma_to_expiry, size_position, strike_step,
-                       wing_strike)
+from .strategy import (
+    Plan,
+    chain_side,
+    make_leg,
+    net_cost,
+    pick_quote,
+    pop_estimate,
+    resolve_risk_form,
+    sigma_to_expiry,
+    size_position,
+    strike_step,
+    wing_strike,
+)
 
 # --- strike placement, as fractions of spot ----------------------------------
 # Deliberately not in sigmas: see the module docstring.

@@ -1,4 +1,14 @@
-yfinance>=0.2.40
-pandas>=2.1        # pct_change(fill_method=None) — see seasonality.py
-numpy>=1.24
-PyYAML>=6.0
+# Runtime dependencies, with upper bounds.
+#
+# An unattended daily job on an unbounded range is one upstream major release
+# away from breaking silently, and this project has already lived through it:
+# `yfinance>=0.2.40` quietly resolved across a major version, and data.py's own
+# docstring records a previous change in the shape it returns. The bounds below
+# block the *next* major of each while still letting fixes in — Yahoo changes
+# under yfinance often enough that pinning it to a patch would be worse than
+# not pinning it at all. Dependabot proposes the bumps (.github/dependabot.yml)
+# and the test workflow is what says yes.
+yfinance>=1.7,<2.0
+pandas>=2.1,<4.0      # pct_change(fill_method=None) — see seasonality.py
+numpy>=1.24,<3.0
+PyYAML>=6.0,<7.0

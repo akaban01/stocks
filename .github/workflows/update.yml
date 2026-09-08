@@ -42,18 +42,34 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Lint
+        run: ruff check .
+
       - name: Run tests
         run: python -m pytest -q
+
+      - name: Calibrate the score weights
+        # Fits weights.json (the model run.py and backtest.py both load) and
+        # public/data/calibration.json (the out-of-sample half of the "Does it
+        # work?" tab). This step is why either exists: without it run.py fell
+        # back to the hardcoded weights on every run and the tab read "not
+        # generated yet" permanently, while the README described the fit as
+        # part of the pipeline.
+        #
+        # Best-effort: a calibration that cannot fetch its history must not stop
+        # the scan. run.py then scores with the built-in weights and says so.
+        continue-on-error: true
+        run: python calibrate.py
 
       - name: Run scanner
         # Writes public/data/scan.json + signals.csv + charts.json. No HTML:
         # public/index.html and public/assets/ are hand-written and stay put.
-        env:
-          # Optional: create this repo secret to enable Slack/Discord alerts.
-          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        # Alerts are only *staged* here (alert.json) — see the send step below.
         run: python run.py
 
       - name: Refresh backtest
+        # Scores with the same weights.json run.py just used, so the live score
+        # and the backtested score are the same function.
         run: python backtest.py --years 5
 
       - name: Sanity-check the generated JSON
@@ -108,12 +124,31 @@ jobs:
           print(f"scan.json OK — {len(scan['signals'])} signals, counts {scan['counts']}, "
                 f"{ld['candidates']} long-dated spreads across {ld['tickers']} names, "
                 "shipped copy matches the code")
-          for name in ("charts", "backtest"):
+          # A name kept by `annotate` mode is a name that failed the screen and is
+          # on the page anyway. It has to arrive carrying its verdict, or it is
+          # indistinguishable from one that passed.
+          if scan["screen"].get("mode") == "annotate":
+              unflagged = [s["ticker"] for s in scan["signals"] if not s.get("screen")]
+              assert not unflagged, f"annotate mode published names with no screen verdict: {unflagged}"
+              print(f"screen OK — {scan['screen']['screened']} names carry a verdict, "
+                    f"{scan['screen']['flagged_count']} flagged")
+          for name in ("charts", "backtest", "calibration"):
               p = Path(f"public/data/{name}.json")
               if p.exists():
                   json.loads(p.read_text(encoding="utf-8"))
                   print(f"{name}.json OK")
           PY
+
+      - name: Send staged alerts
+        # Deliberately *after* the validation step above. The alert says what to
+        # trade, and it used to be posted from inside run.py — before anything
+        # had checked the scan it describes, so a run whose option feed came back
+        # empty (which CI then refuses to publish) had already notified Slack
+        # about the prices in it.
+        env:
+          # Optional: create this repo secret to enable Slack/Discord alerts.
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+        run: python send_alerts.py
 
       - name: Commit refreshed data
         run: |
@@ -122,10 +157,23 @@ jobs:
           git add public
           if git diff --staged --quiet; then
             echo "No changes to commit."
-          else
-            git commit -m "Update spread scan ($(date -u +'%Y-%m-%d %H:%M UTC'))"
-            git push
+            exit 0
           fi
+          git commit -m "Update spread scan ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          # The concurrency group makes a racing push unlikely, not impossible:
+          # a manual dispatch, or any commit landing on the branch while the scan
+          # ran, rejects this one and the day's data is lost with no retry. Rebase
+          # onto whatever arrived and try again, with backoff.
+          for attempt in 1 2 3 4; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt) — rebasing onto origin and retrying"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+            sleep $((2 ** attempt))
+          done
+          echo "::error::could not push the refreshed scan after 4 attempts"
+          exit 1
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5

@@ -188,7 +188,7 @@ def test_pmcc_is_secured_by_the_long_call_not_by_shares():
     assert plan["risk_form"]["tier"] == "option_covered"
     assert "long call" in plan["risk_form"]["note"]
     assert "shares you already own" not in plan["risk_form"]["note"]
-    assert not any(l["right"] == "share" for l in plan["legs"])
+    assert not any(leg["right"] == "share" for leg in plan["legs"])
 
 
 def test_pmcc_has_no_probability_of_profit():

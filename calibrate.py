@@ -18,22 +18,31 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from spread_scanner import backtest, data, report, universe
 from run import DEFAULT_PARAMS, load_config
+from spread_scanner import backtest, data, report, universe
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Calibrate Setup-Score weights")
     ap.add_argument("--config", default="config.yaml")
-    ap.add_argument("--years", type=int, default=5)
-    ap.add_argument("--train-frac", type=float, default=0.7)
-    ap.add_argument("--weights-file", default="weights.json")
+    ap.add_argument("--years", type=int, default=None)
+    ap.add_argument("--train-frac", type=float, default=None)
+    ap.add_argument("--weights-file", default=None)
     ap.add_argument("--tickers")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.config)
     params = {**DEFAULT_PARAMS, **(cfg.get("params") or {})}
     outdir = Path((cfg.get("output") or {}).get("dir", "public"))
+
+    # Defaults come from the `calibration:` block in config.yaml, so the daily
+    # workflow and a local run calibrate the same way and write to the same
+    # file run.py and backtest.py read.
+    cal_cfg = cfg.get("calibration") or {}
+    args.years = int(args.years if args.years is not None else cal_cfg.get("years", 5))
+    args.train_frac = float(args.train_frac if args.train_frac is not None
+                            else cal_cfg.get("train_frac", 0.7))
+    args.weights_file = args.weights_file or cal_cfg.get("weights_file", "weights.json")
 
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]

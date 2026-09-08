@@ -45,7 +45,11 @@ def offline(monkeypatch):
         return {t: make_view(t, spot=float(spot), **spec[t])
                 for t, spot, _hist in rows if t in spec}
     monkeypatch.setattr(options, "screen_options", fake_options)
-    monkeypatch.setattr(run.alerts, "maybe_alert", lambda *a, **k: 0)
+    # No webhook configured, so nothing can leave even if something is staged.
+    # (run.py stages and never sends; send_alerts.py is what posts.)
+    monkeypatch.delenv("ALERT_WEBHOOK_URL", raising=False)
+    monkeypatch.setattr(halal, "earnings_calendar",
+                        lambda tickers: {t: 12 for t in tickers})
 
 
 @pytest.fixture
@@ -233,3 +237,145 @@ def test_shipped_config_still_parses_and_carries_a_budget():
     # The long-dated budget is deliberately separate and larger: a LEAPS spread
     # costs several times a monthly one and holds the capital for a year.
     assert strat["long_risk_budget_usd"] > strat["risk_budget_usd"]
+
+
+# ------------------------------------------------- the screen's own verdict
+
+def _screen_config(tmp_path, mode, tickers=TICKERS):
+    cfg = tmp_path / f"{mode}.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        f"halal_screen: {{financial_formula: {{enabled: true, mode: {mode}}}}}\n"
+        "options: {enabled: true, top_n: 3}\n"
+        "strategy: {risk_budget_usd: 1000}\n"
+        "charts: {enabled: false}\n"
+        "alerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(tickers)}]\n", encoding="utf-8")
+    return cfg
+
+
+@pytest.fixture
+def mixed_screen(monkeypatch):
+    """BBB fails the industry screen; the other two pass."""
+    def fake_screen(tickers, **kw):
+        details = {}
+        for t in tickers:
+            fails = t == "BBB"
+            details[t] = halal.ScreenResult(
+                ticker=t, compliant=not fails, industry_ok=not fails,
+                debt_ratio=0.41 if fails else 0.05, cash_ratio=0.03,
+                receivables_ratio=None,
+                industry="Banks—Diversified" if fails else "Semiconductors",
+                reasons=["prohibited industry: Banks—Diversified"] if fails else ["ok"],
+                earnings_in_days=40)
+        kept = [t for t in tickers if details[t].compliant]
+        dropped = [(t, "; ".join(details[t].reasons)) for t in tickers if not details[t].compliant]
+        return kept, dropped, details
+    monkeypatch.setattr(halal, "screen_universe", fake_screen)
+
+
+def test_annotate_mode_publishes_why_a_name_failed(offline, mixed_screen, tmp_path):
+    """`annotate` keeps the names that fail the screen. Before this, only the
+    two ratios reached the payload — no verdict, no reason — so a name kept for
+    being a bank rendered identically to one that passed, on a page whose whole
+    premise is that its contents have been screened."""
+    assert run.main(["--config", str(_screen_config(tmp_path, "annotate")),
+                     "--alert-file", str(tmp_path / "alert.json")]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+
+    assert {s["ticker"] for s in scan["signals"]} == set(TICKERS), "annotate keeps everything"
+    by = {s["ticker"]: s for s in scan["signals"]}
+    assert by["BBB"]["screen"]["compliant"] is False
+    assert by["BBB"]["screen"]["industry_ok"] is False
+    assert "Banks" in by["BBB"]["screen"]["reasons"][0]
+    assert by["AAA"]["screen"]["compliant"] is True
+
+    assert scan["screen"]["mode"] == "annotate"
+    assert scan["screen"]["flagged"] == ["BBB"]
+    assert scan["screen"]["flagged_count"] == 1
+    assert scan["screen"]["screened"] == 3
+
+
+def test_filter_mode_drops_the_failing_name_and_still_says_why_the_rest_passed(
+        offline, mixed_screen, tmp_path):
+    assert run.main(["--config", str(_screen_config(tmp_path, "filter")),
+                     "--alert-file", str(tmp_path / "alert.json")]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    assert {s["ticker"] for s in scan["signals"]} == {"AAA", "CCC"}
+    assert scan["screen"]["mode"] == "filter"
+    assert scan["screen"]["flagged"] == []
+    assert all(s["screen"]["compliant"] for s in scan["signals"])
+
+
+# ------------------------------------------------------- the earnings column
+
+def test_earnings_are_fetched_when_the_financial_screen_never_ran(offline, tmp_path):
+    """The guardrail that forces defined risk into a print reads one column.
+    Attached only inside the financial-formula branch, a `--tickers` run had the
+    check silently switched off while the table's Earnings column — all dashes —
+    looked exactly like "nothing due"."""
+    cfg = tmp_path / "sector.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        "halal_screen: {live_sector_filter: false}\n"
+        "options: {enabled: true, top_n: 3}\n"
+        "strategy: {risk_budget_usd: 1000}\n"
+        "charts: {enabled: false}\n"
+        "alerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(TICKERS)}]\n", encoding="utf-8")
+    assert run.main(["--config", str(cfg), "--alert-file", str(tmp_path / "alert.json")]) == 0
+
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    by = {s["ticker"]: s for s in scan["signals"]}
+    assert by["AAA"]["earnings_in_days"] == 12
+    # And it reaches the plan: 12 days is inside the front expiry, so the naked
+    # structure is off the table and the warning is on the card.
+    assert by["AAA"]["recommendation"]["plan"]["risk"] == "defined"
+    assert any("Earnings in 12 days" in w for w in by["AAA"]["recommendation"]["warnings"])
+    assert scan["screen"]["earnings_checked"] == 3
+
+
+# ------------------------------------------------------------ staged alerts
+
+def test_alerts_are_staged_not_sent(offline, tmp_path, monkeypatch):
+    """run.py writes the message; send_alerts.py posts it — after the workflow
+    step that decides whether the scan is publishable at all."""
+    posted = []
+    monkeypatch.setattr(run.alerts, "_post", lambda url, msg: posted.append(msg))
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    cfg = tmp_path / "alerting.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        "halal_screen: {financial_formula: {enabled: true, mode: filter}}\n"
+        "options: {enabled: true, top_n: 3}\n"
+        "strategy: {risk_budget_usd: 1000}\n"
+        "charts: {enabled: false}\n"
+        "alerts: {enabled: true, score_threshold: 10}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(TICKERS)}]\n", encoding="utf-8")
+    staged = tmp_path / "alert.json"
+    assert run.main(["--config", str(cfg), "--alert-file", str(staged)]) == 0
+
+    assert posted == [], "nothing may be posted before the scan is validated"
+    payload = json.loads(staged.read_text(encoding="utf-8"))
+    assert set(payload["tickers"]) == set(TICKERS)
+    assert "Spread Scanner" in payload["message"]
+
+    import send_alerts
+    assert send_alerts.main(["--file", str(staged)]) == 0
+    assert len(posted) == 1
+    assert not staged.exists()
+
+
+def test_a_run_with_nothing_crossing_stages_no_alert(offline, config, tmp_path):
+    staged = tmp_path / "alert.json"
+    staged.write_text('{"tickers": ["STALE"], "message": "yesterday"}', encoding="utf-8")
+    assert run.main(["--config", str(config), "--alert-file", str(staged)]) == 0
+    # Yesterday's staged message is cleared at the start of the run, so a later
+    # send can never post a scan that no longer exists.
+    assert not staged.exists()

@@ -26,6 +26,8 @@ from dataclasses import dataclass
 
 import yfinance as yf
 
+from .net import retry
+
 # Substrings matched (case-insensitive) against Yahoo's `sector` / `industry`.
 HARAM_KEYWORDS = (
     "bank", "insurance", "capital markets", "mortgage", "credit services",
@@ -72,7 +74,8 @@ def _industry_check(info: dict) -> tuple[bool, str]:
 def classify(ticker: str) -> tuple[bool, str]:
     """Industry-only screen. (is_allowed, reason). Fails open on missing data."""
     try:
-        info = yf.Ticker(ticker).get_info()
+        tk = yf.Ticker(ticker)
+        info = retry(tk.get_info, label=f"{ticker} info")
     except Exception as exc:
         return True, f"no screen (info error: {type(exc).__name__})"
     ok, industry = _industry_check(info)
@@ -116,7 +119,7 @@ def _days_to_earnings(info: dict) -> int | None:
     return int((min(future) - now) // 86400) if future else None
 
 
-def _receivables(tk: "yf.Ticker") -> float | None:
+def _receivables(tk: yf.Ticker) -> float | None:
     """Most recent accounts-receivable from the balance sheet (best-effort)."""
     try:
         bs = tk.balance_sheet
@@ -143,7 +146,7 @@ def financial_screen(
     just because Yahoo hiccupped; we only reject on a clear ratio breach."""
     try:
         tk = yf.Ticker(ticker)
-        info = tk.get_info()
+        info = retry(tk.get_info, label=f"{ticker} info")
     except Exception as exc:
         return ScreenResult(ticker, True, True, None, None, None, "",
                             [f"no screen (info error: {type(exc).__name__})"])
@@ -173,6 +176,25 @@ def financial_screen(
     return ScreenResult(ticker, compliant, industry_ok, debt_ratio, cash_ratio,
                         recv_ratio, industry, reasons or ["ok"],
                         earnings_in_days=_days_to_earnings(info))
+
+
+def earnings_calendar(tickers: list[str]) -> dict[str, int | None]:
+    """{ticker: calendar days to the next earnings report}, best-effort.
+
+    The financial-ratio screen already reads this out of the fundamentals call
+    it makes anyway, so this exists for the runs where that screen does not run
+    — an ad-hoc ``--tickers`` scan, or the industry-only sector filter. Without
+    it the earnings guardrail in the strategy engine has no column to read and
+    silently never fires, which is indistinguishable from "no earnings due"."""
+    out: dict[str, int | None] = {}
+    for t in tickers:
+        try:
+            info = retry(yf.Ticker(t).get_info, label=f"{t} earnings date")
+        except Exception:
+            out[t] = None
+            continue
+        out[t] = _days_to_earnings(info)
+    return out
 
 
 def screen_universe(

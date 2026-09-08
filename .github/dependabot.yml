@@ -1,0 +1,26 @@
+# Dependency updates for an unattended job.
+#
+# requirements.txt carries upper bounds so an upstream major release cannot
+# arrive unannounced on a Tuesday; this is the other half of that trade — the
+# bumps still happen, they just happen as a pull request the test workflow runs
+# first, instead of inside the scheduled scan.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the lot: these move together and reviewing four is four times
+      # the work for the same decision.
+      python-deps:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]

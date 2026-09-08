@@ -39,6 +39,28 @@ def test_too_short_history_returns_none():
     assert scanner.analyze("X", _synth(n=10), PARAMS) is None
 
 
+def test_a_score_is_not_published_off_a_handful_of_percentile_points():
+    """25 bars is enough to compute the indicators and nowhere near enough to
+    rank them: `rolling_percentile` clamps its window to what it has, so the
+    two percentile terms — two thirds of the score — came off about five
+    points, and the result was ranked against names with a full year."""
+    assert scanner.analyze("X", _synth(n=25), PARAMS) is None
+    assert scanner.analyze("X", _synth(n=59), PARAMS) is None      # 120 * 0.5 = 60
+    assert scanner.analyze("X", _synth(n=61), PARAMS) is not None
+
+
+def test_a_thin_but_scorable_history_says_so():
+    sig = scanner.analyze("X", _synth(n=70), PARAMS)
+    assert sig.note == "limited history"
+    assert scanner.analyze("X", _synth(n=200), PARAMS).note == ""
+
+
+def test_the_gate_follows_the_configured_lookback():
+    short = {**PARAMS, "percentile_lookback": 40}
+    assert scanner.analyze("X", _synth(n=25), short) is not None    # 40 * 0.5 = 20
+    assert scanner.analyze("X", _synth(n=24), short) is None        # but bb_length + 5 = 25
+
+
 def test_squeeze_fired_detection(monkeypatch):
     df = _synth(n=80).copy()
     # Force the squeeze to be ON for all but the final bar (released today).

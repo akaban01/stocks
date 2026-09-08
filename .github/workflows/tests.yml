@@ -34,6 +34,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      # Small rule set (see ruff.toml): unused imports and names, undefined
+      # names, obvious bugs, import order. Style is left to the house style.
+      - name: Lint
+        run: ruff check .
+
       # The suite is network-free by design, so it needs no secrets and no
       # market data — a pull request from a fork runs it exactly as master does.
       - name: Run tests

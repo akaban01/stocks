@@ -1,0 +1,22 @@
+# Lint config. The rule set is deliberately small: this repo has a house style
+# already (long explanatory comments, aligned trailing comments, occasional long
+# data lines) and a linter that argues with it would be turned off within a week.
+# What is enabled is the part a reader cannot check by eye — unused imports and
+# names, undefined names, obvious bugs, and import order.
+line-length = 110
+
+[lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]
+ignore = [
+  # `zip(ks, ks[1:])` is the idiom for pairwise iteration in this codebase and
+  # the lengths differ on purpose; strict=True would raise on every call.
+  "B905",
+]
+
+[lint.per-file-ignores]
+# The test suite imports its fixtures from conftest by name, which ruff reads as
+# a first-party module living somewhere odd.
+"tests/*" = ["I001"]
+
+[lint.isort]
+known-first-party = ["spread_scanner", "run", "backtest", "calibrate"]

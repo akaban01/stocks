@@ -228,8 +228,13 @@ def calibration_payload(c: dict, years: int, universe: int) -> dict:
     }
 
 
-def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
-    """The backtest as JSON, with the verdict pre-computed for the frontend."""
+def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
+                     weights: dict | None = None, weights_as_of: str | None = None) -> dict:
+    """The backtest as JSON, with the verdict pre-computed for the frontend.
+
+    `weights` is the weight set the scores below were actually computed with, so
+    the page can say whether it is reading the built-in heuristic or a fitted
+    model — and, when it is the fitted one, that the fit saw this same history."""
     from .report import SCHEMA_VERSION
 
     base = {
@@ -238,6 +243,16 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
         "universe": n_tickers,
         "history_years": years,
         "horizon_days": int(p["horizon_days"]),
+        "weights": {
+            "values": dict(weights or scanner.SCORE_WEIGHTS),
+            "as_of": weights_as_of,
+            "source": "auto-calibrated" if weights_as_of else "default",
+            # compute_weights() fits on all available history and this measures
+            # the resulting score on that same history. Saying so is the whole
+            # of the fix: the out-of-sample number lives in calibration.json,
+            # which splits train from test.
+            "in_sample": bool(weights_as_of),
+        },
     }
     if not stats:
         return {**base, "ok": False, "note": "Not enough history to backtest."}
@@ -289,9 +304,14 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
                       "compressed band? That is the expansion multiple (realized ÷ expected) and the "
                       "band-break rate."),
         "caveat": ("Overlapping forward windows make these observations autocorrelated, so read the "
-                   "percentages as descriptive rather than as independent-sample statistics. The score "
-                   "flags where a relative expansion is likelier — never its direction. Past behaviour "
-                   "does not guarantee future results."),
+                   "percentages as descriptive rather than as independent-sample statistics. The "
+                   "universe is also whatever passes the screen *today*, measured backwards: names "
+                   "that would have dragged these numbers down are the ones no longer in it. And "
+                   "when the score being tested comes from calibrated weights, those weights were "
+                   "fitted on this same history — the honest out-of-sample separation is the one on "
+                   "the calibration panel, which holds a test split back. The score flags where a "
+                   "relative expansion is likelier — never its direction. Past behaviour does not "
+                   "guarantee future results."),
     }
 
 
