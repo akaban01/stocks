@@ -276,6 +276,13 @@ rather than left to the reader:
 gets — ten years is ten Januaries. Shorten it and the record gets noisier, not
 just shorter.
 
+The **two views read different windows on purpose.** Seasonality wants the whole
+download; the price cards are trimmed to `charts.display_years` (default `5`),
+because a card's high/low and window change describe where a name sits *now* — a
+decade-wide range is a history lesson, and twice the bars through the same point
+budget smooths away the drawdowns the card exists to show. `period` and
+`history_period` in `charts.json` name each window.
+
 > ⚠️ **A tendency, not an edge.** Ten readings per month is a small sample, and
 > the names in one screen move together, so the pooled row is closer to "ten
 > years of evidence" than to "ten years × thirty names". Nothing here knows about
@@ -367,7 +374,8 @@ params:
   horizon_days: 10       # ~2 weeks of trading days — the short-term window
   history_period: 1y
 charts:
-  history_period: 10y    # the chart window — and the Seasonality sample size
+  history_period: 10y    # what's downloaded — and what Seasonality measures
+  display_years: 5       # what the price cards draw and summarize
 tickers: [AAPL, NVDA, ...]   # fallback list if the ETF fetch fails
 ```
 

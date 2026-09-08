@@ -1013,11 +1013,9 @@
                  : '<span class="faint">—</span>';
   }
 
+  // Callers pass a series that has a seasonality block: seasonHeat filters on it
+  // and the pooled row is only built when the payload carries one.
   function heatRow(name, seas, scale, minYears, cls) {
-    if (!seas) {
-      return '<tr class="' + cls + '"><td class="t">' + esc(name) + '</td><td class="r">—</td>' +
-        '<td class="faint" colspan="14">not enough history</td></tr>';
-    }
     var cells = seas.months.map(function (m) {
       if (m.avg_pct === null) return '<td class="r faint">—</td>';
       var weak = thinMonth(m, minYears);
@@ -1079,6 +1077,15 @@
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
   }
 
+  // The pooled year span can be carried by one long history, so the headline
+  // quotes the median name's instead — the number the ranking actually gates on.
+  function typicalYears(pooled) {
+    var years = (pooled.months || []).map(function (m) {
+      return m.ticker_years ? m.ticker_years.median : null;
+    }).filter(has).sort(function (a, b) { return a - b; });
+    return years.length ? years[Math.floor((years.length - 1) / 2)] : pooled.years.count;
+  }
+
   function seasonHeadline(pooled, minYears) {
     function tile(row, cls, label) {
       if (!row) {
@@ -1088,16 +1095,18 @@
       return '<div class="rule ' + cls + '"><span class="k">' + label + " — " +
         MONTH_NAMES[row.month - 1] + "</span><div class=\"v\">" +
         (row.avg_pct >= 0 ? "+" : "") + num(row.avg_pct, 2) + "% on average · higher in " +
-        num(row.win_rate_pct, 0) + "% of them · " + row.n + " name-months over " +
-        row.years + " years</div></div>";
+        num(row.win_rate_pct, 0) + "% of them · " + row.n + " name-months, " +
+        (row.ticker_years ? row.ticker_years.median + " years per name" : row.years + " years") +
+        "</div></div>";
     }
     var best = pooled ? monthRow(pooled, pooled.best_month) : null;
     var worst = pooled ? monthRow(pooled, pooled.worst_month) : null;
     return '<div class="rulebar">' + tile(best, "cheap", "Best month") +
       tile(worst, "rich", "Worst month") +
       '<div class="rule"><span class="k">How thin is this?</span><div class="v">' +
-      (pooled ? "Each month is one reading per name per year — " + pooled.years.count +
-        " years of them. A month needs " + minYears + " to be ranked at all."
+      (pooled ? "Each month is one reading per name per year. The window spans " +
+        pooled.years.count + " years; the typical name has " + typicalYears(pooled) +
+        " of them, and a month needs " + minYears + " to be ranked at all."
               : "No pooled history available.") + "</div></div></div>";
   }
 
@@ -1152,11 +1161,14 @@
       "</div>" +
       seasonHeat(d, minYears) +
       '<p class="faint" style="font-size:.82rem;margin-top:14px">' +
-      "Ten years is ten Januaries, and these names move together — so read this as a tendency with " +
-      "wide error bars, not an edge. Only whole months count: a part-month at either end of the " +
-      "window is dropped rather than annualised. Nothing here knows about earnings dates, " +
-      "index rebalances or the dividend calendar, which is where a lot of month-shaped behaviour " +
-      "actually comes from.</p>";
+      "<b>Read this as a tendency with wide error bars, not an edge.</b> The largest bias is that " +
+      "this basket is whatever passes the screen <i>today</i>: every month below is measured on " +
+      "the survivors, and the names that would have dragged a month down are the ones no longer " +
+      "here to be measured. On top of that, ten years is only ten Januaries, and these names move " +
+      "together, so the pooled row is nearer ten years of evidence than ten years times thirty " +
+      "names. Only whole months count — a part-month at either end is dropped rather than " +
+      "annualised. Prices are split- and dividend-adjusted, but nothing here knows about earnings " +
+      "dates or index rebalances, which is where a lot of month-shaped behaviour comes from.</p>";
 
     var ths = document.querySelectorAll("#seasonbody table.heat th");
     for (var i = 0; i < ths.length; i++) {

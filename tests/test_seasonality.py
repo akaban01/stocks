@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -38,6 +40,15 @@ def test_a_month_ending_on_a_weekend_still_counts():
     assert str(r.index[-1]) == "2025-08"
 
 
+def test_the_month_in_progress_is_dropped_until_its_last_session():
+    # January 2026 ends on Friday the 30th. Through the 27th there are three
+    # sessions still to come, so January is not yet a January.
+    through_27 = se.monthly_returns(_closes("2025-06-02", "2026-01-27", daily=0.001))
+    assert str(through_27.index[-1]) == "2025-12"
+    through_30 = se.monthly_returns(_closes("2025-06-02", "2026-01-30", daily=0.001))
+    assert str(through_30.index[-1]) == "2026-01"
+
+
 def test_a_gap_in_the_history_is_not_charged_to_the_next_month():
     closes = _closes("2024-01-01", "2024-12-31", daily=0.001)
     closes = closes[(closes.index.month != 5) & (closes.index.month != 6)]
@@ -58,6 +69,28 @@ def test_returns_are_percent_moves_of_the_month():
 
 
 # ---- the month table ------------------------------------------------------
+
+def test_a_gap_is_dropped_rather_than_padded_flat():
+    # The regression this guards: pandas pads NaN in pct_change by default, which
+    # would invent a flat month for the hole and charge two months' move to the
+    # month after it. Both must be absent, and the survivors unchanged.
+    full = _closes("2024-01-01", "2024-12-31", daily=0.001)
+    holed = full[full.index.month != 5]
+    a, b = se.monthly_returns(full), se.monthly_returns(holed)
+    assert [str(p) for p in b.index] == [m for m in map(str, a.index)
+                                         if m not in ("2024-05", "2024-06")]
+    assert b.loc[pd.Period("2024-04", "M")] == pytest.approx(a.loc[pd.Period("2024-04", "M")])
+    assert b.loc[pd.Period("2024-07", "M")] == pytest.approx(a.loc[pd.Period("2024-07", "M")])
+
+
+def test_a_tz_aware_index_is_handled_without_warnings():
+    closes = _closes("2024-01-01", "2024-06-28", daily=0.001)
+    closes.index = closes.index.tz_localize("America/New_York")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        r = se.monthly_returns(closes)
+    assert [str(p) for p in r.index] == ["2024-02", "2024-03", "2024-04", "2024-05", "2024-06"]
+
 
 def test_summarize_finds_the_planted_best_and_worst_months():
     s = se.summarize(se.monthly_returns(_seasonal(up_month=4, down_month=9)))
@@ -100,7 +133,29 @@ def test_pooled_counts_both_tickers_and_years():
     assert p["best_month"] == 4 and p["worst_month"] == 9
     jan = p["months"][0]
     assert jan["n"] == 24 and jan["years"] == 8 and jan["tickers"] == 3
+    assert jan["ticker_years"] == {"min": 8, "median": 8}
     assert p["min_years"] == se.MIN_YEARS
+
+
+def test_pooled_ranking_does_not_lean_on_one_long_history():
+    # One name with eight years, four with two. The pooled row still spans eight
+    # calendar years, but the typical name has two — so nothing is ranked.
+    rets = {"LONG": se.monthly_returns(_seasonal(years=8))}
+    for i in range(4):
+        rets[f"SHORT{i}"] = se.monthly_returns(_seasonal(years=2, seed=i + 1))
+    p = se.pooled(rets)
+    jan = p["months"][0]
+    assert jan["years"] == 8                      # the span, across every name
+    assert jan["ticker_years"] == {"min": 2, "median": 2}
+    assert p["best_month"] is None and p["worst_month"] is None
+
+    # Give the shorter names three years each and the ranking comes back.
+    rets = {"LONG": se.monthly_returns(_seasonal(years=8))}
+    for i in range(4):
+        rets[f"SHORT{i}"] = se.monthly_returns(_seasonal(years=3, seed=i + 1))
+    p = se.pooled(rets)
+    assert p["months"][0]["ticker_years"]["median"] == 3
+    assert p["best_month"] == 4 and p["worst_month"] == 9
 
 
 def test_pooled_ignores_tickers_with_no_usable_history():

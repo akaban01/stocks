@@ -102,6 +102,35 @@ def test_seasonality_is_null_when_there_is_too_little_history(tmp_path):
     assert payload["seasonality"] is None
 
 
+def test_cards_are_trimmed_to_the_display_window_but_months_use_it_all(tmp_path):
+    data = {"X": _synth(n=2600, seed=11, start="2016-01-04")}          # ~10 years
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    assert payload["period"] == "5y"           # what the cards show
+    assert payload["history_period"] == "10y"  # what was downloaded
+    s = payload["series"][0]
+    assert s["bars"] < 1400                    # five years of sessions, not ten
+    full = data["X"]["Close"]
+    cutoff = full.index[-1] - pd.DateOffset(years=5)
+    assert pd.Timestamp(s["start"]) > cutoff
+    assert s["end"] == full.index[-1].strftime("%Y-%m-%d")
+    assert s["low"] > round(float(full.min()), 2)   # the decade's low is outside it
+    assert s["high"] == pytest.approx(round(float(full[full.index > cutoff].max()), 2))
+
+    # The month tables still see the whole download.
+    assert s["seasonality"]["years"]["start"] == 2016
+    assert payload["seasonality"]["years"]["start"] == 2016
+
+
+def test_display_years_of_zero_charts_the_whole_download(tmp_path):
+    data = {"X": _synth(n=2600, seed=12, start="2016-01-04")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=None).read_text(encoding="utf-8"))
+    assert payload["period"] == "10y"
+    assert payload["series"][0]["bars"] == 2600
+
+
 def test_window_spans_every_ticker(tmp_path):
     data = {"OLD": _synth(seed=5, start="2020-01-02"), "NEW": _synth(seed=6, start="2023-01-02")}
     payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))

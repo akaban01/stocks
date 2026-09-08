@@ -22,6 +22,8 @@ and the tickers in one screen move together, so the pooled row is closer to
 
 from __future__ import annotations
 
+import statistics
+
 import pandas as pd
 
 MONTH_NAMES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -31,10 +33,6 @@ MONTH_NAMES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 # best or the worst. Fewer than three and one earnings blow-up is the pattern.
 MIN_YEARS = 3
 
-# The last month is "in progress" — and so excluded — unless the history runs to
-# within this many calendar days of the month end (a slack that covers a month
-# ending on a weekend or a holiday).
-PARTIAL_MONTH_DAYS = 4
 
 
 def month_end_closes(closes: pd.Series) -> pd.Series:
@@ -49,10 +47,21 @@ def month_end_closes(closes: pd.Series) -> pd.Series:
     if s.empty:
         return pd.Series(dtype="float64")
     s.index = pd.to_datetime(s.index)
+    if getattr(s.index, "tz", None) is not None:
+        # to_period would warn and drop the zone anyway; a daily bar has no
+        # meaningful time of day, so shed it here rather than in the log.
+        s.index = s.index.tz_localize(None)
 
     monthly = s.groupby(s.index.to_period("M")).last()
+
+    # The month in progress is not a month. If another session is still due
+    # before the month turns, drop it — a calendar-day slack would admit a
+    # January on the 27th and then let its value drift with every daily run.
+    # BDay knows weekends but not holidays, so a month whose final session is
+    # followed by a weekday holiday is dropped rather than half-counted: rarer
+    # than the error it replaces, and the safe direction to be wrong in.
     last = s.index[-1]
-    if (last + pd.offsets.MonthEnd(0) - last).days > PARTIAL_MONTH_DAYS:
+    if (last + pd.offsets.BDay(1)).month == last.month:
         monthly = monthly.iloc[:-1]
     return monthly if not monthly.empty else pd.Series(dtype="float64")
 
@@ -68,7 +77,11 @@ def monthly_returns(closes: pd.Series) -> pd.Series:
     if len(monthly) < 2:
         return pd.Series(dtype="float64")
     monthly = monthly.reindex(pd.period_range(monthly.index[0], monthly.index[-1], freq="M"))
-    return (monthly.pct_change() * 100.0).dropna()
+    # fill_method=None explicitly: through pandas 2.x ``pct_change`` still pads
+    # by default, which would forward-fill the very NaN the reindex above just
+    # created — turning a gap into a fabricated flat month plus a double move
+    # in the month after it. The whole rule lives in that keyword.
+    return (monthly.pct_change(fill_method=None) * 100.0).dropna()
 
 
 def _month_row(month: int, vals: pd.Series) -> dict:
@@ -98,9 +111,17 @@ def month_rows(returns: pd.Series) -> list[dict]:
     return [_month_row(m, returns[returns.index.month == m]) for m in range(1, 13)]
 
 
-def _extremes(rows: list[dict], min_years: int = MIN_YEARS):
-    """Best and worst month numbers, ignoring months with too little history."""
-    ranked = [r for r in rows if r["avg_pct"] is not None and r["years"] >= min_years]
+def _row_years(row: dict) -> int:
+    return row["years"]
+
+
+def _extremes(rows: list[dict], min_years: int = MIN_YEARS, years_of=_row_years):
+    """Best and worst month numbers, ignoring months with too little history.
+
+    ``years_of`` says what "enough history" counts: for one ticker that is the
+    row's own year count, for the pooled rows the typical per-ticker one.
+    """
+    ranked = [r for r in rows if r["avg_pct"] is not None and years_of(r) >= min_years]
     if not ranked:
         return None, None
     return (max(ranked, key=lambda r: r["avg_pct"])["month"],
@@ -130,6 +151,12 @@ def pooled(returns_by_ticker: dict[str, pd.Series]) -> dict | None:
     well as years; ``years`` and ``tickers`` are reported alongside it because
     names in one screen are correlated and ``n`` alone would overstate the
     evidence.
+
+    ``years`` here spans the concatenated names, so one long history can carry
+    it while everything else is short. The ranking therefore gates on
+    ``ticker_years.median`` — the typical name's year count for that month —
+    and both it and the minimum ship in the payload, so the headline cannot
+    lean on a single ten-year name.
     """
     parts = [r for r in returns_by_ticker.values() if r is not None and not r.empty]
     if not parts:
@@ -137,8 +164,17 @@ def pooled(returns_by_ticker: dict[str, pd.Series]) -> dict | None:
     summary = summarize(pd.concat(parts))
     if summary is None:
         return None
+
     for row in summary["months"]:
-        row["tickers"] = sum(1 for r in parts if bool((r.index.month == row["month"]).any()))
+        counts = sorted(len(set(r[r.index.month == row["month"]].index.year))
+                        for r in parts if bool((r.index.month == row["month"]).any()))
+        row["tickers"] = len(counts)
+        # median_low keeps it an integer and rounds toward the shorter history.
+        row["ticker_years"] = ({"min": counts[0], "median": int(statistics.median_low(counts))}
+                               if counts else None)
+
+    summary["best_month"], summary["worst_month"] = _extremes(
+        summary["months"], years_of=lambda r: (r["ticker_years"] or {}).get("median", 0))
     summary["tickers"] = len(parts)
     summary["min_years"] = MIN_YEARS
     return summary
