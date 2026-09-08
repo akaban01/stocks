@@ -43,7 +43,7 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 |---|---|---|
 | `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
-| `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker |
+| `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
 | `public/data/backtest.json` | `backtest.py` | does the score work? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set |
 
@@ -244,6 +244,51 @@ name's caveats.
 
 Set `options.long_dated.enabled: false` to skip the extra chain call per ticker.
 
+## The Charts tab — when in the year, not just how much
+
+The **Price history** view is the closing line for every screened name over the
+download window, with the calendar-year boundaries marked.
+
+The **Seasonality** view cuts the same closes a different way: every whole month
+in the window becomes one return, and those returns are grouped into twelve
+calendar buckets. It answers a timing question the rest of the dashboard does
+not — *which months have these names actually risen and fallen in?* — with three
+things on the page:
+
+- the pooled **best and worst month** across the whole basket, with the average
+  move, the hit rate and how many years stand behind each;
+- **average move** and **how often it worked** as two twelve-bar charts. They are
+  deliberately separate: a fat average built on one spectacular year sits right
+  on the coin-flip line in the second chart, which is exactly the tell you want;
+- a **name-by-month grid** — every ticker's average return in each month, sorted
+  by any month you click, so "who is strong in December" is one click away.
+
+Three rules keep it honest, and they are in `spread_scanner/seasonality.py`
+rather than left to the reader:
+
+| Rule | Why |
+|---|---|
+| Only whole months count | A window starting mid-March contributes no March, and the month in progress is dropped. A return measured over eleven days is not a March. |
+| A gap breaks the chain | If a month is missing from the history, the month after it is dropped too, rather than silently absorbing two months of move. |
+| Under 3 years, no ranking | A month is still shown with its sample count, but it is never named best or worst. Three years is a floor, not a blessing. |
+
+`charts.history_period` (default `10y`) sets how many observations each month
+gets — ten years is ten Januaries. Shorten it and the record gets noisier, not
+just shorter.
+
+The **two views read different windows on purpose.** Seasonality wants the whole
+download; the price cards are trimmed to `charts.display_years` (default `5`),
+because a card's high/low and window change describe where a name sits *now* — a
+decade-wide range is a history lesson, and twice the bars through the same point
+budget smooths away the drawdowns the card exists to show. `period` and
+`history_period` in `charts.json` name each window.
+
+> ⚠️ **A tendency, not an edge.** Ten readings per month is a small sample, and
+> the names in one screen move together, so the pooled row is closer to "ten
+> years of evidence" than to "ten years × thirty names". Nothing here knows about
+> earnings dates, index rebalances or the dividend calendar — which is where a
+> lot of month-shaped behaviour actually comes from.
+
 ## A scan is only published if the option feed answered
 
 The US close is 21:00 UTC in winter and 20:00 in summer, so the schedule sits
@@ -328,6 +373,9 @@ strategy:
 params:
   horizon_days: 10       # ~2 weeks of trading days — the short-term window
   history_period: 1y
+charts:
+  history_period: 10y    # what's downloaded — and what Seasonality measures
+  display_years: 5       # what the price cards draw and summarize
 tickers: [AAPL, NVDA, ...]   # fallback list if the ETF fetch fails
 ```
 
@@ -377,9 +425,10 @@ Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
 workflow already requests the `pages`/`id-token` permissions it needs.
 
 The page has six tabs: **What to do** (the strategy cards), **Spreads** (the
-≈13-month table), **Scanner** (the sortable ranked table), **Charts**,
-**Does it work?** (backtest + calibration) and
-**Reference** (the glossary and strategy playbook, both read from `scan.json`).
+≈13-month table), **Scanner** (the sortable ranked table), **Charts** (price
+history, and a **Seasonality** view — see below), **Does it work?** (backtest +
+calibration) and **Reference** (the glossary and strategy playbook, both read
+from `scan.json`).
 
 ### Working on the frontend
 
@@ -498,7 +547,9 @@ spread_scanner/
   strategy.py                the decision table -> one explicit plan per ticker
   leaps.py                   the same chains at ~13 months -> the Spreads tab
   report.py                  the JSON payload (and the UI copy that ships with it)
-  charts.py    backtest.py   the other payloads
+  charts.py                  the price history payload
+  seasonality.py             the same closes grouped by calendar month
+  backtest.py                the validation payload
   alerts.py                  Slack / Discord webhook
 public/                      the frontend (hand-written) + data/ (generated)
 ```

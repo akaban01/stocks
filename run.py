@@ -286,13 +286,16 @@ def main(argv: list[str] | None = None) -> int:
     # here must never break the main scan.
     charts_cfg = cfg.get("charts") or {}
     if charts_cfg.get("enabled", True):
-        cperiod = str(charts_cfg.get("history_period", "5y"))
+        cperiod = str(charts_cfg.get("history_period", "10y"))
+        cshow = charts_cfg.get("display_years", charts.DEFAULT_DISPLAY_YEARS)
+        cshow = int(cshow) if cshow else None
         try:
-            print(f"Collecting price history for the charts ({cperiod})...")
+            print(f"Collecting price history for the charts ({cperiod}, cards show {cshow or 'all'}y)...")
             craw = data.download(tickers, period=cperiod)
             if not craw:                       # reuse the scan download if the fetch came back empty
                 craw = raw
-            charts_path = charts.write_charts(craw, outdir, period_label=cperiod)
+            charts_path = charts.write_charts(craw, outdir, period_label=cperiod,
+                                              display_years=cshow)
             print(f"Wrote {charts_path}")
         except Exception as exc:               # noqa: BLE001 — charts are optional, log and move on
             print(f"Charts skipped ({type(exc).__name__}: {exc})", file=sys.stderr)

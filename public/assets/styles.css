@@ -339,6 +339,21 @@ svg.spark .yr { fill: var(--text-faint); font-size: 9px; }
 .chart-foot { color: var(--text-dim); font-size: .78rem; margin-top: 6px; font-variant-numeric: tabular-nums; }
 .chart-foot b { color: #c9d1d9; }
 
+/* ---------------------------------------------------------- seasonality */
+
+svg.monthchart { display: block; width: 100%; height: auto; margin-top: 4px; }
+svg.monthchart .ax { stroke: var(--line); stroke-width: 1; }
+svg.monthchart .ylab { fill: var(--text-faint); font-size: 9px; text-anchor: end; }
+svg.monthchart .xlab { fill: var(--text-faint); font-size: 10px; text-anchor: middle; }
+svg.monthchart .blab { fill: var(--text-dim); font-size: 9.5px; text-anchor: middle; font-weight: 700; }
+svg.monthchart rect { transition: fill-opacity .12s; }
+svg.monthchart rect:hover { fill-opacity: 1 !important; }
+table.heat { font-size: .82rem; }
+table.heat tbody td { padding: 6px 8px; }
+table.heat tbody tr:hover { background: transparent; }
+table.heat tbody tr.pool { background: var(--surface-2); }
+table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight: 600; }
+
 /* ------------------------------------------------------------ validation */
 
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

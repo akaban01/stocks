@@ -75,6 +75,92 @@ def test_empty_input_still_writes_a_valid_payload(tmp_path):
     assert payload["window"] == {"start": None, "end": None}
 
 
+def test_each_series_carries_its_calendar_month_record(tmp_path):
+    data = {"NVDA": _synth(n=1300, seed=7, start="2019-01-02")}
+    payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))
+    seas = payload["series"][0]["seasonality"]
+    assert [m["month"] for m in seas["months"]] == list(range(1, 13))
+    assert seas["years"]["start"] < seas["years"]["end"]
+    assert seas["best_month"] in range(1, 13)
+    assert seas["worst_month"] in range(1, 13)
+
+
+def test_seasonality_is_also_pooled_across_tickers(tmp_path):
+    data = {"A": _synth(n=1300, seed=8, start="2019-01-02"),
+            "B": _synth(n=1300, seed=9, start="2019-01-02")}
+    payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))
+    pooled = payload["seasonality"]
+    assert pooled["tickers"] == 2
+    jan = pooled["months"][0]
+    assert jan["n"] == jan["years"] * 2          # both names, every year
+
+
+def test_seasonality_is_null_when_there_is_too_little_history(tmp_path):
+    payload = json.loads(
+        charts.write_charts({"X": _synth(n=20, seed=1)}, tmp_path).read_text(encoding="utf-8"))
+    assert payload["series"][0]["seasonality"] is None
+    assert payload["seasonality"] is None
+
+
+def test_cards_are_trimmed_to_the_display_window_but_months_use_it_all(tmp_path):
+    data = {"X": _synth(n=2600, seed=11, start="2016-01-04")}          # ~10 years
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    assert payload["period"] == "5y"           # what the cards show
+    assert payload["history_period"] == "10y"  # what was downloaded
+    s = payload["series"][0]
+    assert s["bars"] < 1400                    # five years of sessions, not ten
+    full = data["X"]["Close"]
+    cutoff = full.index[-1] - pd.DateOffset(years=5)
+    assert pd.Timestamp(s["start"]) > cutoff
+    assert s["end"] == full.index[-1].strftime("%Y-%m-%d")
+    assert s["low"] > round(float(full.min()), 2)   # the decade's low is outside it
+    assert s["high"] == pytest.approx(round(float(full[full.index > cutoff].max()), 2))
+
+    # The month tables still see the whole download.
+    assert s["seasonality"]["years"]["start"] == 2016
+    assert payload["seasonality"]["years"]["start"] == 2016
+
+
+def test_a_stale_series_cannot_stretch_the_reported_window(tmp_path):
+    # Two bars a decade apart: nothing lands inside the display window, so the
+    # card falls back to drawing what it has. The window still describes 5y.
+    idx = pd.DatetimeIndex(["2016-01-04", "2025-12-19"])
+    data = {"STALE": pd.DataFrame({"Close": [10.0, 20.0]}, index=idx),
+            "FRESH": _synth(n=1300, seed=13, start="2020-12-01")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    stale = [s for s in payload["series"] if s["ticker"] == "STALE"][0]
+    assert stale["bars"] == 2 and stale["start"] == "2016-01-04"   # the card kept its bars
+    assert payload["window"]["start"] > "2020-01-01"               # the label did not follow
+
+
+def test_a_dead_series_cannot_stretch_the_reported_window(tmp_path):
+    # The shape a delisted or renamed ticker takes: its history simply stops.
+    # It never hits the tail_years fallback — its whole run is inside five years
+    # of its own last bar — so only a payload-wide anchor keeps the label right.
+    data = {"DEAD": _synth(n=500, seed=14, start="2016-01-04"),      # ends 2017
+            "LIVE": _synth(n=1305, seed=15, start="2020-12-21")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    dead = [s for s in payload["series"] if s["ticker"] == "DEAD"][0]
+    assert dead["start"] == "2016-01-04" and dead["bars"] == 500   # the card kept its run
+    assert payload["window"]["start"] > "2020-01-01"               # the label did not follow
+    # The window is the period the cards cover, not an envelope over them.
+    assert dead["start"] < payload["window"]["start"]
+
+
+def test_display_years_of_zero_charts_the_whole_download(tmp_path):
+    data = {"X": _synth(n=2600, seed=12, start="2016-01-04")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=None).read_text(encoding="utf-8"))
+    assert payload["period"] == "10y"
+    assert payload["series"][0]["bars"] == 2600
+
+
 def test_window_spans_every_ticker(tmp_path):
     data = {"OLD": _synth(seed=5, start="2020-01-02"), "NEW": _synth(seed=6, start="2023-01-02")}
     payload = json.loads(charts.write_charts(data, tmp_path).read_text(encoding="utf-8"))

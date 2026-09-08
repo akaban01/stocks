@@ -844,14 +844,21 @@
     var area = "M " + X(0).toFixed(1) + "," + baseY.toFixed(1) + " L " +
       pts.split(" ").join(" L ") + " L " + X(n - 1).toFixed(1) + "," + baseY.toFixed(1) + " Z";
 
+    // Every year boundary gets a rule; the labels are thinned to whatever fits,
+    // so a ten-year window reads as cleanly as a two-year one.
+    var LABEL_GAP = 26;
+    var lastLabel = X(0);
     var grid = ['<text x="' + (X(0) + 2).toFixed(1) + '" y="' + (h - 5) + '" class="yr">' +
       dates[0].slice(0, 4) + "</text>"];
     for (var k = 1; k < n; k++) {
       if (dates[k].slice(0, 4) !== dates[k - 1].slice(0, 4)) {
         var x = X(k).toFixed(1);
         grid.push('<line x1="' + x + '" y1="' + padT + '" x2="' + x + '" y2="' + baseY.toFixed(1) + '" class="gl"/>');
-        grid.push('<text x="' + (X(k) + 2).toFixed(1) + '" y="' + (h - 5) + '" class="yr">' +
-          dates[k].slice(0, 4) + "</text>");
+        if (X(k) - lastLabel >= LABEL_GAP) {
+          lastLabel = X(k);
+          grid.push('<text x="' + (X(k) + 2).toFixed(1) + '" y="' + (h - 5) + '" class="yr">' +
+            dates[k].slice(0, 4) + "</text>");
+        }
       }
     }
     return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="xMidYMid meet" ' +
@@ -892,11 +899,316 @@
               "</div></div>";
           }).join("")
         : '<p class="empty">No price history available.</p>';
+      renderSeasonality(d);
     }).catch(function (e) {
       host.innerHTML = loadError(e, "charts", "python run.py");
+      $("#seasonbody").innerHTML = loadError(e, "charts", "python run.py");
       $("#chartmeta").textContent = "";
+      $("#seasonmeta").textContent = "";
     });
   }
+
+  // ---------------------------------------------------------- seasonality
+  //
+  // The same closes, cut by calendar month. charts.json ships one row per month
+  // per ticker plus the pooled row, so nothing here computes returns — it draws
+  // what the backend already grouped, and it refuses to draw a month the
+  // backend flagged as too thin to rank.
+
+  var MONTH_INITIALS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  var MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July",
+                     "August", "September", "October", "November", "December"];
+  // The --up / --down tokens, as rgb triples so cell fills can be faded.
+  var UP_RGB = "95,208,122", DOWN_RGB = "240,129,111", THIN_RGB = "139,148,158";
+
+  var seasonSort = { key: "ticker", dir: 1 };
+
+  function monthRow(seas, month) {
+    return seas && seas.months ? seas.months[month - 1] : null;
+  }
+  // Whether a month is too thin to lean on — the same test the backend ranks by.
+  // A pooled row's `years` spans every name concatenated, so one long history
+  // can carry it; `ticker_years.median` is the typical name's, and that is what
+  // decides both the ranking and the grey.
+  function thinMonth(row, minYears) {
+    if (!row || row.avg_pct === null) return true;
+    return (row.ticker_years ? row.ticker_years.median : row.years) < minYears;
+  }
+
+  /* A twelve-bar chart hanging off a baseline — the average move (baseline 0)
+     or the hit rate (baseline 50%). One measure per chart: the two never share
+     an axis. Months with too little history are drawn grey and unlabelled. */
+  function monthChart(rows, opt) {
+    var W = 480, H = 196, padL = 40, padR = 12, padT = 14, padB = 30;
+    var pw = W - padL - padR, ph = H - padT - padB;
+    var base = opt.baseline || 0;
+    var vals = rows.map(opt.value).filter(function (v) { return v !== null && !isNaN(v); });
+    if (!vals.length) return '<p class="empty">Not enough history to group by month.</p>';
+
+    var lo = Math.min.apply(null, vals.concat([base]));
+    var hi = Math.max.apply(null, vals.concat([base]));
+    var pad = (hi - lo) * 0.18 || 1;
+    lo -= pad; hi += pad;
+    if (opt.clamp) { lo = Math.max(lo, opt.clamp[0]); hi = Math.min(hi, opt.clamp[1]); }
+
+    function Y(v) { return padT + (1 - (v - lo) / (hi - lo)) * ph; }
+    var y0 = Y(base), slot = pw / 12, bw = Math.min(28, slot * 0.6);
+
+    var parts = [];
+    // Recessive frame: the baseline is the only solid rule, top and bottom are ticks.
+    parts.push('<line x1="' + padL + '" y1="' + y0.toFixed(1) + '" x2="' + (W - padR) +
+               '" y2="' + y0.toFixed(1) + '" class="ax"/>');
+    [[hi, Y(hi)], [base, y0], [lo, Y(lo)]].forEach(function (t) {
+      parts.push('<text x="' + (padL - 6) + '" y="' + (t[1] + 3.5).toFixed(1) +
+                 '" class="ylab">' + esc(opt.fmt(t[0])) + "</text>");
+    });
+
+    rows.forEach(function (r, i) {
+      var v = opt.value(r), x = padL + slot * i + (slot - bw) / 2;
+      var mid = padL + slot * (i + 0.5);
+      parts.push('<text x="' + mid.toFixed(1) + '" y="' + (H - 10) + '" class="xlab">' +
+                 MONTH_INITIALS[i] + "</text>");
+      if (v === null || isNaN(v)) return;
+
+      var grey = thinMonth(r, opt.minYears);
+      var up = v >= base;
+      var y = up ? Y(v) : y0, h = Math.max(1.5, Math.abs(Y(v) - y0));
+      parts.push('<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) +
+                 '" height="' + h.toFixed(1) + '" rx="2" fill="rgb(' +
+                 (grey ? THIN_RGB : up ? UP_RGB : DOWN_RGB) + ')" fill-opacity="' +
+                 (grey ? "0.35" : "0.85") + '"><title>' + esc(opt.title(r)) + "</title></rect>");
+
+      // Direct-label the extremes only; the table below carries every number.
+      if (!grey && (r.month === opt.best || r.month === opt.worst)) {
+        parts.push('<text x="' + mid.toFixed(1) + '" y="' + (up ? y - 5 : y + h + 11).toFixed(1) +
+                   '" class="blab">' + esc(opt.fmt(v)) + "</text>");
+      }
+    });
+
+    return '<svg class="monthchart" viewBox="0 0 ' + W + " " + H + '" ' +
+      'preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + esc(opt.aria) + '">' +
+      parts.join("") + "</svg>";
+  }
+
+  function seasonPanel(title, sub, svg) {
+    return '<div class="panelcard"><h3>' + esc(title) + "</h3>" +
+      '<p class="faint" style="font-size:.8rem;margin:-4px 0 8px">' + sub + "</p>" + svg + "</div>";
+  }
+
+  function heatStyle(v, scale) {
+    if (v === null || v === undefined || isNaN(v)) return "";
+    var t = Math.min(1, Math.abs(v) / scale);
+    return "background:rgba(" + (v >= 0 ? UP_RGB : DOWN_RGB) + "," + (0.07 + 0.5 * t).toFixed(3) + ")";
+  }
+
+  /* One robust scale for every cell, so a single blow-up month cannot wash the
+     whole grid out: the 90th percentile of |average|, never below 1%. */
+  function heatScale(series) {
+    var mags = [];
+    series.forEach(function (s) {
+      ((s.seasonality || {}).months || []).forEach(function (m) {
+        if (m.avg_pct !== null) mags.push(Math.abs(m.avg_pct));
+      });
+    });
+    if (!mags.length) return 1;
+    mags.sort(function (a, b) { return a - b; });
+    return Math.max(1, mags[Math.floor(mags.length * 0.9)] || mags[mags.length - 1]);
+  }
+
+  function monthBadge(month, cls) {
+    return month ? '<span class="tag ' + cls + '">' + MONTH_NAMES[month - 1].slice(0, 3) + "</span>"
+                 : '<span class="faint">—</span>';
+  }
+
+  // Callers pass a series that has a seasonality block: seasonHeat filters on it
+  // and the pooled row is only built when the payload carries one.
+  function heatRow(name, seas, scale, minYears, cls) {
+    var cells = seas.months.map(function (m) {
+      if (m.avg_pct === null) return '<td class="r faint">—</td>';
+      var weak = thinMonth(m, minYears);
+      var behind = m.ticker_years
+        ? m.n + " name-months, " + m.ticker_years.median + " years for the typical name" +
+          (m.ticker_years.min < m.ticker_years.median ? " (fewest " + m.ticker_years.min + ")" : "")
+        : m.n + " observation" + (m.n === 1 ? "" : "s") + " over " + m.years +
+          " year" + (m.years === 1 ? "" : "s");
+      var tip = MONTH_NAMES[m.month - 1] + ": average " + (m.avg_pct >= 0 ? "+" : "") +
+        num(m.avg_pct, 2) + "%, median " + (m.median_pct >= 0 ? "+" : "") + num(m.median_pct, 2) +
+        "%, up " + num(m.win_rate_pct, 0) + "% of the time, " + behind +
+        (weak ? " — too few to rank" : "");
+      return '<td class="r' + (weak ? " faint" : "") + '" title="' + esc(tip) + '" style="' +
+        (weak ? "" : heatStyle(m.avg_pct, scale)) + '">' +
+        (m.avg_pct >= 0 ? "+" : "") + num(m.avg_pct, 1) + "</td>";
+    }).join("");
+    var span = seas.years.start + "–" + seas.years.end + ", " + seas.observations +
+      " whole months measured";
+    return '<tr class="' + cls + '"><td class="t">' + esc(name) + "</td>" +
+      '<td class="r faint" title="' + esc(span) + '">' + seas.years.count + "</td>" + cells +
+      "<td>" + monthBadge(seas.best_month, "buy") + "</td>" +
+      "<td>" + monthBadge(seas.worst_month, "sell") + "</td></tr>";
+  }
+
+  function seasonHeat(d, minYears) {
+    var series = (d.series || []).filter(function (s) { return s.seasonality; });
+    if (!series.length) return "";
+    var scale = heatScale(series);
+
+    var rows = series.slice();
+    var key = seasonSort.key;
+    rows.sort(function (a, b) {
+      if (key === "ticker") return a.ticker.localeCompare(b.ticker) * seasonSort.dir;
+      if (key === "years") return (a.seasonality.years.count - b.seasonality.years.count) * seasonSort.dir;
+      var x = monthRow(a.seasonality, key), y = monthRow(b.seasonality, key);
+      x = x && x.avg_pct !== null ? x.avg_pct : -Infinity;
+      y = y && y.avg_pct !== null ? y.avg_pct : -Infinity;
+      return (x - y) * seasonSort.dir;
+    });
+
+    function th(k, label, cls) {
+      var sort = String(seasonSort.key) === String(k)
+        ? (seasonSort.dir === 1 ? "ascending" : "descending") : "none";
+      return '<th data-key="' + k + '" class="' + (cls || "") + '" aria-sort="' + sort + '">' +
+        esc(label) + "</th>";
+    }
+    var head = th("ticker", "Name") + th("years", "Yrs", "r") +
+      MONTH_NAMES.map(function (n, i) { return th(i + 1, n.slice(0, 3), "r"); }).join("") +
+      "<th>Best</th><th>Worst</th>";
+
+    var body = (d.seasonality
+      ? heatRow("All " + d.seasonality.tickers + " names", d.seasonality, scale, minYears, "pool")
+      : "") + rows.map(function (s) {
+        return heatRow(s.ticker, s.seasonality, scale, minYears, "");
+      }).join("");
+
+    return '<h2>Every name, month by month</h2>' +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Average return in each calendar month, ' +
+      'in percent. Hover a cell for the median, the hit rate and how many years stand behind it; ' +
+      'click a month to rank the names by it. Greyed cells rest on fewer than ' + minYears +
+      " years — for the pooled row, fewer than that for the typical name — and are never named " +
+      "best or worst.</p>" +
+      '<div class="tablewrap"><table class="scan heat"><thead><tr>' + head +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  function monthYears(row) {
+    return row.ticker_years ? row.ticker_years.median : row.years;
+  }
+
+  // The pooled year span can be carried by one long history, so the headline
+  // quotes the median name's instead — the number the ranking actually gates on.
+  function typicalYears(pooled) {
+    var years = (pooled.months || []).map(function (m) {
+      return m.ticker_years ? m.ticker_years.median : null;
+    }).filter(has).sort(function (a, b) { return a - b; });
+    return years.length ? years[Math.floor((years.length - 1) / 2)] : pooled.years.count;
+  }
+
+  function seasonHeadline(pooled, minYears) {
+    function tile(row, cls, label) {
+      if (!row) {
+        // The ranking gate is years per name, not months — say which one bit.
+        return '<div class="rule"><span class="k">' + label + '</span>' +
+          '<div class="v">No month yet has ' + minYears +
+          " years behind the typical name, so none is called best or worst.</div></div>";
+      }
+      return '<div class="rule ' + cls + '"><span class="k">' + label + " — " +
+        MONTH_NAMES[row.month - 1] + "</span><div class=\"v\">" +
+        (row.avg_pct >= 0 ? "+" : "") + num(row.avg_pct, 2) + "% on average · higher in " +
+        num(row.win_rate_pct, 0) + "% of them · " + row.n + " name-months, " +
+        (row.ticker_years ? row.ticker_years.median + " years per name" : row.years + " years") +
+        "</div></div>";
+    }
+    var best = pooled ? monthRow(pooled, pooled.best_month) : null;
+    var worst = pooled ? monthRow(pooled, pooled.worst_month) : null;
+    return '<div class="rulebar">' + tile(best, "cheap", "Best month") +
+      tile(worst, "rich", "Worst month") +
+      '<div class="rule"><span class="k">How thin is this?</span><div class="v">' +
+      (pooled ? "Each month is one reading per name per year. The window spans " +
+        pooled.years.count + " years; the typical name has " + typicalYears(pooled) +
+        " of them, and a month needs " + minYears + " to be ranked at all."
+              : "No pooled history available.") + "</div></div></div>";
+  }
+
+  function renderSeasonality(d) {
+    var host = $("#seasonbody");
+    var pooled = d.seasonality;
+    var minYears = (pooled && pooled.min_years) || 3;
+
+    if (!pooled) {
+      $("#seasonmeta").textContent = "";
+      host.innerHTML = pooled === undefined
+        ? '<p class="empty">This scan was written before the seasonality view existed — the next ' +
+          'run adds it.<br><span class="faint">Locally: <code>python run.py</code></span></p>'
+        : '<p class="empty">The window holds too few whole months to group by calendar month. ' +
+          "A longer <code>charts.history_period</code> fixes it.</p>";
+      return;
+    }
+
+    $("#seasonmeta").textContent = pooled.tickers + " names · " + pooled.years.start + "–" +
+      pooled.years.end + " · " + pooled.observations + " whole months measured";
+
+    var rows = pooled.months;
+    var avgChart = monthChart(rows, {
+      value: function (r) { return r.avg_pct; },
+      baseline: 0, best: pooled.best_month, worst: pooled.worst_month, minYears: minYears,
+      fmt: function (v) { return (v >= 0 ? "+" : "") + num(v, 1) + "%"; },
+      title: function (r) {
+        return MONTH_NAMES[r.month - 1] + ": " + (r.avg_pct >= 0 ? "+" : "") + num(r.avg_pct, 2) +
+          "% average, " + (r.median_pct >= 0 ? "+" : "") + num(r.median_pct, 2) + "% median (" +
+          r.n + " name-months, " + monthYears(r) + " years per name)";
+      },
+      aria: "Average return by calendar month across every screened name"
+    });
+    var winChart = monthChart(rows, {
+      value: function (r) { return r.win_rate_pct; },
+      baseline: 50, clamp: [0, 100], best: pooled.best_month, worst: pooled.worst_month,
+      minYears: minYears,
+      fmt: function (v) { return num(v, 0) + "%"; },
+      title: function (r) {
+        return MONTH_NAMES[r.month - 1] + ": higher in " + num(r.win_rate_pct, 0) + "% of " +
+          r.n + " name-months (" + monthYears(r) + " years per name)";
+      },
+      aria: "Share of months that closed higher, by calendar month"
+    });
+
+    host.innerHTML = seasonHeadline(pooled, minYears) +
+      '<div class="cols">' +
+      seasonPanel("Average move", "Every name, every year, averaged per month. Bars above the line " +
+                  "are months the basket gained.", avgChart) +
+      seasonPanel("How often it worked", "The same months by hit rate — the line is a coin flip. A " +
+                  "big average built on one good year sits near it.", winChart) +
+      "</div>" +
+      seasonHeat(d, minYears) +
+      '<p class="faint" style="font-size:.82rem;margin-top:14px">' +
+      "<b>Read this as a tendency with wide error bars, not an edge.</b> The largest bias is that " +
+      "this basket is whatever passes the screen <i>today</i>: every month below is measured on " +
+      "the survivors, and the names that would have dragged a month down are the ones no longer " +
+      "here to be measured. On top of that, ten years is only ten Januaries, and these names move " +
+      "together, so the pooled row is nearer ten years of evidence than ten years times thirty " +
+      "names. Only whole months count — a part-month at either end is dropped rather than " +
+      "annualised. Prices are split- and dividend-adjusted, but nothing here knows about earnings " +
+      "dates or index rebalances, which is where a lot of month-shaped behaviour comes from.</p>";
+
+    var ths = document.querySelectorAll("#seasonbody table.heat th");
+    for (var i = 0; i < ths.length; i++) {
+      ths[i].addEventListener("click", function () {
+        var k = this.dataset.key;
+        if (String(seasonSort.key) === String(k)) seasonSort.dir = -seasonSort.dir;
+        else { seasonSort.key = k; seasonSort.dir = k === "ticker" ? 1 : -1; }
+        renderSeasonality(store.charts);
+      });
+    }
+  }
+
+  function showChartView(view) {
+    var buttons = document.querySelectorAll("#chartviews button");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute("aria-pressed", buttons[i].dataset.view === view ? "true" : "false");
+    }
+    var panes = document.querySelectorAll('.panel[data-tab="charts"] > div[data-view]');
+    for (var j = 0; j < panes.length; j++) panes[j].hidden = panes[j].dataset.view !== view;
+    try { localStorage.setItem("chartview", view); } catch (e) { /* private mode */ }
+  }
+
 
   // ----------------------------------------------------------- validation
 
@@ -1004,6 +1316,14 @@
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].addEventListener("click", function () { showTab(this.dataset.tab); });
     }
+
+    var views = document.querySelectorAll("#chartviews button");
+    for (var v = 0; v < views.length; v++) {
+      views[v].addEventListener("click", function () { showChartView(this.dataset.view); });
+    }
+    var savedView = null;
+    try { savedView = localStorage.getItem("chartview"); } catch (e) { savedView = null; }
+    showChartView(savedView === "seasonality" ? "seasonality" : "prices");
 
     load("scan").then(function (d) {
       if (!d || !d.schema_version) throw new Error("scan.json is missing or malformed");
