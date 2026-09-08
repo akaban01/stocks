@@ -926,7 +926,14 @@
   function monthRow(seas, month) {
     return seas && seas.months ? seas.months[month - 1] : null;
   }
-  function thinMonth(row, minYears) { return !row || row.avg_pct === null || row.years < minYears; }
+  // Whether a month is too thin to lean on — the same test the backend ranks by.
+  // A pooled row's `years` spans every name concatenated, so one long history
+  // can carry it; `ticker_years.median` is the typical name's, and that is what
+  // decides both the ranking and the grey.
+  function thinMonth(row, minYears) {
+    if (!row || row.avg_pct === null) return true;
+    return (row.ticker_years ? row.ticker_years.median : row.years) < minYears;
+  }
 
   /* A twelve-bar chart hanging off a baseline — the average move (baseline 0)
      or the hit rate (baseline 50%). One measure per chart: the two never share
@@ -1019,10 +1026,14 @@
     var cells = seas.months.map(function (m) {
       if (m.avg_pct === null) return '<td class="r faint">—</td>';
       var weak = thinMonth(m, minYears);
+      var behind = m.ticker_years
+        ? m.n + " name-months, " + m.ticker_years.median + " years for the typical name" +
+          (m.ticker_years.min < m.ticker_years.median ? " (fewest " + m.ticker_years.min + ")" : "")
+        : m.n + " observation" + (m.n === 1 ? "" : "s") + " over " + m.years +
+          " year" + (m.years === 1 ? "" : "s");
       var tip = MONTH_NAMES[m.month - 1] + ": average " + (m.avg_pct >= 0 ? "+" : "") +
         num(m.avg_pct, 2) + "%, median " + (m.median_pct >= 0 ? "+" : "") + num(m.median_pct, 2) +
-        "%, up " + num(m.win_rate_pct, 0) + "% of the time, " + m.n + " observation" +
-        (m.n === 1 ? "" : "s") + " over " + m.years + " year" + (m.years === 1 ? "" : "s") +
+        "%, up " + num(m.win_rate_pct, 0) + "% of the time, " + behind +
         (weak ? " — too few to rank" : "");
       return '<td class="r' + (weak ? " faint" : "") + '" title="' + esc(tip) + '" style="' +
         (weak ? "" : heatStyle(m.avg_pct, scale)) + '">' +
@@ -1071,10 +1082,15 @@
     return '<h2>Every name, month by month</h2>' +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Average return in each calendar month, ' +
       'in percent. Hover a cell for the median, the hit rate and how many years stand behind it; ' +
-      'click a month to rank the names by it. Greyed cells have fewer than ' + minYears +
-      ' years and are never named best or worst.</p>' +
+      'click a month to rank the names by it. Greyed cells rest on fewer than ' + minYears +
+      " years — for the pooled row, fewer than that for the typical name — and are never named " +
+      "best or worst.</p>" +
       '<div class="tablewrap"><table class="scan heat"><thead><tr>' + head +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  function monthYears(row) {
+    return row.ticker_years ? row.ticker_years.median : row.years;
   }
 
   // The pooled year span can be carried by one long history, so the headline
@@ -1089,8 +1105,10 @@
   function seasonHeadline(pooled, minYears) {
     function tile(row, cls, label) {
       if (!row) {
+        // The ranking gate is years per name, not months — say which one bit.
         return '<div class="rule"><span class="k">' + label + '</span>' +
-          '<div class="v">Not enough whole months in the window to call one.</div></div>';
+          '<div class="v">No month yet has ' + minYears +
+          " years behind the typical name, so none is called best or worst.</div></div>";
       }
       return '<div class="rule ' + cls + '"><span class="k">' + label + " — " +
         MONTH_NAMES[row.month - 1] + "</span><div class=\"v\">" +
@@ -1136,7 +1154,7 @@
       title: function (r) {
         return MONTH_NAMES[r.month - 1] + ": " + (r.avg_pct >= 0 ? "+" : "") + num(r.avg_pct, 2) +
           "% average, " + (r.median_pct >= 0 ? "+" : "") + num(r.median_pct, 2) + "% median (" +
-          r.n + " name-months, " + r.years + " years)";
+          r.n + " name-months, " + monthYears(r) + " years per name)";
       },
       aria: "Average return by calendar month across every screened name"
     });
@@ -1147,7 +1165,7 @@
       fmt: function (v) { return num(v, 0) + "%"; },
       title: function (r) {
         return MONTH_NAMES[r.month - 1] + ": higher in " + num(r.win_rate_pct, 0) + "% of " +
-          r.n + " name-months";
+          r.n + " name-months (" + monthYears(r) + " years per name)";
       },
       aria: "Share of months that closed higher, by calendar month"
     });

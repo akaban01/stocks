@@ -125,9 +125,18 @@ def build_charts(data: dict[str, pd.DataFrame], period_label: str = "",
     payload = [series_payload(t, shown[t], points, returns[t]) for t in series]
 
     if shown:
-        spans = [s.index for s in shown.values()]
-        window = {"start": min(idx[0] for idx in spans).strftime("%Y-%m-%d"),
-                  "end": max(idx[-1] for idx in spans).strftime("%Y-%m-%d")}
+        # The window the cards cover. A card never reaches back past its own
+        # display cutoff, so neither does this — otherwise one stale series that
+        # fell back to drawing everything it has would label the whole view with
+        # a span twice the period beside it.
+        starts, ends = [], []
+        for s in shown.values():
+            first, last = s.index[0], s.index[-1]
+            cutoff = last - pd.DateOffset(years=display_years) if display_years else first
+            starts.append(max(first, cutoff))
+            ends.append(last)
+        window = {"start": min(starts).strftime("%Y-%m-%d"),
+                  "end": max(ends).strftime("%Y-%m-%d")}
     else:
         window = {"start": None, "end": None}
 

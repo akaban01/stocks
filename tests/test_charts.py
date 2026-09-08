@@ -123,6 +123,20 @@ def test_cards_are_trimmed_to_the_display_window_but_months_use_it_all(tmp_path)
     assert payload["seasonality"]["years"]["start"] == 2016
 
 
+def test_a_stale_series_cannot_stretch_the_reported_window(tmp_path):
+    # Two bars a decade apart: nothing lands inside the display window, so the
+    # card falls back to drawing what it has. The window still describes 5y.
+    idx = pd.DatetimeIndex(["2016-01-04", "2025-12-19"])
+    data = {"STALE": pd.DataFrame({"Close": [10.0, 20.0]}, index=idx),
+            "FRESH": _synth(n=1300, seed=13, start="2020-12-01")}
+    payload = json.loads(charts.write_charts(
+        data, tmp_path, period_label="10y", display_years=5).read_text(encoding="utf-8"))
+
+    stale = [s for s in payload["series"] if s["ticker"] == "STALE"][0]
+    assert stale["bars"] == 2 and stale["start"] == "2016-01-04"   # the card kept its bars
+    assert payload["window"]["start"] > "2020-01-01"               # the label did not follow
+
+
 def test_display_years_of_zero_charts_the_whole_download(tmp_path):
     data = {"X": _synth(n=2600, seed=12, start="2016-01-04")}
     payload = json.loads(charts.write_charts(
