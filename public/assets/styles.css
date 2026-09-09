@@ -341,6 +341,16 @@ table.scan tbody td { padding: 8px 11px; border-bottom: 1px solid var(--line-sof
 table.scan tbody tr:hover { background: var(--surface); }
 table.scan td.t { font-weight: 700; }
 table.scan td.r { text-align: right; }
+
+/* The bottom line on both Repeat-test tables. Outside tbody deliberately: it
+   never sorts, never highlights on hover, and in the ranked table never becomes
+   a name picker — the row handlers and the sort wiring are both scoped to
+   thead/tbody, so a summary can never be mistaken for a row of data. */
+table.scan tfoot td {
+  padding: 9px 11px; border-top: 2px solid var(--line); background: var(--surface-2);
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+table.scan tfoot td.faint { font-weight: 400; }
 .pill {
   display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px;
   border-radius: 6px; font-weight: 700; color: #fff; font-size: .8rem;

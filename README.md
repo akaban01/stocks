@@ -378,6 +378,18 @@ and the same test run across every other name for context:
 | **Best it got** | median of how far each window travelled toward the target |
 | **Worst it got** | median of how far each window went the *other* way — the drawdown the years that worked still put you through |
 
+Both tables carry a **summary row** at the foot, because the two counts the tab
+exists to separate are worth reading at the bottom of the columns they came from:
+*7 of 10 closed past · 10 of 10 touched* under one name's years, and the same two
+pooled across every name under the ranking. Only judged years are in it — the
+cell beside the total names how many were set aside, so a total that does not
+match the row count never has to be worked out. The two median columns are dashed
+rather than totalled: a median of medians is not a median.
+
+> The pooled figure has 279 judged years behind it and they are **not 279
+> independent ones** — these names move together, so a year that was good for the
+> market was good for most of the list at once. It is one broad answer, not 279.
+
 ### What it refuses to do
 
 The counting rules live in `spread_scanner/weekly.py` and ship inside

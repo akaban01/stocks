@@ -1573,11 +1573,30 @@
         '<td class="' + r.state + '">' + verdict + "</td></tr>";
     }).join("");
 
+    // The bottom line: the two counts this whole tab exists to tell apart, added
+    // up under the columns they came from. The tiles say it in prose; a reader
+    // who has just scanned a column wants it at the foot of that column. Only
+    // the judged years are in it — an open or skipped year is in neither count,
+    // so the cell beside the total says how many were set aside rather than
+    // letting the reader work it out from a total that does not match the rows.
+    var unjudged = t.open + t.skipped;
+    var foot = !t.decided ? "" : "<tfoot><tr>" +
+      '<td class="t">' + t.decided + " judged year" + (t.decided === 1 ? "" : "s") + "</td>" +
+      '<td class="faint">' + (unjudged ? unjudged + " set aside" : "") + "</td>" +
+      "<td></td><td></td>" +
+      '<td class="r ' + (t.rate >= 50 ? "hit" : "miss") + '">' + t.hit + " of " + t.decided +
+        "</td>" +
+      '<td class="r">' + signed(t.median_best) + "</td>" +
+      '<td class="r' + (t.touched ? " hit" : "") + '">' + t.touched + " of " + t.decided + "</td>" +
+      '<td class="r">' + signed(t.median_worst) + "</td>" +
+      "<td>" + num(t.rate, 0) + "% closed · " + num(t.touch_rate, 0) + "% touched</td>" +
+      "</tr></tfoot>";
+
     return '<div class="tablewrap"><table class="scan trial"><thead><tr>' +
       "<th>Year</th><th>Buy week</th><th class=\"r\">Entry</th><th class=\"r\">Target</th>" +
       '<th class="r">At exit</th><th class="r">Best</th><th class="r">Touched</th>' +
       '<th class="r">Worst</th><th>Result</th>' +
-      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
   }
 
   /* The same settings run across every name — the reason to keep this on one
@@ -1639,6 +1658,30 @@
         '<td class="r soft-miss">' + signed(r.worst) + "</td></tr>";
     }).join("");
 
+    // Pooled across every name shown, the short histories included: pooling has
+    // none of the problem the ranking floor exists to stop — a name with two
+    // judged years puts two years into the denominator, not a 100% record at the
+    // top of a list. What it does have is the correlation problem, which gets
+    // worse the bigger the number looks, so it is said under the table.
+    var sum = rows.reduce(function (a, r) {
+      a.decided += r.decided; a.hit += r.hit; a.touched += r.touched; return a;
+    }, { decided: 0, hit: 0, touched: 0 });
+    var pooled = sum.decided ? (sum.hit / sum.decided) * 100 : null;
+    var pooledTouch = sum.decided ? (sum.touched / sum.decided) * 100 : null;
+    var medianNote = "no total: a median of medians is not a median. The per-name figures are "
+      + "in the column above.";
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + rows.length + " name" + (rows.length === 1 ? "" : "s") + "</td>" +
+      '<td class="r">' + sum.decided + "</td>" +
+      '<td class="r' + (sum.hit ? " hit" : "") + '">' + sum.hit + "</td>" +
+      '<td class="r' + (sum.decided - sum.hit ? " miss" : "") + '">' + (sum.decided - sum.hit) +
+        "</td>" +
+      '<td class="r ' + (pooled >= 50 ? "hit" : "miss") + '">' + num(pooled, 0) + "%</td>" +
+      '<td class="r' + (sum.touched ? " hit" : "") + '">' + num(pooledTouch, 0) + "%</td>" +
+      '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
+      '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
+      "</tr></tfoot>";
+
     return "<h2>The same question, every name</h2>" +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Week ' + rp.week + ", " + rp.hold +
       " weeks, " + rpGoal() + rpSide() +
@@ -1653,7 +1696,12 @@
       '<th class="r">Fell short</th>' + th("rate", "Closed %", "r") +
       '<th class="r">Touched %</th>' + th("best", "Median best", "r") +
       th("worst", "Median worst", "r") +
-      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>" +
+      '<p class="faint" style="font-size:.83rem;margin:8px 0 0">' + sum.decided +
+      " judged years stand behind that bottom line, and they are not " + sum.decided +
+      " independent ones — these names move together, so a year that was good for the market was " +
+      "good for most of the list at once. Read it as one broad answer to the question, not as " +
+      esc(String(sum.decided)) + " separate ones.</p>";
   }
 
   function rpCaveats(d) {
