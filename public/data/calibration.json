@@ -1,6 +1,6 @@
 {
   "schema_version": "2.4.0",
-  "generated_at": "2026-09-09T18:12:39Z",
+  "generated_at": "2026-09-09T20:26:07Z",
   "as_of": "2026-09-09",
   "history_years": 5,
   "universe": 30,
@@ -11,13 +11,13 @@
     "squeeze": 0.21
   },
   "lift": {
-    "compression": 0.114,
+    "compression": 0.1137,
     "vol_room": 0.1997,
-    "squeeze": 0.0854
+    "squeeze": 0.0848
   },
   "bars": {
-    "total": 35540,
-    "train": 24890,
+    "total": 35511,
+    "train": 24861,
     "test": 10650,
     "cutoff": "2025-03-26"
   },
