@@ -76,8 +76,11 @@ REFERENCE = {
               "vertical spread settles against that close, so this is the number the structure "
               "actually pays on; touching is what lets you take profit early.",
     "incomplete": "A year whose window runs past the last complete week is reported as still open "
-                  "and counted in neither column. A year with no bars for the entry week, or a gap "
-                  "inside the window, is skipped and said to be skipped.",
+                  "and counted in neither column — including when the target is already behind it. "
+                  "An unfinished window can produce a touch but never a miss, so admitting one to "
+                  "the rate would move it in one direction only, and the newest year would quietly "
+                  "hold the headline up. A year with no bars for the entry week, or a gap inside "
+                  "the window, is skipped and said to be skipped.",
     "ranking": "A name needs at least three judged years before its hit rate is ranked against "
                "the others. Two years at 100% is not a better answer than ten at 70%, and a "
                "shorter history is not a stronger one.",
@@ -186,7 +189,12 @@ def build_weekly(data: dict[str, pd.DataFrame], period_label: str = "",
     for ticker, weekly in bars.items():
         onto = weekly.reindex(axis)
         present = onto["close"].notna().to_numpy()
-        if not present.any():                    # entirely outside a trimmed window
+        # The floor has to be measured on what is *shipped*, not on what was
+        # downloaded. Applied only before the trim, a `years` window let a name
+        # whose history ended years ago through with ten weeks in it, on a
+        # payload still declaring `min_weeks: 26` — which the page quotes back
+        # to the reader. With no trim this is the same test it was.
+        if int(present.sum()) < MIN_WEEKS:
             continue
         first = int(present.argmax())
         last = len(present) - 1 - int(present[::-1].argmax())

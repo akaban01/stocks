@@ -214,3 +214,22 @@ def test_write_weekly_round_trips_and_stays_compact(tmp_path):
     # the bytes. One line of JSON plus the trailing newline.
     assert text.count("\n") == 1
     assert ": " not in text.split('"reference"')[0]
+
+
+def test_the_week_floor_is_measured_on_the_window_that_ships():
+    """A name is judged on what it puts in the payload, not on what was fetched.
+
+    Applied only to the download, a `years` trim let a name whose history ended
+    years ago through with a handful of weeks in it — on a payload that still
+    declares `min_weeks: 26`, which the page quotes back to the reader.
+    """
+    frames = {"AAA": _frame("2015-01-05", "2025-09-19"),
+              "STOPPED": _frame("2015-01-05", "2023-11-30")}
+
+    # Untrimmed, STOPPED has a decade of weeks and belongs in the payload.
+    assert [s["ticker"] for s in _payload(frames)["series"]] == ["AAA", "STOPPED"]
+
+    # Inside a two-year window it has about eleven, which is not a history.
+    trimmed = _payload(frames, years=2)
+    assert [s["ticker"] for s in trimmed["series"]] == ["AAA"]
+    assert trimmed["count"] == 1

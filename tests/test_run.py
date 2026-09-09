@@ -140,13 +140,24 @@ def test_weekly_can_be_switched_off(offline, config, tmp_path):
     assert not (site / "data" / "weekly.json").exists()
 
 
-def test_weekly_is_written_even_with_the_charts_off(offline, tmp_path):
+def test_weekly_is_written_even_with_the_charts_off(offline, tmp_path, monkeypatch):
     """The two payloads share one download but not one switch.
 
     They started as one block, so turning the charts off would have taken the
     weekly bars with it — and the Repeat test would have gone blank because of a
     setting about price cards.
+
+    The sharing is the other half of that, and it is asserted here rather than
+    trusted: the long fetch used to be gated on the charts alone, so this exact
+    config downloaded the scan window and then the long one again — two full
+    passes over a free endpoint for the same bars.
     """
+    periods = []
+    inner = data.download
+    monkeypatch.setattr(data, "download",
+                        lambda tickers, period="1y", interval="1d":
+                        (periods.append(period), inner(tickers, period, interval))[1])
+
     cfg = tmp_path / "nocharts.yaml"
     cfg.write_text(
         "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
@@ -162,6 +173,8 @@ def test_weekly_is_written_even_with_the_charts_off(offline, tmp_path):
     assert not (site / "data" / "charts.json").exists()
     weekly = json.loads((site / "data" / "weekly.json").read_text(encoding="utf-8"))
     assert weekly["count"] == 3
+    assert periods == ["2y"], f"one download of the long window, not {periods}"
+    assert weekly["period"] == "2y", "and it publishes the window it actually got"
 
 
 def test_cli_tickers_override_the_config(offline, config, tmp_path):

@@ -105,9 +105,15 @@
     return tz ? txt + " (" + tz + ")" : txt;
   }
 
+  // Keyed on the *promise*, not just the result: two clicks on a tab before
+  // its payload lands used to start two downloads of the same file, which on
+  // weekly.json is 300KB twice.
+  var inflight = {};
+
   function load(name) {
     if (store[name]) return Promise.resolve(store[name]);
-    return fetch(DATA_DIR + name + ".json", { cache: "no-cache" })
+    if (inflight[name]) return inflight[name];
+    inflight[name] = fetch(DATA_DIR + name + ".json", { cache: "no-cache" })
       .then(function (r) {
         if (r.status === 404) {
           var missing = new Error("data/" + name + ".json has not been generated yet.");
@@ -117,7 +123,9 @@
         if (!r.ok) throw new Error(r.status + " " + r.statusText);
         return r.json();
       })
-      .then(function (json) { store[name] = json; return json; });
+      .then(function (json) { store[name] = json; return json; })
+      .finally(function () { delete inflight[name]; });
+    return inflight[name];
   }
 
   function loadError(e, name, cmd) {
@@ -1414,108 +1422,17 @@
     try { localStorage.setItem("repeat", JSON.stringify(rp)); } catch (e) { /* private mode */ }
   }
 
-  function rpWeekId(year, week) {
-    return year + "-W" + (week < 10 ? "0" + week : String(week));
-  }
-
-  function median(values) {
-    if (!values.length) return null;
-    var v = values.slice().sort(function (a, b) { return a - b; });
-    var m = Math.floor(v.length / 2);
-    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
-  }
-
   function signed(v, digits) {
     if (!has(v) || isNaN(v)) return "—";
     return (v >= 0 ? "+" : "") + num(v, digits === undefined ? 1 : digits) + "%";
   }
 
-  /* One year of the trial for one name.
-     Every branch that cannot reach a verdict says which branch it is. A window
-     that has not finished running is "open" and a window the history cannot
-     cover is "skipped" — neither is a failure, and quietly counting either as
-     one is exactly how a hit rate ends up flattering. */
-  function rpYear(d, s, year, up, last) {
-    var i = rpAt[rpWeekId(year, rp.week)];
-    var row = { year: year, week: d.weeks[i], start: d.starts[i], state: "skipped" };
-
-    var at = i - 1;              // you buy as the week opens: the last close before it
-    if (at < 0 || s.close[at] === null) {
-      row.why = "no close before that week";
-      return row;
-    }
-    row.entry = s.close[at];
-    row.entry_week = d.starts[at];
-    row.target = row.entry * (up ? 1 + rp.target / 100 : 1 - rp.target / 100);
-
-    var end = i + rp.hold - 1, stop = Math.min(end, last);
-    var fav = null, adv = null, hitAt = -1;
-    for (var k = i; k <= stop; k++) {
-      if (s.close[k] === null || s.high[k] === null || s.low[k] === null) {
-        row.why = "the history has a gap inside that window";
-        return row;
-      }
-      var f = up ? s.high[k] : s.low[k];          // the extreme toward the target
-      var a = up ? s.low[k] : s.high[k];          // and the one against it
-      if (fav === null || (up ? f > fav : f < fav)) fav = f;
-      if (adv === null || (up ? a < adv : a > adv)) adv = a;
-      if (hitAt < 0 && (up ? f >= row.target : f <= row.target)) hitAt = k;
-    }
-
-    row.best_pct = (fav / row.entry - 1) * 100;
-    row.worst_pct = (adv / row.entry - 1) * 100;
-    row.hit = hitAt >= 0;
-    if (row.hit) { row.hit_in = hitAt - i + 1; row.hit_week = d.starts[hitAt]; }
-
-    if (end > last) {
-      // Still running. It can already be a hit — the target either was touched
-      // or was not — but it cannot yet be a miss, and it has no exit price.
-      row.state = row.hit ? "hit" : "open";
-      row.ran = stop - i + 1;
-      return row;
-    }
-    row.settled = true;
-    row.exit = s.close[end];
-    row.exit_pct = (row.exit / row.entry - 1) * 100;
-    row.finished = up ? row.exit >= row.target : row.exit <= row.target;
-    row.state = row.hit ? "hit" : "miss";
-    return row;
-  }
-
-  /* The same trade in the same week of each of the last `rp.years` years. */
+  // The counting itself lives in assets/trial.js, on its own so it can be run
+  // under node by tests/test_trial.py — what a hit, a miss, a still-open year
+  // and a skipped one mean is the whole point of this tab, and it was the one
+  // part of it nothing could check.
   function rpTrial(d, s) {
-    var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, settled: 0, finished: 0,
-                asked: rp.years };
-    var last = d.weeks.length - 1;
-    if (last < 0 || !s) return out;
-
-    var newest = parseInt(d.weeks[last].slice(0, 4), 10);
-    var oldest = parseInt(d.weeks[0].slice(0, 4), 10);
-    var years = [];
-    // Backwards from the newest year, keeping only the years that *have* the
-    // chosen week. Week 53 exists in about one year in six, so asking for it
-    // is a legitimate question with a much shorter answer.
-    for (var y = newest; y >= oldest && years.length < rp.years; y--) {
-      if (rpAt[rpWeekId(y, rp.week)] !== undefined) years.push(y);
-    }
-    years.reverse();
-
-    var up = rp.dir === "up";
-    for (var n = 0; n < years.length; n++) {
-      var row = rpYear(d, s, years[n], up, last);
-      out.rows.push(row);
-      out[row.state]++;
-      if (row.settled) { out.settled++; if (row.finished) out.finished++; }
-    }
-    out.decided = out.hit + out.miss;
-    out.rate = out.decided ? (out.hit / out.decided) * 100 : null;
-    out.finish_rate = out.settled ? (out.finished / out.settled) * 100 : null;
-    var judged = out.rows.filter(function (r) { return r.best_pct !== undefined; });
-    out.median_best = median(judged.map(function (r) { return r.best_pct; }));
-    out.median_worst = median(judged.map(function (r) { return r.worst_pct; }));
-    out.median_weeks = median(judged.filter(function (r) { return r.hit; })
-                                    .map(function (r) { return r.hit_in; }));
-    return out;
+    return SpreadTrial.run(d, s, rp, rpAt);
   }
 
   // ---- rendering
@@ -1531,8 +1448,8 @@
     var reached = t.decided
       ? t.hit + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") + num(t.rate, 0) + "%)"
       : "no year could be judged";
-    var settled = t.settled
-      ? t.finished + " of " + t.settled + " window" + (t.settled === 1 ? "" : "s") +
+    var settled = t.decided
+      ? t.finished + " of " + t.decided + " window" + (t.decided === 1 ? "" : "s") +
         " (" + num(t.finish_rate, 0) + "%)"
       : "no window has finished yet";
 
@@ -1557,19 +1474,26 @@
       "</div>";
   }
 
+  /* Ten years at a glance. The detail is in the table directly below — the
+     tooltips here are a convenience, not the only copy of anything, because a
+     tooltip is unreachable on a touch screen. The state is in a glyph as well
+     as in the colour for the same reason it is in the table: colour on its own
+     is not a channel everyone has (WCAG 1.4.1). */
   function rpStrip(t) {
     if (!t.rows.length) return "";
     var labels = { hit: "touched", miss: "missed", open: "still open", skipped: "skipped" };
+    var marks = { hit: "✓", miss: "✗", open: "•", skipped: "–" };
     return '<div class="yearstrip">' + t.rows.map(function (r) {
       var note = r.state === "skipped" ? (r.why || "no data")
         : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, best " +
-                               signed(r.best_pct)
+                               signed(r.best_pct) + (r.touched ? ", already touched" : "")
         : "entry " + money(r.entry) + ", target " + money(r.target) + ", best " +
           signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
-          (r.hit ? ", touched in week " + r.hit_in : "") +
-          (r.settled ? ", closed " + signed(r.exit_pct) : "");
-      return '<div class="yr ' + r.state + '" title="' + esc(r.year + " — " + labels[r.state] +
-        ": " + note) + '"><b>' + r.year + "</b><span>" +
+          (r.touched ? ", touched in week " + r.hit_in : "") +
+          ", closed " + signed(r.exit_pct);
+      var say = r.year + " — " + labels[r.state] + ": " + note;
+      return '<div class="yr ' + r.state + '" title="' + esc(say) + '" aria-label="' + esc(say) +
+        '"><b>' + r.year + "</b><span>" + marks[r.state] + " " +
         (r.best_pct === undefined ? "—" : signed(r.best_pct)) + "</span></div>";
     }).join("") + "</div>";
   }
@@ -1589,15 +1513,20 @@
       var exit = r.settled
         ? '<td class="r ' + (r.finished ? "hit" : "") + '">' + signed(r.exit_pct) + "</td>"
         : '<td class="r faint">running</td>';
+      // An unfinished window that has already touched is said out loud, because
+      // it is the one row a reader might expect in the hit column and will not
+      // find there.
+      var verdict = r.state === "open"
+        ? (r.touched ? "Touched, still open" : "Still open") + " (" + r.ran + "/" + rp.hold + "w)"
+        : labels[r.state];
       return "<tr><td class=\"t\">" + r.year + "</td><td>" + esc(r.start) + "</td>" +
         '<td class="r" title="' + esc("the last close of the week beginning " + r.entry_week +
           " — you buy as week " + rp.week + " opens") + '">' + money(r.entry) + "</td>" +
         '<td class="r">' + money(r.target) + "</td>" +
         '<td class="r">' + signed(r.best_pct) + "</td>" +
-        '<td class="r">' + (r.hit ? "week " + r.hit_in : "—") + "</td>" +
+        '<td class="r">' + (r.touched ? "week " + r.hit_in : "—") + "</td>" +
         '<td class="r">' + signed(r.worst_pct) + "</td>" + exit +
-        '<td class="' + r.state + '">' + labels[r.state] +
-        (r.state === "open" ? " (" + r.ran + "/" + rp.hold + "w)" : "") + "</td></tr>";
+        '<td class="' + r.state + '">' + verdict + "</td></tr>";
     }).join("");
 
     return '<div class="tablewrap"><table class="scan trial"><thead><tr>' +
@@ -1615,19 +1544,22 @@
     var rows = d.series.map(function (s) {
       var t = rpTrial(d, s);
       return { ticker: s.ticker, hit: t.hit, decided: t.decided, rate: t.rate,
-               finished: t.finished, settled: t.settled, best: t.median_best,
-               worst: t.median_worst, thin: t.decided < floor };
+               finished: t.finished, best: t.median_best, worst: t.median_worst,
+               thin: t.decided < floor };
     }).filter(function (r) { return r.decided > 0; });
     if (!rows.length) return "";
 
     var key = rpSort.key;
     rows.sort(function (a, b) {
-      // Names with too few judged years are reported but never ranked: sorted
-      // by rate, two years at 100% would otherwise sit above ten years at 70%
-      // and read as the best name on the screen. Same floor, same reason, as
-      // the greyed months in the Seasonality view.
-      if (a.thin !== b.thin) return a.thin ? 1 : -1;
+      // Sorting by Name is a request for A–Z, so the floor does not apply: it
+      // exists to stop a short history *topping a ranking*, and an alphabetical
+      // list is not one. The greying still marks them.
       if (key === "ticker") return a.ticker.localeCompare(b.ticker) * rpSort.dir;
+      // Everywhere else, names with too few judged years are reported but never
+      // ranked — sorted by rate, two years at 100% would otherwise sit above ten
+      // years at 70% and read as the best name on the screen. Same floor, same
+      // reason, as the greyed months in the Seasonality view.
+      if (a.thin !== b.thin) return a.thin ? 1 : -1;
       var x = a[key], y = b[key];
       x = has(x) ? x : -Infinity; y = has(y) ? y : -Infinity;
       // Equal rates fall back to how many years stand behind them.
@@ -1650,7 +1582,7 @@
         '<td class="r">' + r.hit + "</td>" +
         '<td class="r">' + (r.decided - r.hit) + "</td>" +
         '<td class="r"><b>' + num(r.rate, 0) + "%</b></td>" +
-        '<td class="r">' + (r.settled ? num((r.finished / r.settled) * 100, 0) + "%" : "—") + "</td>" +
+        '<td class="r">' + (r.decided ? num((r.finished / r.decided) * 100, 0) + "%" : "—") + "</td>" +
         '<td class="r">' + signed(r.best) + "</td>" +
         '<td class="r">' + signed(r.worst) + "</td></tr>";
     }).join("");
@@ -1707,7 +1639,12 @@
         " — that week does not fall in every year, and the history only reaches so far back.</div>"
       : "";
     var pending = [];
-    if (t.open) pending.push(t.open + (t.open === 1 ? " year is" : " years are") + " still running");
+    if (t.open) {
+      var already = !t.touched_open ? ""
+        : t.open === 1 ? " (already past the target)"
+        : " (" + t.touched_open + " of them already past the target)";
+      pending.push(t.open + (t.open === 1 ? " year is" : " years are") + " still running" + already);
+    }
     if (t.skipped) pending.push(t.skipped + " skipped for want of data");
 
     host.innerHTML = short + rpTiles(t) +
@@ -1750,12 +1687,17 @@
   // is not a control, it is a number.
   function rpWeekLabel(d) {
     var label = "week " + rp.week;
+    var want = "W" + (rp.week < 10 ? "0" : "") + rp.week;
     for (var i = d.weeks.length - 1; i >= 0; i--) {
-      if (rpAt[d.weeks[i]] === i && d.weeks[i].slice(6) === (rp.week < 10 ? "0" : "") + rp.week) {
+      if (d.weeks[i].slice(5) === want) {
         var when = new Date(d.starts[i] + "T00:00:00");
         if (!isNaN(when.getTime())) {
+          // The *ISO* year, not the Monday's calendar year. ISO 2021-W01 opens
+          // on 4 January but 2020-W53 opens on 28 December — labelling that one
+          // "in 2020" while the table calls the row 2020 is the only reading
+          // where the two agree.
           label += " — w/c " + when.toLocaleDateString(undefined, { day: "numeric", month: "short" }) +
-            " in " + d.starts[i].slice(0, 4);
+            " in " + d.weeks[i].slice(0, 4);
         }
         break;
       }
@@ -1772,8 +1714,7 @@
   function renderRepeat() {
     load("weekly").then(function (d) {
       if (!rpAt) {
-        rpAt = {};
-        for (var i = 0; i < d.weeks.length; i++) rpAt[d.weeks[i]] = i;
+        rpAt = SpreadTrial.index(d);
 
         var select = $("#rp-ticker");
         select.innerHTML = d.series.map(function (s) {

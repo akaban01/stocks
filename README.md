@@ -367,7 +367,7 @@ The counting rules live in `spread_scanner/weekly.py` and ship inside
 | Rule | Why |
 |---|---|
 | The week in progress is dropped | A Wednesday high is not the week's high, and a trial reading one finds hits that have not happened yet. |
-| A year still running is neither a hit nor a miss | It is reported as **still open** and left out of both columns. Counting an unfinished window as a failure is how a hit rate gets quietly pessimistic — and counting it as a success is how it gets flattering. |
+| A year still running is neither a hit nor a miss | It is reported as **still open** and left out of both columns — *including when the target is already behind it*. An unfinished window can produce a touch but never a miss, so admitting one to the rate moves it in one direction only, and the newest year would quietly hold the headline up. The row still says "Touched, still open", and the count of them is printed under the headline. |
 | A year the history cannot cover is **skipped**, and says so | A name that listed in 2024 has eight skipped years, not eight failures. |
 | Every name sits on one gapless week axis | "Eight weeks later" is eight positions later for every name — never eight *rows* spanning a hole in the history. A window containing a gap is refused rather than closed up. |
 | Under 3 judged years, no ranking | In the all-names table a short history is shown, greyed, at the bottom. Two years at 100% is not a better answer than ten at 70%. |
@@ -570,9 +570,17 @@ No build step, no dependencies, no external assets:
 
 ```
 public/index.html          the shell and the tab markup
+public/assets/trial.js     the Repeat test's counting rules, on their own
 public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```
+
+`trial.js` is separate because it is the one piece of frontend that is a *rule*
+rather than a rendering: what a hit, a miss, a still-open year and a skipped one
+mean. `tests/test_trial.py` runs that exact file under node, so the rules are
+pinned to the code that ships rather than to a Python re-implementation that
+would drift from it. Tests skip themselves where node is missing; GitHub's
+runners all have it.
 
 Nothing generates these — edit and reload. `app.js` reads all of its trading copy
 from `scan.json`'s `reference` block, so adding a strategy on the Python side
