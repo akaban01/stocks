@@ -44,6 +44,7 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
 | `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
+| `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test walks |
 | `public/data/backtest.json` | `backtest.py` | does the score work? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set |
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
@@ -325,6 +326,61 @@ budget smooths away the drawdowns the card exists to show. `period` and
 > earnings dates, index rebalances or the dividend calendar — which is where a
 > lot of month-shaped behaviour actually comes from.
 
+## The Repeat test — the same trade, every year
+
+The Charts tab says *which months these names have risen in*. The **Repeat test**
+asks the next question, which is the one you actually place a trade on:
+
+> *If I bought this name in the same week every year, held it for eight weeks and
+> needed +8%, how many of the last ten years got there — and how many did not?*
+
+Six controls, and the answer redraws as you turn any of them:
+
+| Control | What it means |
+|---|---|
+| **Name** | one of the screened names — the ranked table below runs every one of them on the same settings |
+| **Direction** | an upside target (a call spread's thesis) or a downside one (a put spread's) |
+| **Buy week** | the ISO week of the year you place it. The label names the calendar dates, because "week 37" is not something anyone can place on a calendar |
+| **Hold** | how many weeks the trade runs — the buy week plus the N−1 after it |
+| **Target** | how far the name has to move, **as a percentage** |
+| **Years** | how many years back to repeat it |
+
+**The target is a distance, not a level.** $250 meant something very different in
+2016, so each year's target price is computed from that year's own entry, and
+every one of them is printed in the table — there is nothing to take on trust.
+
+You get four numbers, a year-by-year strip, the full table of entries and exits,
+and the same test run across every other name for context:
+
+| Number | What it is |
+|---|---|
+| **Touched** | years where the high (or the low, going down) reached the target at any point inside the window. This is the headline, and it is the *generous* reading |
+| **Finished past it** | years where the window's **closing** price was past the target. A vertical spread settles against this, not against the high, so it is always the smaller number |
+| **Best it got** | median of how far each window travelled toward the target |
+| **Worst it got** | median of how far each window went the *other* way — the drawdown the years that worked still put you through |
+
+### What it refuses to do
+
+The counting rules live in `spread_scanner/weekly.py` and ship inside
+`weekly.json`, so the page and the docs cannot drift from what was measured:
+
+| Rule | Why |
+|---|---|
+| The week in progress is dropped | A Wednesday high is not the week's high, and a trial reading one finds hits that have not happened yet. |
+| A year still running is neither a hit nor a miss | It is reported as **still open** and left out of both columns — *including when the target is already behind it*. An unfinished window can produce a touch but never a miss, so admitting one to the rate moves it in one direction only, and the newest year would quietly hold the headline up. The row still says "Touched, still open", and the count of them is printed under the headline. |
+| A year the history cannot cover is **skipped**, and says so | A name that listed in 2024 has eight skipped years, not eight failures. |
+| Every name sits on one gapless week axis | "Eight weeks later" is eight positions later for every name — never eight *rows* spanning a hole in the history. A window containing a gap is refused rather than closed up. |
+| Under 3 judged years, no ranking | In the all-names table a short history is shown, greyed, at the bottom. Two years at 100% is not a better answer than ten at 70%. |
+
+> ⚠️ **A stock reaching your level is not the spread paying out.** A debit
+> vertical reaches its maximum only at expiry with the name still past the short
+> strike; the Spreads tab is where that gets priced. Read a hit rate here as the
+> first of those two conditions, not as a backtested return. On top of that, ten
+> years is ten observations, this list is whoever passes the screen *today* — the
+> names that would have dragged a week's record down are the ones no longer here
+> to be measured — and nothing here knows about earnings dates, which is where a
+> lot of week-shaped behaviour comes from.
+
 ## A scan is only published if the option feed answered
 
 The US close is 21:00 UTC in winter and 20:00 in summer, so the schedule sits
@@ -427,6 +483,9 @@ params:
 charts:
   history_period: 10y    # what's downloaded — and what Seasonality measures
   display_years: 5       # what the price cards draw and summarize
+weekly:
+  enabled: true          # write weekly.json — the bars the Repeat test walks
+  years:                 # how much of the download to ship; blank = all of it
 tickers: [AAPL, NVDA, ...]   # fallback list if the ETF fetch fails
 ```
 
@@ -479,11 +538,12 @@ alone. To turn it on: **Settings → Pages → Build and deployment → Source =
 Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
 workflow already requests the `pages`/`id-token` permissions it needs.
 
-The page has six tabs: **What to do** (the strategy cards), **Spreads** (the
+The page has seven tabs: **What to do** (the strategy cards), **Spreads** (the
 ≈13-month table), **Scanner** (the sortable ranked table), **Charts** (price
-history, and a **Seasonality** view — see below), **Does it work?** (backtest +
-calibration) and **Reference** (the glossary and strategy playbook, both read
-from `scan.json`).
+history, and a **Seasonality** view — see below), **Repeat test** (the same trade
+placed in the same week every year), **Does it work?** (backtest + calibration)
+and **Reference** (the glossary and strategy playbook, both read from
+`scan.json`).
 
 ### Linking to a view
 
@@ -495,8 +555,10 @@ https://<you>.github.io/<repo>/#charts#seasonality   Charts, on the month tables
 ```
 
 The tab names are `playbook` (What to do), `spreads`, `scanner`, `charts`,
-`validation` (Does it work?) and `reference`; Charts takes a second segment,
-`#prices` or `#seasonality`. Switching tabs rewrites the fragment in place —
+`repeat` (Repeat test), `validation` (Does it work?) and `reference`; Charts
+takes a second segment, `#prices` or `#seasonality`. The Repeat test's own
+settings are remembered per browser rather than put in the URL — they are a
+working state, not a view. Switching tabs rewrites the fragment in place —
 `replaceState`, not a history entry, because the tab strip moves on arrow keys
 and one entry per keystroke would bury the page you arrived from. A fragment
 outranks the tab remembered from your last visit; one naming nothing is replaced
@@ -508,9 +570,17 @@ No build step, no dependencies, no external assets:
 
 ```
 public/index.html          the shell and the tab markup
+public/assets/trial.js     the Repeat test's counting rules, on their own
 public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```
+
+`trial.js` is separate because it is the one piece of frontend that is a *rule*
+rather than a rendering: what a hit, a miss, a still-open year and a skipped one
+mean. `tests/test_trial.py` runs that exact file under node, so the rules are
+pinned to the code that ships rather than to a Python re-implementation that
+would drift from it. Tests skip themselves where node is missing; GitHub's
+runners all have it.
 
 Nothing generates these — edit and reload. `app.js` reads all of its trading copy
 from `scan.json`'s `reference` block, so adding a strategy on the Python side
@@ -673,6 +743,7 @@ spread_scanner/
   report.py                  the JSON payload (and the UI copy that ships with it)
   charts.py                  the price history payload
   seasonality.py             the same closes grouped by calendar month
+  weekly.py                  the same closes as ISO weeks -> the Repeat test
   backtest.py                the validation payload
   alerts.py                  Slack / Discord webhook (staged, then sent)
   net.py                     retry with backoff, for every network edge

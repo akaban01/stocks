@@ -157,6 +157,19 @@ charts:
   # Set to 0 to draw the whole download.
   display_years: 5
 
+weekly:
+  # Write data/weekly.json — the same download reduced to one ISO week per row
+  # (high, low, close), which is what the Repeat test walks: buy in week N every
+  # year, hold for a set number of weeks, count the years that reached a target.
+  # Weeks rather than days because the entry is a week and the payload is one
+  # file the browser downloads whole.
+  enabled: true
+  # How much of the download to ship, in years. Blank or 0 means all of it —
+  # `charts.history_period` above is what was fetched, and the test can only
+  # repeat over years that are in it. Lower this if the file gets too big to
+  # want on a page load.
+  years:
+
 output:
   # The backend writes JSON only — <dir>/data/*.json. <dir>/index.html and
   # <dir>/assets/ are the hand-written frontend that reads it; nothing

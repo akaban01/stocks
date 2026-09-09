@@ -106,6 +106,17 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     charts = json.loads((site / "data" / "charts.json").read_text(encoding="utf-8"))
     assert charts["count"] == 3
 
+    # The same download reduced again, for the Repeat test. Every series is
+    # exactly as long as the shared week axis — that is what makes "eight weeks
+    # later" eight positions later rather than eight rows.
+    weekly = json.loads((site / "data" / "weekly.json").read_text(encoding="utf-8"))
+    assert weekly["count"] == 3
+    axis = len(weekly["weeks"])
+    assert axis == len(weekly["starts"]) > 0
+    for series in weekly["series"]:
+        assert len(series["close"]) == len(series["high"]) == len(series["low"]) == axis
+    assert weekly["reference"]["hit"], "the rules the payload is read by ship with it"
+
     csv = pd.read_csv(site / "data" / "signals.csv")
     assert set(csv["ticker"]) == set(TICKERS)
     assert "action" in csv.columns
@@ -117,6 +128,53 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     out = capsys.readouterr().out
     assert "What to do:" in out
     assert "[SELL]" in out and "[BUY ]" in out
+
+
+def test_weekly_can_be_switched_off(offline, config, tmp_path):
+    cfg = tmp_path / "off.yaml"
+    cfg.write_text(config.read_text(encoding="utf-8") + "weekly: {enabled: false}\n",
+                   encoding="utf-8")
+    assert run.main(["--config", str(cfg)]) == 0
+    site = tmp_path / "site"
+    assert (site / "data" / "charts.json").exists()
+    assert not (site / "data" / "weekly.json").exists()
+
+
+def test_weekly_is_written_even_with_the_charts_off(offline, tmp_path, monkeypatch):
+    """The two payloads share one download but not one switch.
+
+    They started as one block, so turning the charts off would have taken the
+    weekly bars with it — and the Repeat test would have gone blank because of a
+    setting about price cards.
+
+    The sharing is the other half of that, and it is asserted here rather than
+    trusted: the long fetch used to be gated on the charts alone, so this exact
+    config downloaded the scan window and then the long one again — two full
+    passes over a free endpoint for the same bars.
+    """
+    periods = []
+    inner = data.download
+    monkeypatch.setattr(data, "download",
+                        lambda tickers, period="1y", interval="1d":
+                        (periods.append(period), inner(tickers, period, interval))[1])
+
+    cfg = tmp_path / "nocharts.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        "options: {enabled: false}\n"
+        "charts: {enabled: false, history_period: 2y}\n"
+        "weekly: {enabled: true}\n"
+        "alerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(TICKERS)}]\n", encoding="utf-8")
+    assert run.main(["--config", str(cfg)]) == 0
+    site = tmp_path / "site"
+    assert not (site / "data" / "charts.json").exists()
+    weekly = json.loads((site / "data" / "weekly.json").read_text(encoding="utf-8"))
+    assert weekly["count"] == 3
+    assert periods == ["2y"], f"one download of the long window, not {periods}"
+    assert weekly["period"] == "2y", "and it publishes the window it actually got"
 
 
 def test_cli_tickers_override_the_config(offline, config, tmp_path):
