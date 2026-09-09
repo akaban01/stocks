@@ -1,7 +1,7 @@
 /* The Repeat test's counting rules.
  *
  * "Buy in week 37 every year, hold it eight weeks — how many of those years
- * *ended* at least 8% up?" This file is the whole of what *finished*, *fell
+ * *closed* at least 8% up?" This file is the whole of what *closed past*, *fell
  * short*, *still open* and *skipped* mean; app.js only draws what comes out of
  * it.
  *
@@ -65,7 +65,7 @@
     row.entry_week = payload.starts[entryAt];
     // `opt.target` may be zero or negative — the in-the-money thesis, where the
     // level to finish past sits *at or behind* the entry rather than beyond it
-    // ("−3% over eight weeks" asks how many years finished no worse than 3%
+    // ("−3% over eight weeks" asks how many years closed no worse than 3%
     // down). The arithmetic is the same either way, and so is the comparison
     // below; only the reading changes. Going down the sign flips with it, so a
     // downside target of −3% is a level 3% above the entry.
@@ -109,10 +109,12 @@
     row.settled = true;
     row.exit = series.close[end];
     row.exit_pct = (row.exit / row.entry - 1) * 100;
-    // Where the trade *ended*. Eight weeks at +1% asks whether the close of
+    // Where the trade *closed*. Eight weeks at +1% asks whether the close of
     // week eight is 1% above the entry — nothing else in the window decides it.
-    row.finished = up ? row.exit >= row.target : row.exit <= row.target;
-    row.state = row.finished ? "hit" : "miss";
+    // `settled` says the window ran out; `closed_past` says it ended on the
+    // right side of the target. Only the second one is a verdict.
+    row.closed_past = up ? row.exit >= row.target : row.exit <= row.target;
+    row.state = row.closed_past ? "hit" : "miss";
     return row;
   }
 
@@ -121,7 +123,7 @@
     // Every field of the result exists from the start, including on the early
     // return below: a caller that got a half-shaped object back read `decided`
     // as undefined and quietly rendered a rate against nothing.
-    // `hit`/`miss` are finished / fell short; `touched` is the softer count
+    // `hit`/`miss` are closed past / fell short; `touched` is the softer count
     // reported next to them, never the verdict.
     var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, touched: 0,
                 touched_open: 0, decided: 0, rate: null, touch_rate: null,

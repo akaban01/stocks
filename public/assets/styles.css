@@ -18,8 +18,10 @@
 
   --buy: #3fb950;
   --buy-bg: #0f2915;
+  --buy-soft: #2f7f3b;
   --sell: #f0816f;
   --sell-bg: #2d1512;
+  --sell-soft: #a4655a;
   --neutral: #d29922;
   --neutral-bg: #2a1f08;
   --wait: #8b949e;
@@ -425,6 +427,18 @@ table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight:
 table.rank tbody tr { cursor: pointer; }
 table.rank tbody tr.picked > td { background: var(--surface-2); }
 table.rank tbody tr.picked > td:first-child { box-shadow: inset 3px 0 0 var(--link); }
+
+/* The same verdict colours the year table uses, so the two read as one scheme —
+   the counts and the rate at full strength, the excursion columns muted so a
+   column you scan for context cannot outshout the one you scan for the answer. */
+table.rank td.hit { color: var(--buy); }
+table.rank td.miss { color: var(--sell); }
+table.rank td.soft-hit { color: var(--buy-soft); }
+table.rank td.soft-miss { color: var(--sell-soft); }
+
+/* Under the ranking floor, and the greying outranks all of it on specificity —
+   deliberately. A name with two judged years should not be the greenest row on
+   the screen. */
 table.rank tbody tr.thin > td { color: var(--text-faint); }
 table.rank tbody tr.thin > td b { font-weight: 400; }
 

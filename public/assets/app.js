@@ -1403,7 +1403,7 @@
   // -------------------------------------------------------- repeat test
   //
   // "Buy in week 37 every year, hold it eight weeks — how many of those years
-  // *ended* at least 8% up?" The trial runs here, in the browser, because every
+  // *closed* at least 8% up?" The trial runs here, in the browser, because every
   // control re-runs it and there is no server on Pages to re-run it on.
   //
   // The verdict is the exit: where the window closed, not the best price it saw
@@ -1454,9 +1454,9 @@
   function rpSide() { return rp.dir === "up" ? " or better" : " or lower"; }
 
   // The counting itself lives in assets/trial.js, on its own so it can be run
-  // under node by tests/test_trial.py — what a finish, a miss, a still-open
-  // year and a skipped one mean is the whole point of this tab, and it was the
-  // one part of it nothing could check.
+  // under node by tests/test_trial.py — what closing past the target, a miss, a
+  // still-open year and a skipped one mean is the whole point of this tab, and
+  // it was the one part of it nothing could check.
   function rpTrial(d, s) {
     return SpreadTrial.run(d, s, rp, rpAt);
   }
@@ -1483,7 +1483,7 @@
     var brushed = t.decided ? years(t.touched) : "no window has finished yet";
 
     return '<div class="rulebar">' +
-      tile(verdict, "Finished " + goal + rpSide() + " — " + ended,
+      tile(verdict, "Closed " + goal + rpSide() + " — " + ended,
            t.decided
              ? "Where the " + rp.hold + "-week window actually closed, measured against the entry. "
                + "This is the verdict: " + goal + " over " + rp.hold + " weeks asks whether the "
@@ -1517,7 +1517,7 @@
      is not a channel everyone has (WCAG 1.4.1). */
   function rpStrip(t) {
     if (!t.rows.length) return "";
-    var labels = { hit: "finished past the target", miss: "fell short", open: "still open",
+    var labels = { hit: "closed past the target", miss: "fell short", open: "still open",
                    skipped: "skipped" };
     var marks = { hit: "✓", miss: "✗", open: "•", skipped: "–" };
     return '<div class="yearstrip">' + t.rows.map(function (r) {
@@ -1543,7 +1543,7 @@
       return '<p class="empty">No year in this history has an ISO week ' + rp.week +
         " to buy in.</p>";
     }
-    var labels = { hit: "Finished", miss: "Fell short", open: "Still open", skipped: "Skipped" };
+    var labels = { hit: "Closed past", miss: "Fell short", open: "Still open", skipped: "Skipped" };
     var body = t.rows.map(function (r) {
       if (r.state === "skipped") {
         return '<tr class="dim"><td class="t">' + r.year + "</td><td>" + esc(r.start) +
@@ -1555,7 +1555,7 @@
       // (the profit was there to take), red at the exit (you did not take it,
       // and the exit is what the verdict and a vertical both settle on).
       var exit = r.settled
-        ? '<td class="r ' + (r.finished ? "hit" : "miss") + '">' + signed(r.exit_pct) + "</td>"
+        ? '<td class="r ' + (r.closed_past ? "hit" : "miss") + '">' + signed(r.exit_pct) + "</td>"
         : '<td class="r faint">running</td>';
       var touched = '<td class="r' + (r.touched ? " hit" : "") + '">' +
         (r.touched ? "week " + r.hit_in : "—") + "</td>";
@@ -1581,8 +1581,8 @@
   }
 
   /* The same settings run across every name — the reason to keep this on one
-     screen is that a 60% finish rate means nothing until you can see whether
-     the other twenty-eight names did 30% or 80% on the same question. */
+     screen is that a 60% record means nothing until you can see whether the
+     other twenty-eight names did 30% or 80% on the same question. */
   function rpAllTable(d) {
     var floor = d.min_years || 3;
     var rows = d.series.map(function (s) {
@@ -1614,6 +1614,13 @@
       return sortableTh(k, label, cls || "",
         rpSort.key === k ? (rpSort.dir === 1 ? "ascending" : "descending") : "none");
     }
+    // The same green and red the year table uses, so one meaning carries down
+    // both: the verdict columns at full strength, the two excursion columns
+    // muted so they cannot outshout it. Green on Median best and red on Median
+    // worst are about the *direction*, not the sign — going down, the best a
+    // window got is a fall. A zero is left uncoloured; a green 0 would be
+    // saying "good" about nothing having happened. The colour is never the only
+    // channel — every cell it lands on is a number that already says it.
     var body = rows.map(function (r) {
       return '<tr class="srow' + (r.thin ? " thin" : "") +
         (r.ticker === rp.ticker ? " picked" : "") + '" data-ticker="' + esc(r.ticker) +
@@ -1623,12 +1630,13 @@
           : "show " + r.ticker + " above") + '">' +
         '<td class="t">' + esc(r.ticker) + "</td>" +
         '<td class="r">' + r.decided + "</td>" +
-        '<td class="r">' + r.hit + "</td>" +
-        '<td class="r">' + (r.decided - r.hit) + "</td>" +
-        '<td class="r"><b>' + num(r.rate, 0) + "%</b></td>" +
-        '<td class="r">' + (r.decided ? num((r.touched / r.decided) * 100, 0) + "%" : "—") + "</td>" +
-        '<td class="r">' + signed(r.best) + "</td>" +
-        '<td class="r">' + signed(r.worst) + "</td></tr>";
+        '<td class="r' + (r.hit ? " hit" : "") + '">' + r.hit + "</td>" +
+        '<td class="r' + (r.decided - r.hit ? " miss" : "") + '">' + (r.decided - r.hit) + "</td>" +
+        '<td class="r ' + (r.rate >= 50 ? "hit" : "miss") + '"><b>' + num(r.rate, 0) + "%</b></td>" +
+        '<td class="r' + (r.touched ? " hit" : "") + '">' +
+          (r.decided ? num((r.touched / r.decided) * 100, 0) + "%" : "—") + "</td>" +
+        '<td class="r soft-hit">' + signed(r.best) + "</td>" +
+        '<td class="r soft-miss">' + signed(r.worst) + "</td></tr>";
     }).join("");
 
     return "<h2>The same question, every name</h2>" +
@@ -1636,12 +1644,14 @@
       " weeks, " + rpGoal() + rpSide() +
       " by the close of the last week, run across the whole screened list. Click a row to bring " +
       "that name up above. Names with fewer than " + floor + " judged years sit at the bottom, " +
-      "greyed: they are reported, never ranked. And these names move together, so twenty-nine of " +
-      "them agreeing is nearer one piece of evidence than twenty-nine.</p>" +
+      "greyed: they are reported, never ranked. Green is the target met at the close, red is not, " +
+      "and the muted pair on the right is how far each window travelled either way. And these " +
+      "names move together, so twenty-nine of them agreeing is nearer one piece of evidence than " +
+      "twenty-nine.</p>" +
       '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
-      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Finished", "r") +
-      '<th class="r">Fell short</th>' + th("rate", "Finish rate", "r") +
-      '<th class="r">Touched</th>' + th("best", "Median best", "r") +
+      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Closed", "r") +
+      '<th class="r">Fell short</th>' + th("rate", "Closed %", "r") +
+      '<th class="r">Touched %</th>' + th("best", "Median best", "r") +
       th("worst", "Median worst", "r") +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
   }
@@ -1660,7 +1670,7 @@
       "measured. Nothing here knows about earnings dates, which is where a lot of week-shaped " +
       "behaviour comes from. Above all, <b>a stock finishing past your level is not the spread " +
       "paying out</b>: a debit vertical reaches its maximum only at expiry with the name still " +
-      "past the short strike, and the Spreads tab is where that is priced. Read a finish rate " +
+      "past the short strike, and the Spreads tab is where that is priced. Read a closing rate " +
       "here as the first of those two conditions, not as a backtested return.</p></div>";
   }
 

@@ -1,7 +1,7 @@
 """The Repeat test's counting rules — run against the JavaScript that ships.
 
-`public/assets/trial.js` decides what a finished year, a miss, a still-open year
-and a skipped one mean, and that is the whole substance of the Repeat test. The
+`public/assets/trial.js` decides what a year that closed past the target, a
+miss, a still-open year and a skipped one mean, and that is the whole substance of the Repeat test. The
 verdict is the *exit* — where the window closed — and touching the target on the
 way is reported beside it rather than being it. It runs in
 the browser because every control re-runs it and Pages has no server, but that
@@ -181,7 +181,7 @@ def test_an_unfinished_window_that_already_touched_is_still_not_counted():
 
     assert row["state"] == "open", "an unfinished window is open whatever it touched"
     assert row["touched"] is True, "but it still says the target was reached"
-    assert "finished" not in row, "there is no exit to have finished past"
+    assert "closed_past" not in row, "there is no exit to have closed past anything"
     assert result["touched_open"] == 1, "and it is counted as one, so the page can say so"
     assert row["year"] not in [r["year"] for r in result["rows"] if r["state"] == "hit"]
 
@@ -203,8 +203,8 @@ def test_the_verdict_is_the_exit_not_the_best_price_in_the_window():
     """The whole point of the test: eight weeks at +1% means +1% at week eight.
 
     A window that went through the target and gave it back is a miss, and a
-    window that crawled there and stayed is a finish — however unexciting the
-    path was.
+    window that crawled there and stayed closed past it — however unexciting
+    the path was.
     """
     spike = flat(300)
     spike[102] = 130.0                     # +30% mid-window, all of it given back
@@ -214,11 +214,11 @@ def test_the_verdict_is_the_exit_not_the_best_price_in_the_window():
 
     hot = row_for(data, "SPIKE", 100, hold=8, target=1)
     assert hot["touched"] is True, "it went straight through +1% in week three"
-    assert hot["state"] == "miss" and hot["finished"] is False
+    assert hot["state"] == "miss" and hot["closed_past"] is False
     assert hot["exit_pct"] == pytest.approx(0.0), "and closed the window back at the entry"
 
     slow = row_for(data, "ENDS", 100, hold=8, target=1)
-    assert slow["state"] == "hit" and slow["finished"] is True
+    assert slow["state"] == "hit" and slow["closed_past"] is True
     assert slow["exit_pct"] == pytest.approx(1.5)
 
 
@@ -229,28 +229,28 @@ def test_a_window_that_touched_and_closed_back_under_is_a_miss():
     data = payload({"AAA": closes})
     row = row_for(data, "AAA", 100, hold=4, target=8)
     assert row["touched"] is True, "the high went through the target"
-    assert row["state"] == "miss" and row["finished"] is False, "the window closed under it"
+    assert row["state"] == "miss" and row["closed_past"] is False, "the window closed under it"
     assert row["exit"] == pytest.approx(100.0), "the exit is the last week, not the best one"
 
 
-def test_a_close_past_the_target_is_both_touched_and_finished():
+def test_a_close_past_the_target_is_both_touched_and_closed_past():
     closes = flat(300)
     closes[103] = 120.0
     data = payload({"AAA": closes})
     row = row_for(data, "AAA", 100, hold=4, target=8)
-    assert row["touched"] is True and row["finished"] is True
+    assert row["touched"] is True and row["closed_past"] is True
     assert row["state"] == "hit"
 
 
-def test_the_rate_is_the_finish_rate_and_touches_are_counted_beside_it():
-    """A flat series with a 2% wick touches +1% every year and finishes none."""
+def test_the_rate_is_the_closed_past_rate_and_touches_are_counted_beside_it():
+    """A flat series with a 2% wick touches +1% every year and closes past none."""
     data = payload({"AAA": flat(52 * 8)})
     _, week = at(data, 100)
     result = run_trial(data, "AAA", week=week, hold=8, target=1)
 
     assert result["decided"] >= 3, "this fixture is meant to judge several years"
     assert result["hit"] == 0 and result["miss"] == result["decided"]
-    assert result["rate"] == 0.0, "the headline rate is the finish rate"
+    assert result["rate"] == 0.0, "the headline rate is how often it closed past"
     assert result["touched"] == result["decided"] and result["touch_rate"] == 100.0
 
 
@@ -281,7 +281,7 @@ def test_a_downside_target_finishes_when_the_exit_close_is_under_it():
     up = next(r for r in run_trial(data, "AAA", week=week, hold=4, target=8,
                                    dir="up")["rows"] if r["year"] == year)
 
-    assert down["state"] == "hit" and down["finished"] is True
+    assert down["state"] == "hit" and down["closed_past"] is True
     assert up["state"] == "miss", "the same weeks never reach +8% the other way"
 
 
@@ -311,7 +311,7 @@ def test_a_negative_target_puts_the_level_behind_the_entry():
 
     ok = row_for(data, "MILD", 100, hold=8, target=-3)
     assert ok["target"] == pytest.approx(97.0), "a −3% target sits below the entry"
-    assert ok["state"] == "hit" and ok["finished"] is True
+    assert ok["state"] == "hit" and ok["closed_past"] is True
 
     assert row_for(data, "STEEP", 100, hold=8, target=-3)["state"] == "miss"
 
@@ -325,7 +325,7 @@ def test_a_negative_downside_target_puts_the_level_above_the_entry():
                                     dir="down")["rows"] if r["year"] == year)
 
     assert row["target"] == pytest.approx(103.0), "the sign flips going down"
-    assert row["state"] == "hit", "it finished under the line"
+    assert row["state"] == "hit", "it closed under the line"
 
 
 def test_the_week_it_was_touched_in_is_one_based_from_the_buy_week():

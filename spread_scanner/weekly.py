@@ -2,7 +2,7 @@
 
 The dashboard's Repeat test asks one question over and over: *if I bought this
 name in the same week every year and gave the trade N weeks, how many of those
-years **ended** past my target?* Answering it needs a bar series fine enough to
+years **closed** past my target?* Answering it needs a bar series fine enough to
 place an entry on a chosen week and coarse enough to ship — so this module
 reduces the same daily download the charts use to one **ISO week**
 (Monday–Sunday) per row, keeping the high, the low and the close.
@@ -55,7 +55,7 @@ from .report import SCHEMA_VERSION, write_json
 # it just does not reach a tool whose shortest question spans weeks.
 MIN_WEEKS = 26
 
-# How many judged years a name needs before its finish rate is ranked against
+# How many judged years a name needs before its rate is ranked against the
 # others. The same floor, for the same reason, as `seasonality.MIN_YEARS`: two
 # years at 100% is not a better answer than ten at 70%, and a table sorted by
 # rate will put it on top unless something stops it. Names under the floor are
@@ -71,11 +71,11 @@ REFERENCE = {
              "baseline for the whole trial, so the buy week's own move counts toward the target.",
     "window": "A hold of N weeks means the buy week plus the N−1 after it. The trade is measured "
               "from the entry price to the close of the last week in that window.",
-    "result": "A year counts as finished if the trade *ends* past the target: the close of the "
-              "last week in the window is at or beyond the entry price moved by your percentage. "
-              "Eight weeks at +1% asks whether the name is 1% up at the end of week eight, not "
-              "whether it was ever 1% up along the way. A vertical spread settles against that "
-              "close, so this is the number the structure actually pays on.",
+    "result": "A year counts when the trade *closes* past the target: the close of the last week "
+              "in the window is at or beyond the entry price moved by your percentage. Eight weeks "
+              "at +1% asks whether the name is 1% up at the close of week eight, not whether it "
+              "was ever 1% up along the way. A vertical spread settles against that close, so this "
+              "is the number the structure actually pays on.",
     "touch": "Touched is the looser test, reported beside the verdict rather than deciding it: the "
              "weekly high for an upside target, the weekly low for a downside one, at any point "
              "inside the window. Touched, not held — it says the price was there, not that you "
@@ -88,7 +88,7 @@ REFERENCE = {
                   "single direction, and the newest year would quietly hold the headline up. A "
                   "year with no bars for the entry week, or a gap inside the window, is skipped "
                   "and said to be skipped.",
-    "ranking": "A name needs at least three judged years before its finish rate is ranked against "
+    "ranking": "A name needs at least three judged years before its rate is ranked against "
                "the others. Two years at 100% is not a better answer than ten at 70%, and a "
                "shorter history is not a stronger one.",
     "prices": "Split- and dividend-adjusted closes, so a target is a target in today's money. "
