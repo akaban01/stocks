@@ -485,6 +485,23 @@ history, and a **Seasonality** view — see below), **Does it work?** (backtest 
 calibration) and **Reference** (the glossary and strategy playbook, both read
 from `scan.json`).
 
+### Linking to a view
+
+The tab on screen is in the URL, so any view can be linked to or bookmarked:
+
+```
+https://<you>.github.io/<repo>/#spreads              the Spreads tab
+https://<you>.github.io/<repo>/#charts#seasonality   Charts, on the month tables
+```
+
+The tab names are `playbook` (What to do), `spreads`, `scanner`, `charts`,
+`validation` (Does it work?) and `reference`; Charts takes a second segment,
+`#prices` or `#seasonality`. Switching tabs rewrites the fragment in place —
+`replaceState`, not a history entry, because the tab strip moves on arrow keys
+and one entry per keystroke would bury the page you arrived from. A fragment
+outranks the tab remembered from your last visit; one naming nothing is replaced
+by whatever is on screen, so a copied URL is never a link to nowhere.
+
 ### Working on the frontend
 
 No build step, no dependencies, no external assets:

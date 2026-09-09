@@ -130,7 +130,74 @@
 
   // ------------------------------------------------------------ tab wiring
 
+  // The visible state of this page is one tab, plus — on Charts — one sub-view.
+  // Both live in the URL fragment, so any view can be linked to and shared:
+  //
+  //     …/#spreads             the Spreads tab
+  //     …/#charts#seasonality  Charts, showing the month tables
+  //
+  // Two segments rather than a query string because a fragment never leaves the
+  // browser, which is the only option on Pages: there is no server to read one.
+  var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "validation", "reference"];
+  var CHART_VIEWS = ["prices", "seasonality"];
+  var curTab = "playbook";
+  var curView = "prices";
+  // Set while the page is putting itself into a state it was *handed* — during
+  // boot, and while applying an incoming fragment — so that those moves do not
+  // write the fragment back over the one they are reading.
+  var hashLock = false;
+
+  function parseHash() {
+    var raw = String(location.hash || "").replace(/^#+/, "");
+    if (!raw) return null;
+    var parts = raw.split("#");
+    var out = {};
+    for (var i = 0; i < parts.length; i++) {
+      var seg = parts[i];
+      try { seg = decodeURIComponent(seg); } catch (e) { /* leave it as typed */ }
+      seg = seg.trim().toLowerCase();
+      if (!out.tab && TAB_NAMES.indexOf(seg) !== -1) out.tab = seg;
+      else if (!out.view && CHART_VIEWS.indexOf(seg) !== -1) out.view = seg;
+    }
+    // A bare "#seasonality" can only mean one tab, so read it as that tab.
+    if (out.view && !out.tab) out.tab = "charts";
+    return out.tab ? out : null;
+  }
+
+  function writeHash() {
+    if (hashLock) return;
+    var want = "#" + curTab + (curTab === "charts" ? "#" + curView : "");
+    if (location.hash === want) return;
+    // replaceState, not pushState: the tab strip moves on arrow keys, and one
+    // history entry per keystroke would bury whatever the reader arrived from.
+    try {
+      history.replaceState(null, "", location.pathname + location.search + want);
+    } catch (e) {
+      location.hash = want;   // history is refused on file://; this still works
+    }
+  }
+
+  // Someone edited the address bar, or followed a link into the page they are
+  // already on. Either way the fragment is now the instruction.
+  function applyHash() {
+    var want = parseHash();
+    if (want) {
+      hashLock = true;
+      if (want.view) showChartView(want.view);
+      showTab(want.tab);
+      hashLock = false;
+    }
+    // Unconditional, so the address bar never keeps a fragment that is not what
+    // is on screen: "#Charts" becomes "#charts#prices", and a fragment naming
+    // nothing is replaced by the tab it failed to move away from.
+    writeHash();
+  }
+
   function showTab(name) {
+    // Both a stale localStorage value and a hand-typed fragment land here, so
+    // an unknown name has to mean the first tab rather than six hidden panels.
+    if (TAB_NAMES.indexOf(name) === -1) name = "playbook";
+    curTab = name;
     var buttons = document.querySelectorAll(".tabs button");
     for (var i = 0; i < buttons.length; i++) {
       var on = buttons[i].dataset.tab === name;
@@ -147,6 +214,7 @@
     if (name === "charts") renderCharts();
     if (name === "validation") renderValidation();
     if (name === "reference") renderReference();
+    writeHash();
   }
 
   // ------------------------------------------------- playbook (the main view)
@@ -1309,6 +1377,8 @@
   }
 
   function showChartView(view) {
+    if (CHART_VIEWS.indexOf(view) === -1) view = "prices";
+    curView = view;
     var buttons = document.querySelectorAll("#chartviews button");
     for (var i = 0; i < buttons.length; i++) {
       buttons[i].setAttribute("aria-pressed", buttons[i].dataset.view === view ? "true" : "false");
@@ -1316,6 +1386,7 @@
     var panes = document.querySelectorAll('.panel[data-tab="charts"] > div[data-view]');
     for (var j = 0; j < panes.length; j++) panes[j].hidden = panes[j].dataset.view !== view;
     try { localStorage.setItem("chartview", view); } catch (e) { /* private mode */ }
+    writeHash();
   }
 
 
@@ -1443,7 +1514,7 @@
     }).join("") + "</dl>";
 
     var play = ref("playbook", {});
-    $("#playbook").innerHTML = "<dl class=\"glossary\">" + Object.keys(play).map(function (k) {
+    $("#strategy-list").innerHTML = "<dl class=\"glossary\">" + Object.keys(play).map(function (k) {
       return "<dt>" + esc(k.replace(/_/g, " ").replace(/\b\w/g, function (c) { return c.toUpperCase(); })) +
         "</dt><dd>" + esc(play[k]) + "</dd>";
     }).join("") + "</dl>";
@@ -1477,9 +1548,16 @@
     for (var v = 0; v < views.length; v++) {
       views[v].addEventListener("click", function () { showChartView(this.dataset.view); });
     }
+    // A fragment is an explicit request, so it outranks the last visit's tab.
+    var linked = parseHash();
     var savedView = null;
     try { savedView = localStorage.getItem("chartview"); } catch (e) { savedView = null; }
-    showChartView(savedView === "seasonality" ? "seasonality" : "prices");
+    // Nothing is on screen yet — the showTab below writes both halves at once.
+    hashLock = true;
+    showChartView((linked && linked.view) || savedView);
+    hashLock = false;
+
+    window.addEventListener("hashchange", applyHash);
 
     load("scan").then(function (d) {
       if (!d || !d.schema_version) throw new Error("scan.json is missing or malformed");
@@ -1495,7 +1573,7 @@
       renderScanner();
       var saved = null;
       try { saved = localStorage.getItem("tab"); } catch (e) { saved = null; }
-      showTab(saved || "playbook");
+      showTab((linked && linked.tab) || saved || "playbook");
     }).catch(function (e) {
       $("#loading").innerHTML =
         '<p class="empty">Could not load <code>data/scan.json</code> — ' + esc(e.message) + ".</p>" +
