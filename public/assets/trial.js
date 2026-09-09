@@ -1,8 +1,15 @@
 /* The Repeat test's counting rules.
  *
  * "Buy in week 37 every year, hold it eight weeks — how many of those years
- * reached +8%?" This file is the whole of what *hit*, *missed*, *still open*
- * and *skipped* mean; app.js only draws what comes out of it.
+ * *ended* at least 8% up?" This file is the whole of what *finished*, *fell
+ * short*, *still open* and *skipped* mean; app.js only draws what comes out of
+ * it.
+ *
+ * The verdict is the exit, not the best price on the way. A window that spiked
+ * past the target in week three and gave it all back by week eight fell short,
+ * and is counted as one — `touched` is reported beside the verdict rather than
+ * being it, because it says the price was there, not that you were still in the
+ * trade when it was.
  *
  * It is a separate file so it can be tested. `tests/test_trial.py` runs this
  * exact source under node against hand-built payloads, so the rules are pinned
@@ -56,6 +63,12 @@
     }
     row.entry = series.close[entryAt];
     row.entry_week = payload.starts[entryAt];
+    // `opt.target` may be zero or negative — the in-the-money thesis, where the
+    // level to finish past sits *at or behind* the entry rather than beyond it
+    // ("−3% over eight weeks" asks how many years finished no worse than 3%
+    // down). The arithmetic is the same either way, and so is the comparison
+    // below; only the reading changes. Going down the sign flips with it, so a
+    // downside target of −3% is a level 3% above the entry.
     row.target = row.entry * (up ? 1 + opt.target / 100 : 1 - opt.target / 100);
 
     var end = i + opt.hold - 1, stop = Math.min(end, last);
@@ -81,21 +94,25 @@
     if (row.touched) { row.hit_in = hitAt - i + 1; row.hit_week = payload.starts[hitAt]; }
 
     if (end > last) {
-      // The window has not finished, and that is the whole verdict — including
-      // when the target is already behind it. An unfinished window can produce
-      // a touch but never a miss, so letting one into the rate moves it in one
-      // direction only, and the newest year would quietly hold the headline up.
-      // `touched` still rides along, so the page can say which it is without
+      // The window has not run out, so it has no exit — and the exit is the
+      // whole verdict. That holds even when the target is already behind it: a
+      // name can be past the target in week three and back under it by week
+      // eight, so admitting one would move the rate in one direction only and
+      // the newest year would quietly hold the headline up. `touched` and
+      // `open_pct` ride along, so the page can say where it stands without
       // counting it.
       row.state = "open";
       row.ran = stop - i + 1;
+      row.open_pct = (series.close[stop] / row.entry - 1) * 100;
       return row;
     }
     row.settled = true;
     row.exit = series.close[end];
     row.exit_pct = (row.exit / row.entry - 1) * 100;
+    // Where the trade *ended*. Eight weeks at +1% asks whether the close of
+    // week eight is 1% above the entry — nothing else in the window decides it.
     row.finished = up ? row.exit >= row.target : row.exit <= row.target;
-    row.state = row.touched ? "hit" : "miss";
+    row.state = row.finished ? "hit" : "miss";
     return row;
   }
 
@@ -104,8 +121,10 @@
     // Every field of the result exists from the start, including on the early
     // return below: a caller that got a half-shaped object back read `decided`
     // as undefined and quietly rendered a rate against nothing.
-    var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, touched_open: 0,
-                finished: 0, decided: 0, rate: null, finish_rate: null,
+    // `hit`/`miss` are finished / fell short; `touched` is the softer count
+    // reported next to them, never the verdict.
+    var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, touched: 0,
+                touched_open: 0, decided: 0, rate: null, touch_rate: null,
                 median_best: null, median_worst: null, median_weeks: null,
                 asked: opt.years };
     var last = (payload.weeks || []).length - 1;
@@ -127,14 +146,14 @@
       out.rows.push(row);
       out[row.state]++;
       if (row.state === "open" && row.touched) out.touched_open++;
-      if (row.settled && row.finished) out.finished++;
+      if (row.settled && row.touched) out.touched++;
     }
 
     // One denominator for both rates: the years whose window actually finished.
     var settled = out.rows.filter(function (r) { return r.settled; });
     out.decided = settled.length;
     out.rate = out.decided ? (out.hit / out.decided) * 100 : null;
-    out.finish_rate = out.decided ? (out.finished / out.decided) * 100 : null;
+    out.touch_rate = out.decided ? (out.touched / out.decided) * 100 : null;
     // The medians describe finished windows too. A part-run window has had less
     // time to travel in either direction, so mixing one in understates both
     // numbers while being presented as a full-window figure.

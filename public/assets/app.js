@@ -1403,8 +1403,14 @@
   // -------------------------------------------------------- repeat test
   //
   // "Buy in week 37 every year, hold it eight weeks — how many of those years
-  // reached +8%?" The trial runs here, in the browser, because every control
-  // re-runs it and there is no server on Pages to re-run it on.
+  // *ended* at least 8% up?" The trial runs here, in the browser, because every
+  // control re-runs it and there is no server on Pages to re-run it on.
+  //
+  // The verdict is the exit: where the window closed, not the best price it saw
+  // inside it. Touching is reported next to it — green in the table, because it
+  // is worth knowing you could have taken profit early — but a year that
+  // touched and then closed back under the target reads red at the exit and
+  // counts as a miss.
   //
   // What the backend owns is the half that is quietly easy to get wrong, and it
   // arrives in weekly.json already done: whole ISO weeks only, the week in
@@ -1427,10 +1433,30 @@
     return (v >= 0 ? "+" : "") + num(v, digits === undefined ? 1 : digits) + "%";
   }
 
+  /* The target as a signed move on the price, which is the form every label
+     wants — and the form that stays right when the target is zero or negative.
+
+     It is allowed to be. An in-the-money vertical is already past its breakeven
+     at today's price, so the honest question for one is not "how far did it
+     travel" but "did it hold up": −3% over eight weeks asks how many years
+     finished no worse than 3% down, which is exactly what that spread needs.
+     Going down, the sign flips — a downside target of −3% is a level 3% *above*
+     the entry that the name has to close under. */
+  function rpMove() { return rp.dir === "up" ? rp.target : -rp.target; }
+
+  function rpGoal() {
+    var m = rpMove();
+    return (m > 0 ? "+" : m < 0 ? "−" : "") + num(Math.abs(m), 1) + "%";
+  }
+
+  // "or better" for an upside trade, "or lower" for a downside one — the side
+  // of the target a year has to finish on to count.
+  function rpSide() { return rp.dir === "up" ? " or better" : " or lower"; }
+
   // The counting itself lives in assets/trial.js, on its own so it can be run
-  // under node by tests/test_trial.py — what a hit, a miss, a still-open year
-  // and a skipped one mean is the whole point of this tab, and it was the one
-  // part of it nothing could check.
+  // under node by tests/test_trial.py — what a finish, a miss, a still-open
+  // year and a skipped one mean is the whole point of this tab, and it was the
+  // one part of it nothing could check.
   function rpTrial(d, s) {
     return SpreadTrial.run(d, s, rp, rpAt);
   }
@@ -1439,32 +1465,42 @@
 
   function rpTiles(t) {
     var up = rp.dir === "up";
-    var goal = (up ? "+" : "−") + num(rp.target, 1) + "%";
+    var goal = rpGoal();
+    // A target at or behind the entry — an in-the-money thesis — starts on the
+    // right side of the line, so touching it is close to automatic and carries
+    // no information. Said out loud rather than left to look like a 100% record.
+    var beyond = rp.target > 0;
     function tile(cls, k, v) {
       return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
         "</div></div>";
     }
     var verdict = t.rate === null ? "fair" : t.rate >= 50 ? "cheap" : "rich";
-    var reached = t.decided
-      ? t.hit + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") + num(t.rate, 0) + "%)"
-      : "no year could be judged";
-    var settled = t.decided
-      ? t.finished + " of " + t.decided + " window" + (t.decided === 1 ? "" : "s") +
-        " (" + num(t.finish_rate, 0) + "%)"
-      : "no window has finished yet";
+    function years(n) {
+      return n + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") +
+        num((n / t.decided) * 100, 0) + "%)";
+    }
+    var ended = t.decided ? years(t.hit) : "no year could be judged";
+    var brushed = t.decided ? years(t.touched) : "no window has finished yet";
 
     return '<div class="rulebar">' +
-      tile(verdict, "Touched " + goal + " — " + reached,
+      tile(verdict, "Finished " + goal + rpSide() + " — " + ended,
            t.decided
-             ? "The high" + (up ? "" : " — the low, for a downside target") +
-               " reached the target at some point inside the " + rp.hold + "-week window" +
-               (t.median_weeks ? ", typically in week " + num(t.median_weeks, 0) + " of it" : "") + "."
+             ? "Where the " + rp.hold + "-week window actually closed, measured against the entry. "
+               + "This is the verdict: " + goal + " over " + rp.hold + " weeks asks whether the "
+               + "name is there at the end of week " + rp.hold + ", not whether it got there on "
+               + "the way. A vertical settles against this close."
              : "Nothing in the window could be scored — widen the years, or pick a week the "
                + "history covers.") +
-      tile(t.finish_rate === null ? "fair" : t.finish_rate >= 50 ? "cheap" : "rich",
-           "Finished past it — " + settled,
-           "Where it actually closed the window. A vertical settles against this, not against the "
-           + "high — which is why this number is the smaller one.") +
+      tile("fair", "Touched it on the way — " + brushed,
+           beyond
+             ? "The looser test: the " + (up ? "high" : "low") + " reached " + goal +
+               " at some point inside the window" +
+               (t.median_weeks ? ", typically in week " + num(t.median_weeks, 0) + " of it" : "") +
+               ". It says the price was there, not that you were still in the trade when it was — "
+               + "so it only pays if you take profit early, and it is never the smaller number."
+             : "With the target at or behind the entry, the trade opens on the right side of it, "
+               + "so touching is close to automatic and says nothing. On an in-the-money thesis "
+               + "like this one it is the verdict on the left that carries the whole answer.") +
       tile("fair", "Best it got — " + signed(t.median_best),
            "Median of the furthest each window travelled toward the target. Half the years did "
            + "better than this, half worse.") +
@@ -1481,20 +1517,24 @@
      is not a channel everyone has (WCAG 1.4.1). */
   function rpStrip(t) {
     if (!t.rows.length) return "";
-    var labels = { hit: "touched", miss: "missed", open: "still open", skipped: "skipped" };
+    var labels = { hit: "finished past the target", miss: "fell short", open: "still open",
+                   skipped: "skipped" };
     var marks = { hit: "✓", miss: "✗", open: "•", skipped: "–" };
     return '<div class="yearstrip">' + t.rows.map(function (r) {
       var note = r.state === "skipped" ? (r.why || "no data")
-        : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, best " +
-                               signed(r.best_pct) + (r.touched ? ", already touched" : "")
-        : "entry " + money(r.entry) + ", target " + money(r.target) + ", best " +
-          signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
-          (r.touched ? ", touched in week " + r.hit_in : "") +
-          ", closed " + signed(r.exit_pct);
+        : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, " +
+                               signed(r.open_pct) + " as it stands, best " + signed(r.best_pct) +
+                               (r.touched ? ", target already touched" : "")
+        : "entry " + money(r.entry) + ", target " + money(r.target) + ", closed " +
+          signed(r.exit_pct) + ", best " + signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
+          (r.touched ? ", touched in week " + r.hit_in + " on the way" : ", never touched it");
       var say = r.year + " — " + labels[r.state] + ": " + note;
+      // The percentage on the block is the one the colour is about: where the
+      // window closed, or where an unfinished one stands so far.
+      var shown = r.settled ? signed(r.exit_pct)
+        : r.state === "open" ? signed(r.open_pct) : "—";
       return '<div class="yr ' + r.state + '" title="' + esc(say) + '" aria-label="' + esc(say) +
-        '"><b>' + r.year + "</b><span>" + marks[r.state] + " " +
-        (r.best_pct === undefined ? "—" : signed(r.best_pct)) + "</span></div>";
+        '"><b>' + r.year + "</b><span>" + marks[r.state] + " " + shown + "</span></div>";
     }).join("") + "</div>";
   }
 
@@ -1503,48 +1543,52 @@
       return '<p class="empty">No year in this history has an ISO week ' + rp.week +
         " to buy in.</p>";
     }
-    var labels = { hit: "Touched", miss: "Missed", open: "Still open", skipped: "Skipped" };
+    var labels = { hit: "Finished", miss: "Fell short", open: "Still open", skipped: "Skipped" };
     var body = t.rows.map(function (r) {
       if (r.state === "skipped") {
         return '<tr class="dim"><td class="t">' + r.year + "</td><td>" + esc(r.start) +
           '</td><td colspan="6" class="faint">' + esc(r.why || "not enough history") +
           '</td><td class="skipped">Skipped</td></tr>';
       }
+      // Exit and Touched are coloured independently, and a year that touched
+      // and then closed back under the target is exactly why: green in Touched
+      // (the profit was there to take), red at the exit (you did not take it,
+      // and the exit is what the verdict and a vertical both settle on).
       var exit = r.settled
-        ? '<td class="r ' + (r.finished ? "hit" : "") + '">' + signed(r.exit_pct) + "</td>"
+        ? '<td class="r ' + (r.finished ? "hit" : "miss") + '">' + signed(r.exit_pct) + "</td>"
         : '<td class="r faint">running</td>';
+      var touched = '<td class="r' + (r.touched ? " hit" : "") + '">' +
+        (r.touched ? "week " + r.hit_in : "—") + "</td>";
       // An unfinished window that has already touched is said out loud, because
-      // it is the one row a reader might expect in the hit column and will not
-      // find there.
+      // it is the one row a reader might expect in a column it is not in.
       var verdict = r.state === "open"
         ? (r.touched ? "Touched, still open" : "Still open") + " (" + r.ran + "/" + rp.hold + "w)"
         : labels[r.state];
       return "<tr><td class=\"t\">" + r.year + "</td><td>" + esc(r.start) + "</td>" +
         '<td class="r" title="' + esc("the last close of the week beginning " + r.entry_week +
           " — you buy as week " + rp.week + " opens") + '">' + money(r.entry) + "</td>" +
-        '<td class="r">' + money(r.target) + "</td>" +
-        '<td class="r">' + signed(r.best_pct) + "</td>" +
-        '<td class="r">' + (r.touched ? "week " + r.hit_in : "—") + "</td>" +
-        '<td class="r">' + signed(r.worst_pct) + "</td>" + exit +
+        '<td class="r">' + money(r.target) + "</td>" + exit +
+        '<td class="r">' + signed(r.best_pct) + "</td>" + touched +
+        '<td class="r">' + signed(r.worst_pct) + "</td>" +
         '<td class="' + r.state + '">' + verdict + "</td></tr>";
     }).join("");
 
     return '<div class="tablewrap"><table class="scan trial"><thead><tr>' +
       "<th>Year</th><th>Buy week</th><th class=\"r\">Entry</th><th class=\"r\">Target</th>" +
-      '<th class="r">Best</th><th class="r">Touched</th><th class="r">Worst</th>' +
-      '<th class="r">At exit</th><th>Result</th>' +
+      '<th class="r">At exit</th><th class="r">Best</th><th class="r">Touched</th>' +
+      '<th class="r">Worst</th><th>Result</th>' +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
   }
 
   /* The same settings run across every name — the reason to keep this on one
-     screen is that a 60% hit rate means nothing until you can see whether the
-     other twenty-eight names did 30% or 80% on the same question. */
+     screen is that a 60% finish rate means nothing until you can see whether
+     the other twenty-eight names did 30% or 80% on the same question. */
   function rpAllTable(d) {
     var floor = d.min_years || 3;
     var rows = d.series.map(function (s) {
       var t = rpTrial(d, s);
       return { ticker: s.ticker, hit: t.hit, decided: t.decided, rate: t.rate,
-               finished: t.finished, best: t.median_best, worst: t.median_worst,
+               touched: t.touched, best: t.median_best, worst: t.median_worst,
                thin: t.decided < floor };
     }).filter(function (r) { return r.decided > 0; });
     if (!rows.length) return "";
@@ -1582,29 +1626,29 @@
         '<td class="r">' + r.hit + "</td>" +
         '<td class="r">' + (r.decided - r.hit) + "</td>" +
         '<td class="r"><b>' + num(r.rate, 0) + "%</b></td>" +
-        '<td class="r">' + (r.decided ? num((r.finished / r.decided) * 100, 0) + "%" : "—") + "</td>" +
+        '<td class="r">' + (r.decided ? num((r.touched / r.decided) * 100, 0) + "%" : "—") + "</td>" +
         '<td class="r">' + signed(r.best) + "</td>" +
         '<td class="r">' + signed(r.worst) + "</td></tr>";
     }).join("");
 
     return "<h2>The same question, every name</h2>" +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Week ' + rp.week + ", " + rp.hold +
-      " weeks, " + (rp.dir === "up" ? "+" : "−") + num(rp.target, 1) +
-      "%, run across the whole screened list. Click a row to bring that name up above. " +
-      "Names with fewer than " + floor + " judged years sit at the bottom, greyed: they are " +
-      "reported, never ranked. And these names move together, so twenty-nine of them agreeing is " +
-      "nearer one piece of evidence than twenty-nine.</p>" +
+      " weeks, " + rpGoal() + rpSide() +
+      " by the close of the last week, run across the whole screened list. Click a row to bring " +
+      "that name up above. Names with fewer than " + floor + " judged years sit at the bottom, " +
+      "greyed: they are reported, never ranked. And these names move together, so twenty-nine of " +
+      "them agreeing is nearer one piece of evidence than twenty-nine.</p>" +
       '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
-      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Touched", "r") +
-      '<th class="r">Missed</th>' + th("rate", "Hit rate", "r") +
-      '<th class="r">Finished</th>' + th("best", "Median best", "r") +
+      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Finished", "r") +
+      '<th class="r">Fell short</th>' + th("rate", "Finish rate", "r") +
+      '<th class="r">Touched</th>' + th("best", "Median best", "r") +
       th("worst", "Median worst", "r") +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
   }
 
   function rpCaveats(d) {
     var r = d.reference || {};
-    var rules = ["entry", "window", "hit", "finish", "incomplete", "prices"]
+    var rules = ["entry", "window", "result", "touch", "incomplete", "prices"]
       .filter(function (k) { return r[k]; })
       .map(function (k) { return "<li>" + esc(r[k]) + "</li>"; }).join("");
     return '<div class="panelcard" style="margin-top:18px">' +
@@ -1614,10 +1658,10 @@
       "Ten years is ten observations, and this list is whoever passes the screen <i>today</i> — " +
       "the names that would have dragged a week's record down are the ones no longer here to be " +
       "measured. Nothing here knows about earnings dates, which is where a lot of week-shaped " +
-      "behaviour comes from. Above all, <b>a stock reaching your level is not the spread paying " +
-      "out</b>: a debit vertical reaches its maximum only at expiry with the name still past the " +
-      "short strike, and the Spreads tab is where that is priced. Read a hit rate here as the " +
-      "first of those two conditions, not as a backtested return.</p></div>";
+      "behaviour comes from. Above all, <b>a stock finishing past your level is not the spread " +
+      "paying out</b>: a debit vertical reaches its maximum only at expiry with the name still " +
+      "past the short strike, and the Spreads tab is where that is priced. Read a finish rate " +
+      "here as the first of those two conditions, not as a backtested return.</p></div>";
   }
 
   function rpDraw() {
@@ -1640,9 +1684,12 @@
       : "";
     var pending = [];
     if (t.open) {
+      // "Touched", not "past the target": a name can be past it in week three
+      // and back under it by the week the window closes on, and the closing
+      // week is the one that decides.
       var already = !t.touched_open ? ""
-        : t.open === 1 ? " (already past the target)"
-        : " (" + t.touched_open + " of them already past the target)";
+        : t.open === 1 ? " (it has touched the target, but has not closed yet)"
+        : " (" + t.touched_open + " of them have touched the target)";
       pending.push(t.open + (t.open === 1 ? " year is" : " years are") + " still running" + already);
     }
     if (t.skipped) pending.push(t.skipped + " skipped for want of data");
@@ -1757,8 +1804,12 @@
       rp.years = rpNum(el, 2, 25, 10);
     }));
     $("#rp-target").addEventListener("input", onChange(function (el) {
+      // Down to −95%, not up from 0.5%: a zero or negative target is the
+      // in-the-money question ("did it hold up"), and it is a real one. The
+      // floor is short of −100% only because the target price has to stay
+      // above zero — see rpMove.
       var v = Number(el.value);
-      rp.target = isNaN(v) ? 8 : Math.min(300, Math.max(0.5, v));
+      rp.target = isNaN(v) ? 8 : Math.min(300, Math.max(-95, v));
     }));
 
     var dirs = document.querySelectorAll("#rp-dir button");

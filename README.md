@@ -331,8 +331,18 @@ budget smooths away the drawdowns the card exists to show. `period` and
 The Charts tab says *which months these names have risen in*. The **Repeat test**
 asks the next question, which is the one you actually place a trade on:
 
-> *If I bought this name in the same week every year, held it for eight weeks and
-> needed +8%, how many of the last ten years got there — and how many did not?*
+> *If I bought this name in the same week every year and held it for eight weeks,
+> how many of the last ten years **ended** at least +8% up — and how many did
+> not?*
+
+**The verdict is the exit.** "Eight weeks, +1%" asks whether the name is 1% above
+the entry at the close of week eight — not whether it touched +1% along the way
+and gave it back. That is the number a vertical spread settles against, and it is
+the one the headline, the year strip and the ranking are all counted on. Whether
+the target was ever *touched* is reported next to it, in its own column and its
+own tile, because it is worth knowing the profit was there to take: a year that
+touched and then closed back under reads **green in Touched and red at the exit**,
+and counts as a miss.
 
 Six controls, and the answer redraws as you turn any of them:
 
@@ -342,7 +352,7 @@ Six controls, and the answer redraws as you turn any of them:
 | **Direction** | an upside target (a call spread's thesis) or a downside one (a put spread's) |
 | **Buy week** | the ISO week of the year you place it. The label names the calendar dates, because "week 37" is not something anyone can place on a calendar |
 | **Hold** | how many weeks the trade runs — the buy week plus the N−1 after it |
-| **Target** | how far the name has to move, **as a percentage** |
+| **Target** | how far the name has to move **by the exit**, as a percentage |
 | **Years** | how many years back to repeat it |
 
 **The target is a distance, not a level.** $250 meant something very different in
@@ -354,8 +364,8 @@ and the same test run across every other name for context:
 
 | Number | What it is |
 |---|---|
-| **Touched** | years where the high (or the low, going down) reached the target at any point inside the window. This is the headline, and it is the *generous* reading |
-| **Finished past it** | years where the window's **closing** price was past the target. A vertical spread settles against this, not against the high, so it is always the smaller number |
+| **Finished** | years where the window's **closing** price was past the target. This is the headline and the verdict — the strict reading, and a vertical spread settles against exactly this |
+| **Touched it on the way** | years where the high (or the low, going down) reached the target at any point inside the window. The *generous* reading, reported beside the verdict rather than as it: it says the price was there, not that you were still in the trade when it was, so it only pays if you take profit early. Never the smaller number |
 | **Best it got** | median of how far each window travelled toward the target |
 | **Worst it got** | median of how far each window went the *other* way — the drawdown the years that worked still put you through |
 
@@ -367,15 +377,15 @@ The counting rules live in `spread_scanner/weekly.py` and ship inside
 | Rule | Why |
 |---|---|
 | The week in progress is dropped | A Wednesday high is not the week's high, and a trial reading one finds hits that have not happened yet. |
-| A year still running is neither a hit nor a miss | It is reported as **still open** and left out of both columns — *including when the target is already behind it*. An unfinished window can produce a touch but never a miss, so admitting one to the rate moves it in one direction only, and the newest year would quietly hold the headline up. The row still says "Touched, still open", and the count of them is printed under the headline. |
+| A year still running is neither a finish nor a miss | It has no exit yet, and the exit is the verdict. It is reported as **still open** and left out of both columns — *including when the target is already behind it*, because a name can be past the target in week three and back under it by week eight. Admitting one would move the rate in a single direction, and the newest year would quietly hold the headline up. The row still says "Touched, still open", and the count of them is printed under the headline. |
 | A year the history cannot cover is **skipped**, and says so | A name that listed in 2024 has eight skipped years, not eight failures. |
 | Every name sits on one gapless week axis | "Eight weeks later" is eight positions later for every name — never eight *rows* spanning a hole in the history. A window containing a gap is refused rather than closed up. |
 | Under 3 judged years, no ranking | In the all-names table a short history is shown, greyed, at the bottom. Two years at 100% is not a better answer than ten at 70%. |
 
-> ⚠️ **A stock reaching your level is not the spread paying out.** A debit
+> ⚠️ **A stock finishing past your level is not the spread paying out.** A debit
 > vertical reaches its maximum only at expiry with the name still past the short
-> strike; the Spreads tab is where that gets priced. Read a hit rate here as the
-> first of those two conditions, not as a backtested return. On top of that, ten
+> strike; the Spreads tab is where that gets priced. Read a finish rate here as
+> the first of those two conditions, not as a backtested return. On top of that, ten
 > years is ten observations, this list is whoever passes the screen *today* — the
 > names that would have dragged a week's record down are the ones no longer here
 > to be measured — and nothing here knows about earnings dates, which is where a

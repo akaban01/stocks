@@ -125,8 +125,15 @@
     <section id="panel-repeat" class="panel" data-tab="repeat" role="tabpanel" aria-labelledby="tab-repeat" hidden>
       <div class="lede">
         One trade, placed in the <b>same week every year</b>. Set the week you would buy, how long
-        you would hold it and how far the name has to move — this counts the years that got there
-        against the years that did not, over the same weekly history behind the Charts tab.
+        you would hold it and how far the name has to move — this counts the years that
+        <b>finished</b> past that move against the years that did not, over the same weekly
+        history behind the Charts tab. The verdict is the <b>exit</b>: eight weeks at +1% asks
+        whether the name is 1% up at the close of week eight, not whether it got there and gave
+        it back. Whether it was ever touched is reported beside it, never as it.
+        <br>The target can be <b>zero or negative</b>. An in-the-money vertical is already past
+        its breakeven at today's price, so its real question is <i>did it hold up</i> rather than
+        <i>did it travel</i> — set −3% and this counts the years that finished no worse than 3%
+        down.
         <br>A target is a <b>distance, not a level</b>: $250 meant something very different in 2016,
         so you set a percentage and each year's target price is worked out from that year's own
         entry. Every one of them is in the table.
@@ -147,8 +154,8 @@
         </label>
         <label class="ctl"><span>Hold, weeks</span>
           <input id="rp-hold" type="number" min="1" max="52" step="1" value="8"></label>
-        <label class="ctl"><span>Target move, %</span>
-          <input id="rp-target" type="number" min="0.5" max="300" step="0.5" value="8"></label>
+        <label class="ctl"><span>Target move by exit, %</span>
+          <input id="rp-target" type="number" min="-95" max="300" step="0.5" value="8"></label>
         <label class="ctl"><span>Years to repeat</span>
           <input id="rp-years" type="number" min="2" max="25" step="1" value="10"></label>
       </div>
