@@ -58,6 +58,18 @@ class ScreenResult:
 
 # ---------------------------------------------------------------- industry only
 
+def _fetch_info(ticker: str) -> dict:
+    """`Ticker.get_info()` as a dict, always.
+
+    The screen's contract is that it fails *open* — a name is never rejected
+    because Yahoo hiccupped. That only holds if a hiccup is an exception. It is
+    not always: this call can also return ``None``, and every consumer here then
+    did ``info.get(...)`` on it and raised an AttributeError straight through the
+    fail-open handler and out of the run. Raising is the caller's signal; None
+    is the same event wearing different clothes."""
+    return retry(yf.Ticker(ticker).get_info, label=f"{ticker} info") or {}
+
+
 def _industry_check(info: dict) -> tuple[bool, str]:
     """(ok, industry_label) from a yfinance info dict. No data -> ok (fail-open)."""
     sector = str(info.get("sector") or "")
@@ -74,8 +86,7 @@ def _industry_check(info: dict) -> tuple[bool, str]:
 def classify(ticker: str) -> tuple[bool, str]:
     """Industry-only screen. (is_allowed, reason). Fails open on missing data."""
     try:
-        tk = yf.Ticker(ticker)
-        info = retry(tk.get_info, label=f"{ticker} info")
+        info = _fetch_info(ticker)
     except Exception as exc:
         return True, f"no screen (info error: {type(exc).__name__})"
     ok, industry = _industry_check(info)
@@ -146,7 +157,7 @@ def financial_screen(
     just because Yahoo hiccupped; we only reject on a clear ratio breach."""
     try:
         tk = yf.Ticker(ticker)
-        info = retry(tk.get_info, label=f"{ticker} info")
+        info = _fetch_info(ticker)
     except Exception as exc:
         return ScreenResult(ticker, True, True, None, None, None, "",
                             [f"no screen (info error: {type(exc).__name__})"])
@@ -189,11 +200,9 @@ def earnings_calendar(tickers: list[str]) -> dict[str, int | None]:
     out: dict[str, int | None] = {}
     for t in tickers:
         try:
-            info = retry(yf.Ticker(t).get_info, label=f"{t} earnings date")
+            out[t] = _days_to_earnings(_fetch_info(t))
         except Exception:
-            out[t] = None
-            continue
-        out[t] = _days_to_earnings(info)
+            out[t] = None       # unknown, which is not the same as "none due"
     return out
 
 

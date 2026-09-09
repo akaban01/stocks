@@ -290,17 +290,24 @@
 
   // The compliance verdict, where a reader will actually see it. `filter` mode
   // never publishes a failing name, so this is silent unless `annotate` is on.
+  // Three states, not two. `false` is checked and failed; `null` is the screen
+  // ran and produced no verdict for this name. "Not checked" and "checked and
+  // passed" are different claims and only one of them is safe to imply.
   function screenBadge(sig) {
     var sc = sig.screen;
-    if (!sc || sc.compliant !== false) return "";
+    if (!sc || sc.compliant === true) return "";
+    var label = sc.compliant === false ? "Fails screen" : "Not screened";
     return '<span class="badge flag" title="' +
-      esc((sc.reasons || []).join("; ")) + '">Fails screen</span>';
+      esc((sc.reasons || []).join("; ")) + '">' + label + "</span>";
   }
 
   function screenNote(sig) {
     var sc = sig.screen;
-    if (!sc || sc.compliant !== false) return "";
-    return noteList("Did not pass the compliance screen", (sc.reasons || []).map(esc), "warns");
+    if (!sc || sc.compliant === true) return "";
+    var title = sc.compliant === false
+      ? "Did not pass the compliance screen"
+      : "The compliance screen returned no verdict for this name";
+    return noteList(title, (sc.reasons || []).map(esc), "warns");
   }
 
   function card(sig) {
@@ -419,14 +426,24 @@
     // individually on their own cards and rows.
     var screen = d.screen || {};
     var flagged = screen.flagged || [];
-    $("#screen-warning").hidden = !flagged.length;
-    if (flagged.length) {
-      $("#screen-warning").innerHTML =
-        "<b>" + flagged.length + " name" + (flagged.length === 1 ? "" : "s") +
-        " on this page did not pass the compliance screen</b> — " +
-        flagged.map(esc).join(", ") +
-        ". The screen is running in <code>annotate</code> mode, which reports a "
-        + "failure instead of dropping the name. Each one is marked on its card.";
+    var unknown = screen.unknown || [];
+    $("#screen-warning").hidden = !(flagged.length || unknown.length);
+    if (flagged.length || unknown.length) {
+      var parts = [];
+      if (flagged.length) {
+        parts.push("<b>" + flagged.length + " name" + (flagged.length === 1 ? "" : "s") +
+          " on this page did not pass the compliance screen</b> — " +
+          flagged.map(esc).join(", ") +
+          ". The screen is running in <code>annotate</code> mode, which reports a " +
+          "failure instead of dropping the name.");
+      }
+      if (unknown.length) {
+        parts.push("<b>" + unknown.length + " name" + (unknown.length === 1 ? "" : "s") +
+          " could not be screened this run</b> — " + unknown.map(esc).join(", ") +
+          ". Treat those as unverified rather than as having passed.");
+      }
+      parts.push("Each one is marked on its card.");
+      $("#screen-warning").innerHTML = parts.join(" ");
     }
 
     var w = d.weights || {};
@@ -540,13 +557,17 @@
         var txt = num(s.earnings_in_days, 0) + "d";
         return s.earnings_in_days <= win ? '<span class="warncell">' + txt + "</span>" : txt;
       } },
-    { k: "screen", h: "Screen", v: function (s) { return (s.screen || {}).compliant === false ? 0 : 1; },
+    { k: "screen", h: "Screen",
+      v: function (s) {
+        var c = (s.screen || {}).compliant;
+        return c === false ? 0 : c === true ? 2 : 1;      // worst sorts first
+      },
       f: function (s) {
         var sc = s.screen;
         if (!sc) return '<span class="dim">—</span>';
-        return sc.compliant === false
-          ? '<span class="flagtext" title="' + esc((sc.reasons || []).join("; ")) + '">fails</span>'
-          : '<span class="dim">ok</span>';
+        if (sc.compliant === true) return '<span class="dim">ok</span>';
+        return '<span class="flagtext" title="' + esc((sc.reasons || []).join("; ")) + '">' +
+          (sc.compliant === false ? "fails" : "?") + "</span>";
       } },
     { k: "debt_ratio", h: "Debt%", r: true, f: function (s) { return has(s.debt_ratio) ? pct(s.debt_ratio * 100, 0) : "—"; } },
     { k: "cash_ratio", h: "Cash%", r: true, f: function (s) { return has(s.cash_ratio) ? pct(s.cash_ratio * 100, 0) : "—"; } }
@@ -1347,12 +1368,32 @@
     });
   }
 
+  // Is the fit on this panel the one the scan on the other tabs actually used?
+  // It need not be: weights.json is a working file and gitignored, while
+  // calibration.json is committed — so a day when the calibration step fails
+  // leaves yesterday's fit here beside a scan scored with the built-in weights.
+  // Both facts were already on the page, on two different tabs, with nothing
+  // reconciling them.
+  function calibrationMismatch(d) {
+    var w = (store.scan && store.scan.weights) || {};
+    if (w.source === "auto-calibrated" && (!d.as_of || w.as_of === d.as_of)) return "";
+    var used = w.source === "auto-calibrated"
+      ? "weights calibrated " + esc(w.as_of || "on an earlier run")
+      : "the built-in weights";
+    return '<div class="notice" style="margin:14px 0 0">' +
+      "<b>This fit is not what the current scan used.</b> The scan on the other tabs scored with " +
+      used + ", while the calibration below is from " + esc(d.as_of || "an earlier run") +
+      ". The calibration step is best-effort — when it cannot fetch its history the scan " +
+      "falls back and says so, but the last good fit stays published here." +
+      "</div>";
+  }
+
   function renderCalibrationPanel(host) {
     load("calibration").then(function (d) {
       host.dataset.calibrationDone = "1";
       if (!d.ok) { $("#calibration").innerHTML = '<p class="empty">' + esc(d.note || "Not calibrated yet.") + "</p>"; return; }
       var sep = d.separation;
-      $("#calibration").innerHTML =
+      $("#calibration").innerHTML = calibrationMismatch(d) +
         '<div class="panelcard"><p>' + esc(d.method) + "</p></div>" +
         '<table class="stats" style="margin-top:14px"><thead><tr><th>Weights (from the train split)</th>' +
         '<th class="r">score ≥ 60</th><th class="r">score &lt; 30</th><th class="r">separation</th>' +

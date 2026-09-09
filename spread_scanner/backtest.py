@@ -182,13 +182,22 @@ def calibrate_weights(recs: pd.DataFrame, train_frac: float = 0.7) -> dict:
     }
 
 
-def calibration_payload(c: dict, years: int, universe: int) -> dict:
-    """The calibration run as JSON (see report.py — the backend renders no HTML)."""
+def calibration_payload(c: dict, years: int, universe: int,
+                        as_of: str | None = None) -> dict:
+    """The calibration run as JSON (see report.py — the backend renders no HTML).
+
+    `as_of` is the stamp written into weights.json by the same run, so the page
+    can tell whether the scan it is sitting next to actually scored with these
+    weights. It can't otherwise: weights.json is a working file and gitignored,
+    while this payload is committed, so a day when the calibration step fails
+    leaves yesterday's fit on the page beside a scan that used the built-in
+    weights."""
     from .report import SCHEMA_VERSION
 
     base = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "as_of": as_of or dt.date.today().isoformat(),
         "history_years": years,
         "universe": universe,
     }

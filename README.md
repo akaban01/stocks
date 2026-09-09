@@ -389,7 +389,10 @@ verification. Set `halal_screen.financial_formula.mode: annotate` to keep names
 that fail instead of dropping them — each one then arrives carrying its verdict:
 a **Fails screen** badge on its card, the reason underneath it, a `fails` in the
 scanner table's **Screen** column, and a banner naming every flagged name at the
-top of the page. (Until recently only the two ratios reached the payload, so a
+top of the page. A name the screen could not reach at all is a third state,
+**Not screened**, and never renders as a pass: "we did not check this" and "this
+passed" are different claims, and only one of them is safe to imply. (Until
+recently only the two ratios reached the payload, so a
 name kept for being a bank rendered exactly like one that passed. On a page whose
 premise is a screened watchlist, that was the worst failure mode available.)
 
@@ -601,7 +604,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 281 network-free tests
+python -m pytest -q          # 290 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 
@@ -627,6 +630,15 @@ notified about either.
 Dependencies carry upper bounds and [Dependabot](.github/dependabot.yml) proposes the
 bumps, so an upstream major release arrives as a pull request the suite runs against
 rather than inside the next scheduled scan.
+
+Network calls retry at the level their failures actually appear at. Most raise, and
+[`spread_scanner/net.py`](spread_scanner/net.py) retries those with backoff. `yf.download`
+does not: a ticker that fails is caught inside yfinance, filed as an empty frame and
+returned normally, so the batch looks like a success and a wrapper around the call
+never sees it. The only signal a caller gets is that the ticker is missing from the
+result — so `data.download` re-requests exactly the missing subset, once. A name that is
+genuinely dead stays missing and costs one extra request per run; a live one no longer
+disappears for the day over a single 429.
 
 ### Layout
 

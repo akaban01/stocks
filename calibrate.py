@@ -61,15 +61,19 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     c = backtest.calibrate_weights(recs, train_frac=args.train_frac)
-    payload = backtest.calibration_payload(c, years=args.years, universe=len(raw))
 
-    # weights.json is the live "model" the scanner loads each run.
+    # weights.json is the live "model" the scanner loads each run. The same
+    # stamp goes into the published calibration, so the dashboard can say
+    # whether the scan beside it actually used this fit.
     import datetime as dt
     import json
+    as_of = dt.date.today().isoformat()
+    payload = backtest.calibration_payload(c, years=args.years, universe=len(raw),
+                                           as_of=as_of)
     weights_path = Path(args.weights_file)
     weights_path.write_text(json.dumps({
         "weights": c["weights"],
-        "as_of": dt.date.today().isoformat(),
+        "as_of": as_of,
         "history_years": args.years,
         "n_bars": int(c["n"]),
         "universe": len(raw),

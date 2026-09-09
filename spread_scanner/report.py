@@ -315,11 +315,17 @@ def _screen_summary(signals: list[dict], meta: dict | None) -> dict:
     watchlist and an unscreened one that says it is screened."""
     screened = [s for s in signals if s.get("screen")]
     flagged = [s["ticker"] for s in screened if s["screen"].get("compliant") is False]
+    # `compliant: None` is the third state: the screen ran but produced no
+    # verdict for this name. Counted separately from a failure, because "not
+    # checked" and "checked and failed" are different things to tell a reader.
+    unknown = [s["ticker"] for s in screened if s["screen"].get("compliant") is None]
     return {
         **(meta or {}),
         "screened": len(screened),
         "flagged": flagged,
         "flagged_count": len(flagged),
+        "unknown": unknown,
+        "unknown_count": len(unknown),
     }
 
 

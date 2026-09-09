@@ -125,13 +125,21 @@ jobs:
                 f"{ld['candidates']} long-dated spreads across {ld['tickers']} names, "
                 "shipped copy matches the code")
           # A name kept by `annotate` mode is a name that failed the screen and is
-          # on the page anyway. It has to arrive carrying its verdict, or it is
-          # indistinguishable from one that passed.
-          if scan["screen"].get("mode") == "annotate":
-              unflagged = [s["ticker"] for s in scan["signals"] if not s.get("screen")]
-              assert not unflagged, f"annotate mode published names with no screen verdict: {unflagged}"
+          # on the page anyway, so it has to arrive carrying its verdict. A name
+          # the screen could not reach carries an explicit "no verdict" instead —
+          # that is a published state, not a missing one, so it is a warning here
+          # rather than a reason to withhold the whole day's scan. Only a screen
+          # that reached nothing at all is a broken pipeline.
+          if scan["screen"].get("mode") in ("annotate", "filter"):
+              missing = [s["ticker"] for s in scan["signals"] if not s.get("screen")]
+              assert not missing, f"names published with no screen block at all: {missing}"
+              unknown = scan["screen"].get("unknown") or []
+              assert scan["screen"]["screened"] > len(unknown), \
+                  "the screen produced no verdict for any name — the join is broken"
+              if unknown:
+                  print(f"::warning::{len(unknown)} name(s) published unscreened: {unknown}")
               print(f"screen OK — {scan['screen']['screened']} names carry a verdict, "
-                    f"{scan['screen']['flagged_count']} flagged")
+                    f"{scan['screen']['flagged_count']} flagged, {len(unknown)} unscreened")
           for name in ("charts", "backtest", "calibration"):
               p = Path(f"public/data/{name}.json")
               if p.exists():

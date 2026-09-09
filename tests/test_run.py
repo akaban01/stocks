@@ -15,9 +15,14 @@ TICKERS = ["AAA", "BBB", "CCC"]
 
 
 def _ohlcv(seed, n=320):
+    """Bars ending today, the way a live download comes back. Not a fixed
+    start date: `data.slice_period` measures the scan window from today, so a
+    frame pinned to 2024 is a delisted ticker as far as the scan is concerned —
+    which is the point of that rule, and would quietly empty this fixture."""
     rng = np.random.RandomState(seed)
     px = (40 + seed * 30) * np.exp(np.cumsum(rng.normal(0.0004, 0.013, n)))
-    close = pd.Series(px, index=pd.bdate_range("2024-01-02", periods=n))
+    close = pd.Series(px, index=pd.bdate_range(end=pd.Timestamp.today().normalize(),
+                                               periods=n))
     return pd.DataFrame({"Open": close, "High": close * 1.008, "Low": close * 0.992,
                          "Close": close, "Volume": 1e6})
 
@@ -307,6 +312,33 @@ def test_filter_mode_drops_the_failing_name_and_still_says_why_the_rest_passed(
     assert scan["screen"]["mode"] == "filter"
     assert scan["screen"]["flagged"] == []
     assert all(s["screen"]["compliant"] for s in scan["signals"])
+
+
+def test_a_name_the_screen_missed_is_published_as_unscreened(offline, tmp_path, monkeypatch):
+    """`screen_universe` returns a verdict per ticker, so this needs a join to
+    drift. When it does, "we did not check this" has to be said out loud: it is
+    a different claim from "this passed", and it is the one that must not be
+    silent on a page whose premise is a screened watchlist."""
+    def partial_screen(tickers, **kw):
+        covered = [t for t in tickers if t != "CCC"]
+        details = {t: halal.ScreenResult(t, True, True, 0.05, 0.03, None,
+                                         "Semiconductors", ["ok"], 40)
+                   for t in covered}
+        return list(tickers), [], details
+    monkeypatch.setattr(halal, "screen_universe", partial_screen)
+
+    assert run.main(["--config", str(_screen_config(tmp_path, "annotate")),
+                     "--alert-file", str(tmp_path / "alert.json")]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    by = {s["ticker"]: s for s in scan["signals"]}
+
+    assert set(by) == set(TICKERS), "the row is published, not dropped"
+    assert by["CCC"]["screen"]["compliant"] is None
+    assert "not checked" in by["CCC"]["screen"]["reasons"][0]
+    assert by["AAA"]["screen"]["compliant"] is True
+    assert scan["screen"]["unknown"] == ["CCC"]
+    assert scan["screen"]["unknown_count"] == 1
+    assert scan["screen"]["flagged"] == [], "unscreened is not the same as failed"
 
 
 # ------------------------------------------------------- the earnings column

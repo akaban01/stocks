@@ -57,7 +57,7 @@ def test_days_to_earnings_picks_soonest_future():
 
 class FakeTicker:
     def __init__(self, info=None, balance_sheet=None, raises=0):
-        self._info = info or {}
+        self._info = info        # may legitimately be None — see the test for it
         self.balance_sheet = (pd.DataFrame() if balance_sheet is None else balance_sheet)
         self.raises = raises
         self.info_calls = 0
@@ -172,6 +172,19 @@ def test_earnings_calendar_reads_the_date_without_the_rest_of_the_screen(monkeyp
     assert out["AAA"] in (5, 6)
     assert out["BBB"] is None                 # no date published
     assert out["CCC"] is None                 # fetch failed — unknown, not zero
+
+
+def test_a_none_from_get_info_fails_open_like_an_exception(monkeypatch):
+    """`get_info` can return None instead of raising. Every consumer then did
+    `.get()` on it and the AttributeError went straight through the fail-open
+    handler and out of the run — the one failure mode this module exists to
+    absorb, arriving in the one shape it did not expect."""
+    _patch(monkeypatch, {"AAA": FakeTicker(None)})
+    res = halal.financial_screen("AAA")
+    assert res.compliant is True and res.debt_ratio is None
+    assert res.earnings_in_days is None
+    assert halal.classify("AAA")[0] is True
+    assert halal.earnings_calendar(["AAA"]) == {"AAA": None}
 
 
 def test_filter_tickers_keeps_the_clean_and_reports_the_reason(monkeypatch):

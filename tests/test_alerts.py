@@ -79,6 +79,30 @@ def test_staged_alerts_are_not_sent_until_asked(tmp_path, monkeypatch):
     assert alerts.send_staged(path) == 0
 
 
+def test_a_failed_send_keeps_the_staged_message(tmp_path, monkeypatch):
+    """Consuming the file before posting meant a webhook that was down took the
+    alert with it. `run.py` clears any leftover before staging fresh, so keeping
+    it cannot re-send a stale one either."""
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    monkeypatch.setattr(alerts, "_post", lambda url, msg: (_ for _ in ()).throw(OSError("down")))
+    path = alerts.stage(alerts.build_alert(_rows("AAA"), 60.0, {}, None), tmp_path / "alert.json")
+    assert alerts.send_staged(path) == 0
+    assert path.exists(), "the message survives a failed post"
+
+    sent = []
+    monkeypatch.setattr(alerts, "_post", lambda url, msg: sent.append(msg))
+    assert alerts.send_staged(path) == 1
+    assert len(sent) == 1 and not path.exists()
+
+
+def test_an_unreadable_staged_file_is_discarded(tmp_path, monkeypatch):
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    path = tmp_path / "alert.json"
+    path.write_text("{not json", encoding="utf-8")
+    assert alerts.send_staged(path) == 0
+    assert not path.exists()
+
+
 def test_nothing_crossing_stages_nothing():
     df = _rows("AAA")
     assert alerts.build_alert(df, 60.0, {"AAA": 70.0}) is None

@@ -127,7 +127,12 @@ def send(payload: dict) -> int:
 
 def send_staged(path: str | Path, remove: bool = True) -> int:
     """Send an alert staged by `stage`, then delete the file so a later run can
-    never re-send it. A missing file is the normal case: nothing crossed."""
+    never re-send it. A missing file is the normal case: nothing crossed.
+
+    The file is consumed only once something has actually been sent. Deleting it
+    first meant a webhook that was down took the alert with it; leaving it costs
+    nothing, because `run.py` clears any leftover at the start of the next run
+    before staging fresh — so a stale message can never be posted either."""
     path = Path(path)
     if not path.exists():
         print("Alerts: nothing staged for this run.")
@@ -136,11 +141,12 @@ def send_staged(path: str | Path, remove: bool = True) -> int:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (ValueError, OSError) as exc:
         print(f"Alerts: staged file unreadable ({type(exc).__name__}: {exc}).")
+        path.unlink(missing_ok=True)          # unreadable is not worth keeping
         return 0
-    finally:
-        if remove:
-            path.unlink(missing_ok=True)
-    return send(payload)
+    sent = send(payload)
+    if sent and remove:
+        path.unlink(missing_ok=True)
+    return sent
 
 
 def maybe_alert(df: pd.DataFrame, threshold: float, prev_scores: dict[str, float] | None = None,

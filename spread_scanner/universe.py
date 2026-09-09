@@ -51,7 +51,12 @@ def to_yahoo(ticker: str) -> str:
 
 
 def _parse_holdings(html: str) -> list[tuple[str, float]]:
-    """Pure: extract [(ticker, weight_pct)] from the holdings page's markup."""
+    """Extract [(ticker, weight_pct)] from the holdings page's markup, with each
+    ticker in Yahoo's spelling (see `to_yahoo`).
+
+    Normalizing here rather than downstream is deliberate: this is the one place
+    a dotted class-share symbol enters the program, so it is the one place that
+    has to know the page's spelling differs from the price feed's."""
     out: list[tuple[str, float]] = []
     for row in _ROW.findall(html or ""):
         found = _SYMBOL.search(row)
@@ -97,5 +102,4 @@ def fetch_halal_universe(symbols: list[str], max_holdings: int = 30) -> list[str
             weight_by_ticker[ticker] = max(weight_by_ticker.get(ticker, 0.0), weight)
 
     ranked = sorted(weight_by_ticker, key=lambda t: weight_by_ticker[t], reverse=True)
-    ranked = [to_yahoo(t) for t in ranked]
     return ranked[:max_holdings] if max_holdings else ranked

@@ -331,6 +331,25 @@ def main(argv: list[str] | None = None) -> int:
                    "reasons": list(res.reasons or [])}
                for t, res in screen_details.items()}
 
+    # A scanned name the screen has no verdict for. `screen_universe` returns a
+    # ScreenResult per ticker, so this needs a join to drift — a spelling the
+    # price feed normalized differently, say. It is still worth a third state
+    # rather than an absent one: "we did not check this" is a different claim
+    # from "this passed", and on a page whose premise is a screened watchlist it
+    # is the one that must not be silent. Publishing it beats both dropping the
+    # row and failing the whole day's publish over one name.
+    if screen_mode in ("filter", "annotate"):
+        for ticker in (df["ticker"] if not df.empty else []):
+            if ticker in screens:
+                continue
+            screens[ticker] = {
+                "compliant": None, "industry_ok": None, "industry": "",
+                "debt_ratio": None, "cash_ratio": None, "receivables_ratio": None,
+                "reasons": ["it was not checked against the industry or balance-sheet "
+                            "rules this run — treat it as unverified, not as passing"],
+            }
+            print(f"  ! {ticker} has no screen verdict — published as unscreened.")
+
     scan_path = report.write_scan(
         df, outdir, params,
         weights=scanner.SCORE_WEIGHTS,
