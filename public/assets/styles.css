@@ -378,6 +378,62 @@ table.heat tbody tr:hover { background: transparent; }
 table.heat tbody tr.pool { background: var(--surface-2); }
 table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight: 600; }
 
+/* --------------------------------------------------------- repeat test */
+
+/* The control strip. Every field is a label wrapping its input, so the whole
+   caption is a hit target and the range slider is reachable by tabbing. */
+.controls {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 14px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px 16px; margin-bottom: 18px; align-items: end;
+}
+.ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ctl.wide { grid-column: span 2; }
+@media (max-width: 560px) { .ctl.wide { grid-column: span 1; } }
+.ctl > span {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--text-faint); font-weight: 700;
+}
+.ctl > span b { color: var(--text); text-transform: none; letter-spacing: 0; font-size: .8rem; }
+.ctl .filters { margin-bottom: 0; }
+.ctl select, .ctl input[type="number"] {
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: var(--radius-sm); padding: 7px 9px; font: inherit; font-size: .88rem;
+  font-variant-numeric: tabular-nums; width: 100%;
+}
+.ctl select:focus, .ctl input:focus { outline: none; border-color: var(--link); }
+.ctl input[type="range"] { width: 100%; accent-color: var(--link); margin: 4px 0 0; }
+
+/* Ten years at a glance: one block per year, its colour the verdict. */
+.yearstrip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+.yearstrip .yr {
+  flex: 1 1 62px; min-width: 62px; border-radius: var(--radius-sm); padding: 7px 8px;
+  border: 1px solid var(--line); background: var(--surface); text-align: center;
+}
+.yearstrip .yr b { display: block; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.yearstrip .yr span { display: block; font-size: .72rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.yearstrip .yr.hit { background: var(--buy-bg); border-color: #1f5c2c; }
+.yearstrip .yr.hit b { color: var(--buy); }
+.yearstrip .yr.miss { background: var(--sell-bg); border-color: #6b3229; }
+.yearstrip .yr.miss b { color: var(--sell); }
+.yearstrip .yr.open { background: var(--neutral-bg); border-color: #5c4a17; }
+.yearstrip .yr.open b { color: var(--neutral); }
+.yearstrip .yr.skipped { background: var(--wait-bg); }
+.yearstrip .yr.skipped b { color: var(--wait); }
+
+/* The ranked table doubles as the name picker for the panel above it. */
+table.rank tbody tr { cursor: pointer; }
+table.rank tbody tr.picked > td { background: var(--surface-2); }
+table.rank tbody tr.picked > td:first-child { box-shadow: inset 3px 0 0 var(--link); }
+table.rank tbody tr.thin > td { color: var(--text-faint); }
+table.rank tbody tr.thin > td b { font-weight: 400; }
+
+table.trial td.hit { color: var(--buy); font-weight: 700; }
+table.trial td.miss { color: var(--sell); font-weight: 700; }
+table.trial td.open { color: var(--neutral); font-weight: 700; }
+table.trial td.skipped { color: var(--text-faint); }
+table.trial tbody tr.dim td { color: var(--text-faint); }
+
 /* ------------------------------------------------------------ validation */
 
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

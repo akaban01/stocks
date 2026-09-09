@@ -33,6 +33,7 @@
     <button id="tab-spreads" data-tab="spreads" role="tab" aria-selected="false" aria-controls="panel-spreads">Spreads</button>
     <button id="tab-scanner" data-tab="scanner" role="tab" aria-selected="false" aria-controls="panel-scanner">Scanner</button>
     <button id="tab-charts" data-tab="charts" role="tab" aria-selected="false" aria-controls="panel-charts">Charts</button>
+    <button id="tab-repeat" data-tab="repeat" role="tab" aria-selected="false" aria-controls="panel-repeat">Repeat test</button>
     <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="panel-validation">Does it work?</button>
     <button id="tab-reference" data-tab="reference" role="tab" aria-selected="false" aria-controls="panel-reference">Reference</button>
   </nav>
@@ -120,6 +121,41 @@
       </div>
     </section>
 
+    <!-- ---------------------------------------------------- repeat test -->
+    <section id="panel-repeat" class="panel" data-tab="repeat" role="tabpanel" aria-labelledby="tab-repeat" hidden>
+      <div class="lede">
+        One trade, placed in the <b>same week every year</b>. Set the week you would buy, how long
+        you would hold it and how far the name has to move — this counts the years that got there
+        against the years that did not, over the same weekly history behind the Charts tab.
+        <br>A target is a <b>distance, not a level</b>: $250 meant something very different in 2016,
+        so you set a percentage and each year's target price is worked out from that year's own
+        entry. Every one of them is in the table.
+      </div>
+
+      <div class="controls" id="repeatcontrols">
+        <label class="ctl"><span>Name</span><select id="rp-ticker"></select></label>
+        <div class="ctl">
+          <span>Direction</span>
+          <div class="filters" role="group" aria-label="Target direction" id="rp-dir">
+            <button class="chip buy" data-dir="up" aria-pressed="true">Up ↑</button>
+            <button class="chip sell" data-dir="down" aria-pressed="false">Down ↓</button>
+          </div>
+        </div>
+        <label class="ctl wide">
+          <span>Buy week — <b id="rp-weeklabel">37</b></span>
+          <input id="rp-week" type="range" min="1" max="53" step="1" value="37">
+        </label>
+        <label class="ctl"><span>Hold, weeks</span>
+          <input id="rp-hold" type="number" min="1" max="52" step="1" value="8"></label>
+        <label class="ctl"><span>Target move, %</span>
+          <input id="rp-target" type="number" min="0.5" max="300" step="0.5" value="8"></label>
+        <label class="ctl"><span>Years to repeat</span>
+          <input id="rp-years" type="number" min="2" max="25" step="1" value="10"></label>
+      </div>
+
+      <div id="repeatbody"><p class="loading">Loading the weekly history…</p></div>
+    </section>
+
     <!-- ----------------------------------------------------- validation -->
     <section id="panel-validation" class="panel" data-tab="validation" role="tabpanel" aria-labelledby="tab-validation" hidden>
       <div id="validation-body">
@@ -154,6 +190,7 @@
           <ul>
             <li><code>data/scan.json</code> — signals, IV read, recommendations, and this copy</li>
             <li><code>data/charts.json</code> — downsampled price history, and the same closes grouped by calendar month</li>
+            <li><code>data/weekly.json</code> — the same history as one row per ISO week, which the Repeat test walks</li>
             <li><code>data/backtest.json</code> · <code>data/calibration.json</code></li>
             <li><code>data/signals.csv</code> — the flat table, for spreadsheets</li>
           </ul>

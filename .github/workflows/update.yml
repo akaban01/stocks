@@ -145,6 +145,21 @@ jobs:
               if p.exists():
                   json.loads(p.read_text(encoding="utf-8"))
                   print(f"{name}.json OK")
+
+          # The Repeat test walks weekly.json by *position*: "eight weeks later"
+          # is eight steps along the shared axis. That only holds while every
+          # series is exactly as long as the axis, so assert it here rather than
+          # let a short column quietly shift a name's windows by a week.
+          weekly = Path("public/data/weekly.json")
+          if weekly.exists():
+              w = json.loads(weekly.read_text(encoding="utf-8"))
+              n = len(w["weeks"])
+              assert len(w["starts"]) == n, "weekly.json: the week axis and its dates disagree"
+              for s in w["series"]:
+                  for col in ("close", "high", "low"):
+                      assert len(s[col]) == n, \
+                          f"weekly.json: {s['ticker']}.{col} is {len(s[col])} long, axis is {n}"
+              print(f"weekly.json OK — {w['count']} names over {n} weeks")
           PY
 
       - name: Send staged alerts

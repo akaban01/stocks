@@ -12,7 +12,7 @@
   "use strict";
 
   var DATA_DIR = "data/";
-  var store = { scan: null, charts: null, backtest: null, calibration: null };
+  var store = { scan: null, charts: null, weekly: null, backtest: null, calibration: null };
   var filters = { actions: new Set(), query: "" };
 
   // ------------------------------------------------------------- utilities
@@ -138,7 +138,8 @@
   //
   // Two segments rather than a query string because a fragment never leaves the
   // browser, which is the only option on Pages: there is no server to read one.
-  var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "validation", "reference"];
+  var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "repeat", "validation",
+                   "reference"];
   var CHART_VIEWS = ["prices", "seasonality"];
   var curTab = "playbook";
   var curView = "prices";
@@ -212,6 +213,7 @@
     try { localStorage.setItem("tab", name); } catch (e) { /* private mode */ }
     if (name === "spreads") renderSpreads();
     if (name === "charts") renderCharts();
+    if (name === "repeat") renderRepeat();
     if (name === "validation") renderValidation();
     if (name === "reference") renderReference();
     writeHash();
@@ -1390,6 +1392,462 @@
   }
 
 
+  // -------------------------------------------------------- repeat test
+  //
+  // "Buy in week 37 every year, hold it eight weeks — how many of those years
+  // reached +8%?" The trial runs here, in the browser, because every control
+  // re-runs it and there is no server on Pages to re-run it on.
+  //
+  // What the backend owns is the half that is quietly easy to get wrong, and it
+  // arrives in weekly.json already done: whole ISO weeks only, the week in
+  // progress dropped, and one shared gapless axis shared by every name — so
+  // "eight weeks later" is eight positions later and never eight *rows* that
+  // span a hole. The rules that payload is read by ship inside it, under
+  // `reference`, and are printed at the foot of this tab rather than restated
+  // here, for the same reason the glossary lives in scan.json.
+
+  var rp = { ticker: "", dir: "up", week: 37, hold: 8, target: 8, years: 10 };
+  var rpAt = null;                          // "2025-W37" -> position on the axis
+  var rpSort = { key: "rate", dir: -1 };
+
+  function rpStore() {
+    try { localStorage.setItem("repeat", JSON.stringify(rp)); } catch (e) { /* private mode */ }
+  }
+
+  function rpWeekId(year, week) {
+    return year + "-W" + (week < 10 ? "0" + week : String(week));
+  }
+
+  function median(values) {
+    if (!values.length) return null;
+    var v = values.slice().sort(function (a, b) { return a - b; });
+    var m = Math.floor(v.length / 2);
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  }
+
+  function signed(v, digits) {
+    if (!has(v) || isNaN(v)) return "—";
+    return (v >= 0 ? "+" : "") + num(v, digits === undefined ? 1 : digits) + "%";
+  }
+
+  /* One year of the trial for one name.
+     Every branch that cannot reach a verdict says which branch it is. A window
+     that has not finished running is "open" and a window the history cannot
+     cover is "skipped" — neither is a failure, and quietly counting either as
+     one is exactly how a hit rate ends up flattering. */
+  function rpYear(d, s, year, up, last) {
+    var i = rpAt[rpWeekId(year, rp.week)];
+    var row = { year: year, week: d.weeks[i], start: d.starts[i], state: "skipped" };
+
+    var at = i - 1;              // you buy as the week opens: the last close before it
+    if (at < 0 || s.close[at] === null) {
+      row.why = "no close before that week";
+      return row;
+    }
+    row.entry = s.close[at];
+    row.entry_week = d.starts[at];
+    row.target = row.entry * (up ? 1 + rp.target / 100 : 1 - rp.target / 100);
+
+    var end = i + rp.hold - 1, stop = Math.min(end, last);
+    var fav = null, adv = null, hitAt = -1;
+    for (var k = i; k <= stop; k++) {
+      if (s.close[k] === null || s.high[k] === null || s.low[k] === null) {
+        row.why = "the history has a gap inside that window";
+        return row;
+      }
+      var f = up ? s.high[k] : s.low[k];          // the extreme toward the target
+      var a = up ? s.low[k] : s.high[k];          // and the one against it
+      if (fav === null || (up ? f > fav : f < fav)) fav = f;
+      if (adv === null || (up ? a < adv : a > adv)) adv = a;
+      if (hitAt < 0 && (up ? f >= row.target : f <= row.target)) hitAt = k;
+    }
+
+    row.best_pct = (fav / row.entry - 1) * 100;
+    row.worst_pct = (adv / row.entry - 1) * 100;
+    row.hit = hitAt >= 0;
+    if (row.hit) { row.hit_in = hitAt - i + 1; row.hit_week = d.starts[hitAt]; }
+
+    if (end > last) {
+      // Still running. It can already be a hit — the target either was touched
+      // or was not — but it cannot yet be a miss, and it has no exit price.
+      row.state = row.hit ? "hit" : "open";
+      row.ran = stop - i + 1;
+      return row;
+    }
+    row.settled = true;
+    row.exit = s.close[end];
+    row.exit_pct = (row.exit / row.entry - 1) * 100;
+    row.finished = up ? row.exit >= row.target : row.exit <= row.target;
+    row.state = row.hit ? "hit" : "miss";
+    return row;
+  }
+
+  /* The same trade in the same week of each of the last `rp.years` years. */
+  function rpTrial(d, s) {
+    var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, settled: 0, finished: 0,
+                asked: rp.years };
+    var last = d.weeks.length - 1;
+    if (last < 0 || !s) return out;
+
+    var newest = parseInt(d.weeks[last].slice(0, 4), 10);
+    var oldest = parseInt(d.weeks[0].slice(0, 4), 10);
+    var years = [];
+    // Backwards from the newest year, keeping only the years that *have* the
+    // chosen week. Week 53 exists in about one year in six, so asking for it
+    // is a legitimate question with a much shorter answer.
+    for (var y = newest; y >= oldest && years.length < rp.years; y--) {
+      if (rpAt[rpWeekId(y, rp.week)] !== undefined) years.push(y);
+    }
+    years.reverse();
+
+    var up = rp.dir === "up";
+    for (var n = 0; n < years.length; n++) {
+      var row = rpYear(d, s, years[n], up, last);
+      out.rows.push(row);
+      out[row.state]++;
+      if (row.settled) { out.settled++; if (row.finished) out.finished++; }
+    }
+    out.decided = out.hit + out.miss;
+    out.rate = out.decided ? (out.hit / out.decided) * 100 : null;
+    out.finish_rate = out.settled ? (out.finished / out.settled) * 100 : null;
+    var judged = out.rows.filter(function (r) { return r.best_pct !== undefined; });
+    out.median_best = median(judged.map(function (r) { return r.best_pct; }));
+    out.median_worst = median(judged.map(function (r) { return r.worst_pct; }));
+    out.median_weeks = median(judged.filter(function (r) { return r.hit; })
+                                    .map(function (r) { return r.hit_in; }));
+    return out;
+  }
+
+  // ---- rendering
+
+  function rpTiles(t) {
+    var up = rp.dir === "up";
+    var goal = (up ? "+" : "−") + num(rp.target, 1) + "%";
+    function tile(cls, k, v) {
+      return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
+        "</div></div>";
+    }
+    var verdict = t.rate === null ? "fair" : t.rate >= 50 ? "cheap" : "rich";
+    var reached = t.decided
+      ? t.hit + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") + num(t.rate, 0) + "%)"
+      : "no year could be judged";
+    var settled = t.settled
+      ? t.finished + " of " + t.settled + " window" + (t.settled === 1 ? "" : "s") +
+        " (" + num(t.finish_rate, 0) + "%)"
+      : "no window has finished yet";
+
+    return '<div class="rulebar">' +
+      tile(verdict, "Touched " + goal + " — " + reached,
+           t.decided
+             ? "The high" + (up ? "" : " — the low, for a downside target") +
+               " reached the target at some point inside the " + rp.hold + "-week window" +
+               (t.median_weeks ? ", typically in week " + num(t.median_weeks, 0) + " of it" : "") + "."
+             : "Nothing in the window could be scored — widen the years, or pick a week the "
+               + "history covers.") +
+      tile(t.finish_rate === null ? "fair" : t.finish_rate >= 50 ? "cheap" : "rich",
+           "Finished past it — " + settled,
+           "Where it actually closed the window. A vertical settles against this, not against the "
+           + "high — which is why this number is the smaller one.") +
+      tile("fair", "Best it got — " + signed(t.median_best),
+           "Median of the furthest each window travelled toward the target. Half the years did "
+           + "better than this, half worse.") +
+      tile("fair", "Worst it got — " + signed(t.median_worst),
+           "Median of the furthest each window went the *other* way. This is the drawdown the "
+           + "years that worked still put you through first.") +
+      "</div>";
+  }
+
+  function rpStrip(t) {
+    if (!t.rows.length) return "";
+    var labels = { hit: "touched", miss: "missed", open: "still open", skipped: "skipped" };
+    return '<div class="yearstrip">' + t.rows.map(function (r) {
+      var note = r.state === "skipped" ? (r.why || "no data")
+        : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, best " +
+                               signed(r.best_pct)
+        : "entry " + money(r.entry) + ", target " + money(r.target) + ", best " +
+          signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
+          (r.hit ? ", touched in week " + r.hit_in : "") +
+          (r.settled ? ", closed " + signed(r.exit_pct) : "");
+      return '<div class="yr ' + r.state + '" title="' + esc(r.year + " — " + labels[r.state] +
+        ": " + note) + '"><b>' + r.year + "</b><span>" +
+        (r.best_pct === undefined ? "—" : signed(r.best_pct)) + "</span></div>";
+    }).join("") + "</div>";
+  }
+
+  function rpYearTable(t) {
+    if (!t.rows.length) {
+      return '<p class="empty">No year in this history has an ISO week ' + rp.week +
+        " to buy in.</p>";
+    }
+    var labels = { hit: "Touched", miss: "Missed", open: "Still open", skipped: "Skipped" };
+    var body = t.rows.map(function (r) {
+      if (r.state === "skipped") {
+        return '<tr class="dim"><td class="t">' + r.year + "</td><td>" + esc(r.start) +
+          '</td><td colspan="6" class="faint">' + esc(r.why || "not enough history") +
+          '</td><td class="skipped">Skipped</td></tr>';
+      }
+      var exit = r.settled
+        ? '<td class="r ' + (r.finished ? "hit" : "") + '">' + signed(r.exit_pct) + "</td>"
+        : '<td class="r faint">running</td>';
+      return "<tr><td class=\"t\">" + r.year + "</td><td>" + esc(r.start) + "</td>" +
+        '<td class="r" title="' + esc("the last close of the week beginning " + r.entry_week +
+          " — you buy as week " + rp.week + " opens") + '">' + money(r.entry) + "</td>" +
+        '<td class="r">' + money(r.target) + "</td>" +
+        '<td class="r">' + signed(r.best_pct) + "</td>" +
+        '<td class="r">' + (r.hit ? "week " + r.hit_in : "—") + "</td>" +
+        '<td class="r">' + signed(r.worst_pct) + "</td>" + exit +
+        '<td class="' + r.state + '">' + labels[r.state] +
+        (r.state === "open" ? " (" + r.ran + "/" + rp.hold + "w)" : "") + "</td></tr>";
+    }).join("");
+
+    return '<div class="tablewrap"><table class="scan trial"><thead><tr>' +
+      "<th>Year</th><th>Buy week</th><th class=\"r\">Entry</th><th class=\"r\">Target</th>" +
+      '<th class="r">Best</th><th class="r">Touched</th><th class="r">Worst</th>' +
+      '<th class="r">At exit</th><th>Result</th>' +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  /* The same settings run across every name — the reason to keep this on one
+     screen is that a 60% hit rate means nothing until you can see whether the
+     other twenty-eight names did 30% or 80% on the same question. */
+  function rpAllTable(d) {
+    var floor = d.min_years || 3;
+    var rows = d.series.map(function (s) {
+      var t = rpTrial(d, s);
+      return { ticker: s.ticker, hit: t.hit, decided: t.decided, rate: t.rate,
+               finished: t.finished, settled: t.settled, best: t.median_best,
+               worst: t.median_worst, thin: t.decided < floor };
+    }).filter(function (r) { return r.decided > 0; });
+    if (!rows.length) return "";
+
+    var key = rpSort.key;
+    rows.sort(function (a, b) {
+      // Names with too few judged years are reported but never ranked: sorted
+      // by rate, two years at 100% would otherwise sit above ten years at 70%
+      // and read as the best name on the screen. Same floor, same reason, as
+      // the greyed months in the Seasonality view.
+      if (a.thin !== b.thin) return a.thin ? 1 : -1;
+      if (key === "ticker") return a.ticker.localeCompare(b.ticker) * rpSort.dir;
+      var x = a[key], y = b[key];
+      x = has(x) ? x : -Infinity; y = has(y) ? y : -Infinity;
+      // Equal rates fall back to how many years stand behind them.
+      return (x === y ? a.decided - b.decided : x - y) * rpSort.dir;
+    });
+
+    function th(k, label, cls) {
+      return sortableTh(k, label, cls || "",
+        rpSort.key === k ? (rpSort.dir === 1 ? "ascending" : "descending") : "none");
+    }
+    var body = rows.map(function (r) {
+      return '<tr class="srow' + (r.thin ? " thin" : "") +
+        (r.ticker === rp.ticker ? " picked" : "") + '" data-ticker="' + esc(r.ticker) +
+        '" tabindex="0" title="' + esc(r.thin
+          ? r.ticker + " has only " + r.decided + " judged year" + (r.decided === 1 ? "" : "s") +
+            " here — shown, but not ranked"
+          : "show " + r.ticker + " above") + '">' +
+        '<td class="t">' + esc(r.ticker) + "</td>" +
+        '<td class="r">' + r.decided + "</td>" +
+        '<td class="r">' + r.hit + "</td>" +
+        '<td class="r">' + (r.decided - r.hit) + "</td>" +
+        '<td class="r"><b>' + num(r.rate, 0) + "%</b></td>" +
+        '<td class="r">' + (r.settled ? num((r.finished / r.settled) * 100, 0) + "%" : "—") + "</td>" +
+        '<td class="r">' + signed(r.best) + "</td>" +
+        '<td class="r">' + signed(r.worst) + "</td></tr>";
+    }).join("");
+
+    return "<h2>The same question, every name</h2>" +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Week ' + rp.week + ", " + rp.hold +
+      " weeks, " + (rp.dir === "up" ? "+" : "−") + num(rp.target, 1) +
+      "%, run across the whole screened list. Click a row to bring that name up above. " +
+      "Names with fewer than " + floor + " judged years sit at the bottom, greyed: they are " +
+      "reported, never ranked. And these names move together, so twenty-nine of them agreeing is " +
+      "nearer one piece of evidence than twenty-nine.</p>" +
+      '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
+      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Touched", "r") +
+      '<th class="r">Missed</th>' + th("rate", "Hit rate", "r") +
+      '<th class="r">Finished</th>' + th("best", "Median best", "r") +
+      th("worst", "Median worst", "r") +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  function rpCaveats(d) {
+    var r = d.reference || {};
+    var rules = ["entry", "window", "hit", "finish", "incomplete", "prices"]
+      .filter(function (k) { return r[k]; })
+      .map(function (k) { return "<li>" + esc(r[k]) + "</li>"; }).join("");
+    return '<div class="panelcard" style="margin-top:18px">' +
+      "<h3>What this test does, exactly</h3>" +
+      (rules ? "<ul>" + rules + "</ul>" : "") +
+      '<p class="dim" style="font-size:.85rem;margin-top:10px"><b>And what it does not.</b> ' +
+      "Ten years is ten observations, and this list is whoever passes the screen <i>today</i> — " +
+      "the names that would have dragged a week's record down are the ones no longer here to be " +
+      "measured. Nothing here knows about earnings dates, which is where a lot of week-shaped " +
+      "behaviour comes from. Above all, <b>a stock reaching your level is not the spread paying " +
+      "out</b>: a debit vertical reaches its maximum only at expiry with the name still past the " +
+      "short strike, and the Spreads tab is where that is priced. Read a hit rate here as the " +
+      "first of those two conditions, not as a backtested return.</p></div>";
+  }
+
+  function rpDraw() {
+    var d = store.weekly, host = $("#repeatbody");
+    if (!d) return;
+    var series = null;
+    for (var i = 0; i < d.series.length; i++) {
+      if (d.series[i].ticker === rp.ticker) { series = d.series[i]; break; }
+    }
+    if (!series) {
+      host.innerHTML = '<p class="empty">No weekly history for that name.</p>';
+      return;
+    }
+
+    var t = rpTrial(d, series);
+    var short = t.rows.length < t.asked
+      ? '<div class="notice">Only ' + t.rows.length + " of the last " + t.asked +
+        " years " + (t.rows.length === 1 ? "has" : "have") + " an ISO week " + rp.week +
+        " — that week does not fall in every year, and the history only reaches so far back.</div>"
+      : "";
+    var pending = [];
+    if (t.open) pending.push(t.open + (t.open === 1 ? " year is" : " years are") + " still running");
+    if (t.skipped) pending.push(t.skipped + " skipped for want of data");
+
+    host.innerHTML = short + rpTiles(t) +
+      (pending.length
+        ? '<p class="faint" style="font-size:.83rem;margin:-12px 0 16px">' +
+          esc(pending.join(" · ")) + " — counted in neither column.</p>"
+        : "") +
+      rpStrip(t) + rpYearTable(t) + rpAllTable(d) + rpCaveats(d);
+
+    wireSort(host.querySelectorAll("table.scan thead th"), function (k) {
+      if (rpSort.key === k) rpSort.dir = -rpSort.dir;
+      else { rpSort.key = k; rpSort.dir = k === "ticker" ? 1 : -1; }
+      rpDraw();
+      var again = host.querySelector('table.scan thead th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
+
+    var picks = host.querySelectorAll("tr.srow[data-ticker]");
+    for (var p = 0; p < picks.length; p++) {
+      picks[p].addEventListener("click", function () { rpPick(this.dataset.ticker); });
+      picks[p].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          rpPick(this.dataset.ticker);
+        }
+      });
+    }
+  }
+
+  function rpPick(ticker) {
+    rp.ticker = ticker;
+    $("#rp-ticker").value = ticker;
+    rpStore();
+    rpDraw();
+    $("#repeatcontrols").scrollIntoView({ block: "nearest" });
+  }
+
+  // The slider says "37"; this says which week of the year that is, using the
+  // most recent one on the axis. A week number nobody can place on a calendar
+  // is not a control, it is a number.
+  function rpWeekLabel(d) {
+    var label = "week " + rp.week;
+    for (var i = d.weeks.length - 1; i >= 0; i--) {
+      if (rpAt[d.weeks[i]] === i && d.weeks[i].slice(6) === (rp.week < 10 ? "0" : "") + rp.week) {
+        var when = new Date(d.starts[i] + "T00:00:00");
+        if (!isNaN(when.getTime())) {
+          label += " — w/c " + when.toLocaleDateString(undefined, { day: "numeric", month: "short" }) +
+            " in " + d.starts[i].slice(0, 4);
+        }
+        break;
+      }
+    }
+    $("#rp-weeklabel").textContent = label;
+  }
+
+  function rpNum(el, lo, hi, fallback) {
+    var v = Math.round(Number(el.value));
+    if (isNaN(v)) v = fallback;
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  function renderRepeat() {
+    load("weekly").then(function (d) {
+      if (!rpAt) {
+        rpAt = {};
+        for (var i = 0; i < d.weeks.length; i++) rpAt[d.weeks[i]] = i;
+
+        var select = $("#rp-ticker");
+        select.innerHTML = d.series.map(function (s) {
+          return '<option value="' + esc(s.ticker) + '">' + esc(s.ticker) + "</option>";
+        }).join("");
+        // A remembered name that has since dropped out of the screen is not an
+        // error; it just is not on this page any more.
+        var known = d.series.some(function (s) { return s.ticker === rp.ticker; });
+        if (!known) rp.ticker = (d.series[0] || {}).ticker || "";
+        select.value = rp.ticker;
+        rpWeekLabel(d);
+      }
+      if (!d.series.length) {
+        $("#repeatbody").innerHTML = '<p class="empty">The weekly history is empty — no name in ' +
+          "this screen has the " + (d.min_weeks || 26) + " weeks the test needs.</p>";
+        return;
+      }
+      rpDraw();
+    }).catch(function (e) {
+      $("#repeatbody").innerHTML = loadError(e, "weekly", "python run.py");
+    });
+  }
+
+  function wireRepeat() {
+    function onChange(fn) {
+      return function () {
+        fn(this);
+        rpStore();
+        if (store.weekly) { rpWeekLabel(store.weekly); rpDraw(); }
+      };
+    }
+    $("#rp-ticker").addEventListener("change", onChange(function (el) { rp.ticker = el.value; }));
+    $("#rp-week").addEventListener("input", onChange(function (el) {
+      rp.week = rpNum(el, 1, 53, 37);
+    }));
+    $("#rp-hold").addEventListener("input", onChange(function (el) {
+      rp.hold = rpNum(el, 1, 52, 8);
+    }));
+    $("#rp-years").addEventListener("input", onChange(function (el) {
+      rp.years = rpNum(el, 2, 25, 10);
+    }));
+    $("#rp-target").addEventListener("input", onChange(function (el) {
+      var v = Number(el.value);
+      rp.target = isNaN(v) ? 8 : Math.min(300, Math.max(0.5, v));
+    }));
+
+    var dirs = document.querySelectorAll("#rp-dir button");
+    for (var i = 0; i < dirs.length; i++) {
+      dirs[i].addEventListener("click", function () {
+        rp.dir = this.dataset.dir;
+        for (var j = 0; j < dirs.length; j++) {
+          dirs[j].setAttribute("aria-pressed", dirs[j].dataset.dir === rp.dir ? "true" : "false");
+        }
+        rpStore();
+        if (store.weekly) rpDraw();
+      });
+    }
+
+    // Whatever was set last time, so a setup survives a reload — the same
+    // contract the tab strip has.
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("repeat") || "null"); } catch (e) { saved = null; }
+    if (saved) {
+      for (var key in rp) if (has(saved[key])) rp[key] = saved[key];
+    }
+    $("#rp-week").value = rp.week;
+    $("#rp-hold").value = rp.hold;
+    $("#rp-target").value = rp.target;
+    $("#rp-years").value = rp.years;
+    for (var k = 0; k < dirs.length; k++) {
+      dirs[k].setAttribute("aria-pressed", dirs[k].dataset.dir === rp.dir ? "true" : "false");
+    }
+  }
+
   // ----------------------------------------------------------- validation
 
   function statsTable(rows, labelHead) {
@@ -1548,6 +2006,7 @@
     for (var v = 0; v < views.length; v++) {
       views[v].addEventListener("click", function () { showChartView(this.dataset.view); });
     }
+    wireRepeat();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;

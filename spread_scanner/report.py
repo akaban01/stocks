@@ -220,10 +220,18 @@ def _clean(obj):
     return str(obj)
 
 
-def write_json(path: Path, payload: dict) -> Path:
+def write_json(path: Path, payload: dict, compact: bool = False) -> Path:
+    """Write a payload as JSON. Indented by default, because these files are
+    read by people as often as by the page.
+
+    ``compact`` is for the one payload that is almost entirely numbers — the
+    weekly bars — where an indented line per number is four times the bytes and
+    nothing a reader gains.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(_clean(payload), indent=2, ensure_ascii=False) + "\n",
-                    encoding="utf-8")
+    text = (json.dumps(_clean(payload), separators=(",", ":"), ensure_ascii=False) if compact
+            else json.dumps(_clean(payload), indent=2, ensure_ascii=False))
+    path.write_text(text + "\n", encoding="utf-8")
     return path
 
 

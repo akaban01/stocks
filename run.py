@@ -36,6 +36,7 @@ from spread_scanner import (
     scanner,
     strategy,
     universe,
+    weekly,
 )
 
 DEFAULT_PARAMS = {
@@ -381,21 +382,47 @@ def main(argv: list[str] | None = None) -> int:
         for rec in _headline_rows(df, recs, limit=min(top, 12)):
             print(f"  {rec}")
 
-    # Per-ticker price history for the frontend to draw. Best-effort: a failure
-    # here must never break the main scan.
-    if charts_cfg.get("enabled", True):
+    # Two reductions of the same long history, for the frontend to draw and to
+    # walk: the price cards and month tables in charts.json, and the weekly
+    # bars the Repeat test runs its trials over in weekly.json. Both are
+    # best-effort — a failure here must never break the main scan.
+    weekly_cfg = cfg.get("weekly") or {}
+    want_charts = bool(charts_cfg.get("enabled", True))
+    want_weekly = bool(weekly_cfg.get("enabled", True))
+
+    if (want_charts or want_weekly) and not craw:
+        # The scan ran on its own shorter download, or the shared one came back
+        # empty. One fetch covers both files.
+        try:
+            craw = data.download(tickers, period=charts_period) or raw
+        except Exception as exc:               # noqa: BLE001 — fall back, do not abort the scan
+            print(f"Long history unavailable ({type(exc).__name__}: {exc}) — the charts and "
+                  "the Repeat test fall back to the scan window.", file=sys.stderr)
+            craw = raw
+
+    if want_charts:
         cshow = charts_cfg.get("display_years", charts.DEFAULT_DISPLAY_YEARS)
         cshow = int(cshow) if cshow else None
         try:
             print(f"Collecting price history for the charts ({charts_period}, "
                   f"cards show {cshow or 'all'}y)...")
-            if not craw:                       # not shareable (or came back empty) — fetch it
-                craw = data.download(tickers, period=charts_period) or raw
             charts_path = charts.write_charts(craw, outdir, period_label=charts_period,
                                               display_years=cshow)
             print(f"Wrote {charts_path}")
         except Exception as exc:               # noqa: BLE001 — charts are optional, log and move on
             print(f"Charts skipped ({type(exc).__name__}: {exc})", file=sys.stderr)
+
+    if want_weekly:
+        wyears = weekly_cfg.get("years")
+        wyears = int(wyears) if wyears else None
+        try:
+            print("Reducing the same history to weekly bars for the Repeat test "
+                  f"({f'last {wyears}y' if wyears else 'all of it'})...")
+            weekly_path = weekly.write_weekly(craw, outdir, period_label=charts_period,
+                                              years=wyears)
+            print(f"Wrote {weekly_path}")
+        except Exception as exc:               # noqa: BLE001 — same contract as the charts above
+            print(f"Weekly bars skipped ({type(exc).__name__}: {exc})", file=sys.stderr)
 
     # Stage the alert; `send_alerts.py` posts it. Nothing is sent from here,
     # because at this point the scan has not been validated yet — and a scan CI
