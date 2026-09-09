@@ -1,0 +1,51 @@
+{
+  "schema_version": "2.4.0",
+  "generated_at": "2026-09-09T18:12:39Z",
+  "as_of": "2026-09-09",
+  "history_years": 5,
+  "universe": 30,
+  "ok": true,
+  "weights": {
+    "compression": 0.29,
+    "vol_room": 0.5,
+    "squeeze": 0.21
+  },
+  "lift": {
+    "compression": 0.114,
+    "vol_room": 0.1997,
+    "squeeze": 0.0854
+  },
+  "bars": {
+    "total": 35540,
+    "train": 24890,
+    "test": 10650,
+    "cutoff": "2025-03-26"
+  },
+  "separation": {
+    "heuristic": {
+      "weights": {
+        "compression": 0.35,
+        "vol_room": 0.2,
+        "squeeze": 0.45
+      },
+      "high_break_pct": 39.8,
+      "low_break_pct": 28.6,
+      "separation_pts": 11.2
+    },
+    "calibrated": {
+      "weights": {
+        "compression": 0.29,
+        "vol_room": 0.5,
+        "squeeze": 0.21
+      },
+      "high_break_pct": 44.5,
+      "low_break_pct": 26.0,
+      "separation_pts": 18.5
+    }
+  },
+  "verdict": {
+    "holds": true,
+    "text": "The calibrated weights hold up out-of-sample — they separate high- from low-score band-break rates by more than the hand-set heuristic did."
+  },
+  "method": "Each weight is set in proportion to that feature's exceed-rate lift — how much more often the expected-move band breaks at the favourable end of the feature than at the unfavourable end. Lift is measured on a train split and the resulting weights are scored on a held-out test split, so the number above is out-of-sample."
+}
