@@ -182,13 +182,22 @@ def calibrate_weights(recs: pd.DataFrame, train_frac: float = 0.7) -> dict:
     }
 
 
-def calibration_payload(c: dict, years: int, universe: int) -> dict:
-    """The calibration run as JSON (see report.py — the backend renders no HTML)."""
+def calibration_payload(c: dict, years: int, universe: int,
+                        as_of: str | None = None) -> dict:
+    """The calibration run as JSON (see report.py — the backend renders no HTML).
+
+    `as_of` is the stamp written into weights.json by the same run, so the page
+    can tell whether the scan it is sitting next to actually scored with these
+    weights. It can't otherwise: weights.json is a working file and gitignored,
+    while this payload is committed, so a day when the calibration step fails
+    leaves yesterday's fit on the page beside a scan that used the built-in
+    weights."""
     from .report import SCHEMA_VERSION
 
     base = {
         "schema_version": SCHEMA_VERSION,
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "as_of": as_of or dt.date.today().isoformat(),
         "history_years": years,
         "universe": universe,
     }
@@ -228,8 +237,13 @@ def calibration_payload(c: dict, years: int, universe: int) -> dict:
     }
 
 
-def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
-    """The backtest as JSON, with the verdict pre-computed for the frontend."""
+def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
+                     weights: dict | None = None, weights_as_of: str | None = None) -> dict:
+    """The backtest as JSON, with the verdict pre-computed for the frontend.
+
+    `weights` is the weight set the scores below were actually computed with, so
+    the page can say whether it is reading the built-in heuristic or a fitted
+    model — and, when it is the fitted one, that the fit saw this same history."""
     from .report import SCHEMA_VERSION
 
     base = {
@@ -238,6 +252,16 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
         "universe": n_tickers,
         "history_years": years,
         "horizon_days": int(p["horizon_days"]),
+        "weights": {
+            "values": dict(weights or scanner.SCORE_WEIGHTS),
+            "as_of": weights_as_of,
+            "source": "auto-calibrated" if weights_as_of else "default",
+            # compute_weights() fits on all available history and this measures
+            # the resulting score on that same history. Saying so is the whole
+            # of the fix: the out-of-sample number lives in calibration.json,
+            # which splits train from test.
+            "in_sample": bool(weights_as_of),
+        },
     }
     if not stats:
         return {**base, "ok": False, "note": "Not enough history to backtest."}
@@ -289,9 +313,14 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int) -> dict:
                       "compressed band? That is the expansion multiple (realized ÷ expected) and the "
                       "band-break rate."),
         "caveat": ("Overlapping forward windows make these observations autocorrelated, so read the "
-                   "percentages as descriptive rather than as independent-sample statistics. The score "
-                   "flags where a relative expansion is likelier — never its direction. Past behaviour "
-                   "does not guarantee future results."),
+                   "percentages as descriptive rather than as independent-sample statistics. The "
+                   "universe is also whatever passes the screen *today*, measured backwards: names "
+                   "that would have dragged these numbers down are the ones no longer in it. And "
+                   "when the score being tested comes from calibrated weights, those weights were "
+                   "fitted on this same history — the honest out-of-sample separation is the one on "
+                   "the calibration panel, which holds a test split back. The score flags where a "
+                   "relative expansion is likelier — never its direction. Past behaviour does not "
+                   "guarantee future results."),
     }
 
 

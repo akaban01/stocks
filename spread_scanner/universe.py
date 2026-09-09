@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 import urllib.request
 
+from .net import retry
+
 # The holdings table is rendered into the page itself, so one GET is enough and
 # no API key is needed. There used to be a JSON endpoint at
 # /api/symbol/e/{sym}/holdings; it now returns 404 for every symbol, which is
@@ -36,8 +38,25 @@ def _valid_ticker(t: str) -> bool:
     return bool(t) and len(t) <= 6 and all(c.isalpha() or c in ".-" for c in t)
 
 
+def to_yahoo(ticker: str) -> str:
+    """Yahoo's spelling of a ticker: class shares use a hyphen, not a dot.
+
+    The holdings page publishes Berkshire's B shares as ``BRK.B``; every Yahoo
+    endpoint this project touches wants ``BRK-B`` and returns nothing at all for
+    the dotted form. A dotted holding therefore downloaded no prices, dropped
+    out of the scan behind a single "No data for:" line, and was gone. Every
+    ticker that enters the pipeline goes through here, and it is idempotent so
+    calling it twice costs nothing."""
+    return ticker.strip().upper().replace(".", "-")
+
+
 def _parse_holdings(html: str) -> list[tuple[str, float]]:
-    """Pure: extract [(ticker, weight_pct)] from the holdings page's markup."""
+    """Extract [(ticker, weight_pct)] from the holdings page's markup, with each
+    ticker in Yahoo's spelling (see `to_yahoo`).
+
+    Normalizing here rather than downstream is deliberate: this is the one place
+    a dotted class-share symbol enters the program, so it is the one place that
+    has to know the page's spelling differs from the price feed's."""
     out: list[tuple[str, float]] = []
     for row in _ROW.findall(html or ""):
         found = _SYMBOL.search(row)
@@ -46,6 +65,7 @@ def _parse_holdings(html: str) -> list[tuple[str, float]]:
         ticker = found.group(1).strip().upper()
         if not _valid_ticker(ticker):
             continue
+        ticker = to_yahoo(ticker)
         weight = _WEIGHT.search(row)
         out.append((ticker, float(weight.group(1)) if weight else 0.0))
     return out
@@ -54,10 +74,13 @@ def _parse_holdings(html: str) -> list[tuple[str, float]]:
 def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]]:
     """Return [(ticker, weight_pct)] for one ETF — best-effort, [] on failure."""
     url = _ENDPOINT.format(sym=symbol.strip().lower())
-    try:
+    def _get() -> str:
         req = urllib.request.Request(url, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            html = resp.read().decode("utf-8", "replace")
+            return resp.read().decode("utf-8", "replace")
+
+    try:
+        html = retry(_get, label=f"{symbol} holdings")
     except Exception as exc:
         print(f"  ! could not fetch {symbol} holdings: {type(exc).__name__}")
         return []

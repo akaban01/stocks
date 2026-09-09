@@ -11,7 +11,10 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [master]
+    # Both, because the README's setup instructions say `git branch -M main`
+    # and this repository is on `master`. Following the README used to produce
+    # a repo whose tests never ran on a push.
+    branches: [main, master]
 
 permissions:
   contents: read
@@ -33,6 +36,11 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
+
+      # Small rule set (see ruff.toml): unused imports and names, undefined
+      # names, obvious bugs, import order. Style is left to the house style.
+      - name: Lint
+        run: ruff check .
 
       # The suite is network-free by design, so it needs no secrets and no
       # market data — a pull request from a fork runs it exactly as master does.

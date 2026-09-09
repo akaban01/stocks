@@ -21,14 +21,20 @@
 
   <div class="notice" id="schema-warning" hidden></div>
   <div class="notice" id="universe-warning" hidden></div>
+  <!-- `annotate` mode keeps the names that fail the compliance screen. This is
+       what says so; without it they are indistinguishable from the rest. -->
+  <div class="notice" id="screen-warning" hidden></div>
 
-  <nav class="tabs" role="tablist">
-    <button data-tab="playbook" role="tab" aria-selected="true">What to do</button>
-    <button data-tab="spreads" role="tab" aria-selected="false">Spreads</button>
-    <button data-tab="scanner" role="tab" aria-selected="false">Scanner</button>
-    <button data-tab="charts" role="tab" aria-selected="false">Charts</button>
-    <button data-tab="validation" role="tab" aria-selected="false">Does it work?</button>
-    <button data-tab="reference" role="tab" aria-selected="false">Reference</button>
+  <!-- Each tab names the panel it controls and each panel names its tab, so a
+       screen reader announces the pair rather than six unlabelled regions.
+       Arrow keys move between them (see showTab in app.js). -->
+  <nav class="tabs" role="tablist" aria-label="Views">
+    <button id="tab-playbook" data-tab="playbook" role="tab" aria-selected="true" aria-controls="panel-playbook">What to do</button>
+    <button id="tab-spreads" data-tab="spreads" role="tab" aria-selected="false" aria-controls="panel-spreads">Spreads</button>
+    <button id="tab-scanner" data-tab="scanner" role="tab" aria-selected="false" aria-controls="panel-scanner">Scanner</button>
+    <button id="tab-charts" data-tab="charts" role="tab" aria-selected="false" aria-controls="panel-charts">Charts</button>
+    <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="panel-validation">Does it work?</button>
+    <button id="tab-reference" data-tab="reference" role="tab" aria-selected="false" aria-controls="panel-reference">Reference</button>
   </nav>
 
   <div id="loading" class="loading">Loading the latest scan…</div>
@@ -36,7 +42,7 @@
   <div id="app" hidden>
 
     <!-- ------------------------------------------------------ what to do -->
-    <section class="panel" data-tab="playbook" role="tabpanel">
+    <section id="panel-playbook" class="panel" data-tab="playbook" role="tabpanel" aria-labelledby="tab-playbook">
       <div class="lede" id="summary"></div>
 
       <p class="dim" style="font-size:.87rem;margin:0 0 10px">
@@ -53,7 +59,7 @@
     </section>
 
     <!-- -------------------------------------------------------- spreads -->
-    <section class="panel" data-tab="spreads" role="tabpanel" hidden>
+    <section id="panel-spreads" class="panel" data-tab="spreads" role="tabpanel" aria-labelledby="tab-spreads" hidden>
       <div class="lede">
         Every <b>≈13-month spread</b> the chains support — the same names, held for a year instead of
         a fortnight. Out here <b>time decay barely works for you</b> and the level of implied
@@ -71,7 +77,7 @@
     </section>
 
     <!-- -------------------------------------------------------- scanner -->
-    <section class="panel" data-tab="scanner" role="tabpanel" hidden>
+    <section id="panel-scanner" class="panel" data-tab="scanner" role="tabpanel" aria-labelledby="tab-scanner" hidden>
       <div class="lede">
         The ranked table behind the cards. <b>Score</b> is how coiled the chart is; <b>Premium</b> is
         how rich the options are. High score with a low premium score is the cleanest buy-premium
@@ -85,7 +91,7 @@
     </section>
 
     <!-- --------------------------------------------------------- charts -->
-    <section class="panel" data-tab="charts" role="tabpanel" hidden>
+    <section id="panel-charts" class="panel" data-tab="charts" role="tabpanel" aria-labelledby="tab-charts" hidden>
       <div class="filters" id="chartviews">
         <button class="chip" data-view="prices" aria-pressed="true">Price history</button>
         <button class="chip" data-view="seasonality" aria-pressed="false">Seasonality</button>
@@ -115,7 +121,7 @@
     </section>
 
     <!-- ----------------------------------------------------- validation -->
-    <section class="panel" data-tab="validation" role="tabpanel" hidden>
+    <section id="panel-validation" class="panel" data-tab="validation" role="tabpanel" aria-labelledby="tab-validation" hidden>
       <div id="validation-body">
         <h2 style="margin-top:0">Does the Setup Score work?</h2>
         <div id="backtest"><p class="loading">Loading backtest…</p></div>
@@ -125,7 +131,7 @@
     </section>
 
     <!-- ------------------------------------------------------ reference -->
-    <section class="panel" data-tab="reference" role="tabpanel" hidden>
+    <section id="panel-reference" class="panel" data-tab="reference" role="tabpanel" aria-labelledby="tab-reference" hidden>
       <div class="lede">
         Every definition below ships inside <code>data/scan.json</code> alongside the numbers it
         describes, so an explanation here can never drift from the field it explains.

@@ -25,10 +25,19 @@ SAMPLE = """
 def test_parse_holdings_filters_and_parses():
     out = universe._parse_holdings(SAMPLE)
     tickers = [t for t, _ in out]
-    assert tickers == ["NVDA", "AAPL", "BRK.B"]   # and in the page's own order
-    assert "BRK.B" in tickers          # dotted class shares are valid
+    assert tickers == ["NVDA", "AAPL", "BRK-B"]   # and in the page's own order
     assert "N/A" not in tickers        # cash / non-equity line has no stock link
     assert dict(out)["NVDA"] == 13.92
+
+
+def test_class_shares_come_out_in_yahoos_spelling():
+    """The holdings page writes BRK.B; every Yahoo endpoint wants BRK-B and
+    returns nothing for the dotted form, so the dot never leaves this module."""
+    assert universe.to_yahoo("BRK.B") == "BRK-B"
+    assert universe.to_yahoo("brk.b") == "BRK-B"
+    assert universe.to_yahoo("BRK-B") == "BRK-B"       # idempotent
+    assert universe.to_yahoo(" nvda ") == "NVDA"
+    assert [t for t, _ in universe._parse_holdings(SAMPLE)] == ["NVDA", "AAPL", "BRK-B"]
 
 
 def test_parse_holdings_takes_the_weight_not_another_number():

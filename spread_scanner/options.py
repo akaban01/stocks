@@ -44,6 +44,8 @@ from dataclasses import dataclass, field
 
 import yfinance as yf
 
+from .net import retry
+
 TRADING_DAYS = 252
 
 # Premium-state cutoffs on the 0..100 blended premium score (see `premium_score`).
@@ -305,7 +307,16 @@ def _term_component(slope: float | None) -> float:
 
 def premium_score(rank: float | None, ratio: float | None, slope: float | None) -> float:
     """Blend IV rank (regime), IV/HV (risk premium) and term structure into one
-    0..100 "how rich is premium here" number. Higher = better to be a seller."""
+    0..100 "how rich is premium here" number. Higher = better to be a seller.
+
+    ⚠️ Two of the three inputs are the same comparison seen twice. Because free
+    data publishes no implied-vol history, `rank` ranks IV against the *realized*
+    vol distribution, and `ratio` is IV over realized. Both say "implied versus
+    realized"; they differ in whether the comparison is against a year of
+    readings or today's. So 85% of this number moves on one signal and only the
+    15% term-structure term is independent of it. Read the score as one strong
+    opinion with a small tiebreaker, not as three votes — the weights are
+    deliberately *not* a claim that these are independent measurements."""
     rank_c = 0.5 if rank is None else rank / 100
     raw = 0.45 * rank_c + 0.40 * _ratio_component(ratio) + 0.15 * _term_component(slope)
     return round(max(0.0, min(1.0, raw)) * 100, 1)
@@ -401,7 +412,8 @@ def implied_view(
     """
     try:
         tk = yf.Ticker(ticker)
-        expiries = [e for e in (tk.options or []) if _dte(e) is not None and _dte(e) >= 1]
+        listed = retry(lambda: tk.options or [], label=f"{ticker} expiries")
+        expiries = [e for e in listed if _dte(e) is not None and _dte(e) >= 1]
     except Exception:
         return None
     if not expiries:
@@ -428,7 +440,7 @@ def implied_view(
 
     for exp in wanted:
         try:
-            ch = tk.option_chain(exp)
+            ch = retry(lambda e=exp: tk.option_chain(e), label=f"{ticker} chain {exp}")
         except Exception:
             continue
         chain[exp] = {"call": _quotes(ch.calls, "call"), "put": _quotes(ch.puts, "put")}
@@ -473,7 +485,13 @@ def implied_view(
     # away exactly the deep-ITM and far-OTM legs the LEAPS structures need.
     def _trim(exp: str, sides: dict) -> dict:
         exp_dte = _dte(exp) or dte
-        sig = iv / 100 * math.sqrt(max(exp_dte, 1) / 365)
+        # Each expiry is sized by *its own* ATM implied volatility, not the front
+        # month's. A 13-month chain is usually quoted several vol points away
+        # from the front month, and using the front month's number here sized
+        # the LEAPS window off the wrong volatility — the one place `long_iv` is
+        # read for probabilities but was not read for strike selection.
+        exp_iv = _atm_iv(sides.get("call", {}), sides.get("put", {}), spot) or iv
+        sig = exp_iv / 100 * math.sqrt(max(exp_dte, 1) / 365)
         lo, hi = spot * (1 - strike_window * sig), spot * (1 + strike_window * sig)
         return {right: {k: q for k, q in side.items() if lo <= k <= hi}
                 for right, side in sides.items()}
@@ -487,8 +505,11 @@ def implied_view(
     long_liq = "unknown"
     if long_exp and long_exp[0] in trimmed:
         long_expiry, long_dte = long_exp
-        lcalls, lputs = trimmed[long_expiry]["call"], trimmed[long_expiry]["put"]
-        long_iv = _atm_iv(lcalls, lputs, spot)
+        # Read off the untrimmed chain: the trim window is now sized by this
+        # very number, and reading it back out of its own output would be
+        # circular if the ATM strike ever fell outside the window.
+        long_iv = _atm_iv(chain[long_expiry]["call"], chain[long_expiry]["put"], spot)
+        lcalls = trimmed[long_expiry]["call"]
         lk = _nearest_strike(lcalls, spot)
         lq = lcalls.get(lk) if lk is not None else None
         if lq is not None:

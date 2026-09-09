@@ -1,11 +1,9 @@
 """The JSON payload — the backend's only output."""
 
 import json
-import math
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from spread_scanner import leaps, report, strategy
 from conftest import make_row, make_view

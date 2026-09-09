@@ -79,7 +79,9 @@ halal_screen:
   # each name's balance sheet. Approximation; not a fatwa. See spread_scanner/halal.py.
   financial_formula:
     enabled: true
-    mode: filter            # 'filter' = drop names that fail; 'annotate' = keep all, just report ratios
+    mode: filter            # 'filter' = drop names that fail the screen;
+                            # 'annotate' = keep them, flagged non-compliant with the
+                            #              reason, on the cards and in the table
     max_debt_ratio: 0.33    # interest-bearing debt / market cap
     max_cash_ratio: 0.33    # cash & equivalents / market cap
     max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
@@ -118,6 +120,19 @@ strategy:
                             #        inside the expiry. Leave false unless you know
                             #        exactly what an open-ended loss means for you.
 
+calibration:
+  # Setup-Score weights, fitted against the expansion outcome by calibrate.py:
+  # each weight is proportional to that feature's measured exceed-rate lift.
+  # The daily workflow runs the calibration before the scan, so run.py and
+  # backtest.py both score with this same file and cannot drift apart.
+  #
+  # Delete the file — or this key — and both fall back to the weights hardcoded
+  # in spread_scanner/scanner.py. `run.py` says which it used, and scan.json
+  # records it under `weights.source`.
+  weights_file: weights.json
+  years: 5                  # history the fit runs on
+  train_frac: 0.7           # the rest is the held-out split the "Does it work?" tab reports
+
 alerts:
   # POST a summary to a Slack/Discord webhook when a ticker's Setup Score
   # crosses the threshold (only fires on a NEW crossing vs the previous run).
@@ -127,9 +142,9 @@ alerts:
 
 charts:
   # Write data/charts.json — the closing-price history for every screened ticker,
-  # downsampled, for the frontend to draw. Uses its own (longer) download so the
-  # chart shows several years; falls back to the scan's history if it comes back
-  # empty.
+  # downsampled, for the frontend to draw. `history_period` below is the only
+  # price download the run makes: it is the longer of the two windows, and the
+  # scan takes its `params.history_period` as a slice of it.
   enabled: true
   # How much history to download. This is what the Seasonality view measures:
   # one observation per calendar month per year, so 10y is ten Januaries.

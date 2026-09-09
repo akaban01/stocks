@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.3.0"
+SCHEMA_VERSION = "2.4.0"
 
 # An equity option quoted below this annualized implied volatility is not a
 # quote. Outside US market hours the feed returns every contract with a floor
@@ -161,6 +161,12 @@ GLOSSARY = {
                 "collapses the morning after — that cuts both ways depending on which side you're on.",
     "debt_cash_ratio": "The balance-sheet screen: interest-bearing debt and cash as a share of market "
                        "cap, both required under ~33%.",
+    "screen": "The compliance verdict for the name: whether it passed the industry-exclusion screen "
+              "and the balance-sheet ratios, and the reason if it did not. In `filter` mode a name "
+              "that fails never reaches the scan; in `annotate` mode it does, carrying this flag — "
+              "which is the only thing that tells it apart from a name that passed. An "
+              "approximation from public fundamentals, not a certification: re-verify with a "
+              "dedicated screener before trading.",
 }
 
 DISCLAIMER = {
@@ -301,12 +307,36 @@ def _long_dated_summary(signals: list[dict]) -> dict:
     }
 
 
+def _screen_summary(signals: list[dict], meta: dict | None) -> dict:
+    """What the compliance screen did, and to whom.
+
+    In `annotate` mode the screen keeps the names that failed it, so the count
+    of flagged names — and their tickers — is the difference between a screened
+    watchlist and an unscreened one that says it is screened."""
+    screened = [s for s in signals if s.get("screen")]
+    flagged = [s["ticker"] for s in screened if s["screen"].get("compliant") is False]
+    # `compliant: None` is the third state: the screen ran but produced no
+    # verdict for this name. Counted separately from a failure, because "not
+    # checked" and "checked and failed" are different things to tell a reader.
+    unknown = [s["ticker"] for s in screened if s["screen"].get("compliant") is None]
+    return {
+        **(meta or {}),
+        "screened": len(screened),
+        "flagged": flagged,
+        "flagged_count": len(flagged),
+        "unknown": unknown,
+        "unknown_count": len(unknown),
+    }
+
+
 def build_scan(df: pd.DataFrame, params: dict, *,
                weights: dict | None = None,
                weights_as_of: str | None = None,
                recommendations: dict[str, dict] | None = None,
                option_views: dict | None = None,
                long_spreads: dict[str, dict] | None = None,
+               screens: dict[str, dict] | None = None,
+               screen_meta: dict | None = None,
                universe: dict | None = None,
                playbook: dict | None = None) -> dict:
     """Assemble the full scan payload (no I/O — handy to test and to reuse)."""
@@ -314,6 +344,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
     recommendations = recommendations or {}
     option_views = option_views or {}
     long_spreads = long_spreads or {}
+    screens = screens or {}
 
     signals: list[dict] = []
     for row in (df.to_dict("records") if not df.empty else []):
@@ -328,6 +359,11 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         # recommendation: they answer a different question on the same chain,
         # and most names have no long-dated chain at all.
         signal["long_dated"] = _clean(long_spreads.get(ticker))
+        # The compliance verdict travels with the row. Without it a name kept by
+        # `annotate` mode because it only *failed* the screen renders exactly
+        # like one that passed — the quietest possible failure on a page whose
+        # premise is that everything on it has been screened.
+        signal["screen"] = _clean(screens.get(ticker))
         signals.append(signal)
 
     return {
@@ -343,6 +379,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
             "source": "auto-calibrated" if weights_as_of else "default",
         },
         "counts": _counts(signals),
+        "screen": _screen_summary(signals, screen_meta),
         "long_dated": _long_dated_summary(signals),
         "top_actions": _headline_actions(signals),
         "reference": {

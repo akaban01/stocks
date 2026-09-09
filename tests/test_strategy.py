@@ -1,5 +1,6 @@
 """The strategy engine: does the right instruction come out of each regime?"""
 
+import datetime as dt
 import math
 
 import pytest
@@ -127,10 +128,10 @@ def test_no_option_view_reports_no_data_rather_than_guessing():
 def test_credit_spread_arithmetic_is_internally_consistent():
     plan = rec({"iv": 58, "hv": 28, "iv_rank": 88}).plan
     legs = plan["legs"]
-    short = [l for l in legs if l["action"] == "sell"]
-    width = max(abs(s["strike"] - l["strike"])
-                for s in short for l in legs
-                if l["action"] == "buy" and l["right"] == s["right"])
+    short = [leg for leg in legs if leg["action"] == "sell"]
+    width = max(abs(s["strike"] - leg["strike"])
+                for s in short for leg in legs
+                if leg["action"] == "buy" and leg["right"] == s["right"])
     credit = -plan["net"]
     assert credit > 0
     assert plan["max_profit"] == pytest.approx(credit, abs=0.01)
@@ -141,8 +142,8 @@ def test_credit_spread_arithmetic_is_internally_consistent():
 def test_debit_spread_arithmetic_is_internally_consistent():
     plan = rec({"iv": 18, "hv": 30, "iv_rank": 8},
                {"squeeze_on": False, "squeeze_fired": True, "fired_dir": "up"}).plan
-    long_leg = [l for l in plan["legs"] if l["action"] == "buy"][0]
-    short_leg = [l for l in plan["legs"] if l["action"] == "sell"][0]
+    long_leg = [leg for leg in plan["legs"] if leg["action"] == "buy"][0]
+    short_leg = [leg for leg in plan["legs"] if leg["action"] == "sell"][0]
     width = abs(short_leg["strike"] - long_leg["strike"])
     debit = plan["net"]
     assert 0 < debit < width * 100
@@ -162,7 +163,7 @@ def test_straddle_breakevens_straddle_the_strike():
 
 def test_condor_wings_bracket_the_short_strikes():
     plan = rec({"iv": 58, "hv": 28, "iv_rank": 88}).plan
-    by = {(l["action"], l["right"]): l["strike"] for l in plan["legs"]}
+    by = {(leg["action"], leg["right"]): leg["strike"] for leg in plan["legs"]}
     assert by[("buy", "put")] < by[("sell", "put")]
     assert by[("sell", "call")] < by[("buy", "call")]
     assert by[("sell", "put")] < 200 < by[("sell", "call")]
@@ -314,3 +315,138 @@ def test_sizing_never_suggests_more_than_the_cap():
     """A cheap spread against a large budget is still bounded."""
     out = strategy.size_position(_condor_plan(1.0), 1_000_000.0)
     assert out["contracts"] == strategy.MAX_CONTRACTS
+
+
+# ------------------------------------------- the structures nothing asserted on
+#
+# `_covered_call` and `_calendar` both *executed* under the old suite — they are
+# built on every rich name and every backwardated one — but nothing looked at
+# the numbers they produced. A covered call reporting a $2,000,326 credit on a
+# $200 stock passed CI for as long as it existed.
+
+def _alt(rec_obj, key):
+    return [a for a in rec_obj.alternatives if a["key"] == key][0]
+
+
+def test_net_cost_ignores_shares_you_already_own():
+    """`action="own"` is stock in the account, not a leg of this order. Priced
+    as a sale it subtracted 100 shares at spot from the net."""
+    call = strategy.Leg("sell", "call", 230.0, "2026-01-16", 1, 2.97, 2.9, 3.0, 45.0, 100, "")
+    shares = strategy.Leg("own", "share", None, None, 100, 200.0, None, None, None, None, "")
+    assert strategy.net_cost([call]) == -297.0
+    assert strategy.net_cost([shares, call]) == -297.0
+
+
+def test_net_cost_returns_none_when_a_traded_leg_has_no_mid():
+    call = strategy.Leg("sell", "call", 230.0, "2026-01-16", 1, None, None, None, None, None, "")
+    assert strategy.net_cost([call]) is None
+
+
+def test_covered_call_is_priced_as_the_credit_it_collects():
+    r = rec({"iv": 58, "hv": 28, "iv_rank": 88})
+    plan = _alt(r, "covered_call")
+    call = [leg for leg in plan["legs"] if leg["right"] == "call"][0]
+    shares = [leg for leg in plan["legs"] if leg["right"] == "share"][0]
+    spot = 200.0
+
+    credit = round(call["mid"] * 100, 2)
+    assert plan["net"] == pytest.approx(-credit, abs=0.01)
+    assert -2000 < plan["net"] < 0, "a covered call collects a credit, not a fortune"
+    assert shares["action"] == "own" and shares["qty"] == 100
+    # The whole position: called away at the strike, plus the premium.
+    assert plan["max_profit"] == pytest.approx((call["strike"] - spot) * 100 + credit, abs=0.01)
+    # And the real risk is the stock going to zero, less the premium.
+    assert plan["max_loss"] == pytest.approx(spot * 100 - credit, abs=0.01)
+    assert plan["breakevens"] == [pytest.approx(spot - call["mid"], abs=0.01)]
+    assert plan["risk_form"]["tier"] == "covered"
+
+
+def test_the_covered_call_order_text_quotes_the_real_credit():
+    """The card prints this string verbatim."""
+    r = rec({"iv": 58, "hv": 28, "iv_rank": 88})
+    plan = _alt(r, "covered_call")
+    assert plan["net"] < 0
+    assert f"{-plan['net']:,.2f}" in strategy._order_text(
+        strategy.Plan(**{**plan, "legs": [strategy.Leg(**leg) for leg in plan["legs"]]}))
+
+
+def _calendar_rec():
+    return rec({"iv": 31, "hv": 30, "iv_rank": 45, "term_slope": -0.08}, {"score": 40.0})
+
+
+def test_calendar_is_a_debit_secured_by_the_long_leg():
+    plan = _calendar_rec().plan
+    assert plan["key"] == "calendar_spread"
+    assert plan["net"] > 0, "a calendar is entered for a debit"
+    assert plan["max_loss"] == pytest.approx(plan["net"], abs=0.01)
+    assert plan["risk"] == "defined"
+    # Not margin, and not shares: the short front call is covered by the long
+    # back call at the same strike.
+    assert plan["risk_form"]["tier"] == "option_covered"
+    assert "not by margin" in plan["risk_form"]["note"]
+    assert "long call" in plan["risk_form"]["note"]
+    # The old copy was the credit-spread note, which says the opposite.
+    assert "collect a premium" not in plan["risk_form"]["note"]
+
+
+def test_calendar_quotes_no_probability_it_cannot_model():
+    """POP is a terminal-price model. The calendar has two terminal dates, and
+    the number it used to publish came from breakevens placed by hand at
+    strike × (1 ± 0.6σ) — which the frontend printed exactly like a vertical's."""
+    r = _calendar_rec()
+    assert r.plan["pop"] is None
+    assert r.plan["breakevens"] == []
+    assert any("different dates" in w for w in r.warnings)
+
+
+def test_calendar_legs_are_a_month_or_two_apart_not_a_year():
+    """`exps[0]` took whichever expiry came first out of a dict that also holds
+    the ≈13-month LEAPS chain — so a failed ~60-day fetch built a "calendar"
+    against a leg a year out, silently."""
+    plan = _calendar_rec().plan
+    front, back = plan["legs"][0], plan["legs"][1]
+    assert front["expiry"] < back["expiry"]
+    assert front["strike"] == back["strike"]
+    gap = (dt.date.fromisoformat(back["expiry"]) - dt.date.fromisoformat(front["expiry"])).days
+    assert strategy.CALENDAR_MIN_GAP_DTE <= gap <= strategy.CALENDAR_MAX_GAP_DTE
+
+
+def test_no_calendar_is_built_when_the_only_other_expiry_is_the_leaps_chain():
+    v = make_view(iv=31, hv=30, iv_rank=45, term_slope=-0.08)
+    back = [e for e in v.expiries if e["date"] not in (v.expiry, v.long_expiry)][0]
+    del v.chain[back["date"]]
+    v.expiries = [e for e in v.expiries if e["date"] != back["date"]]
+    assert strategy._calendar(v, 0.1) is None
+
+
+# --------------------------------------------------- a straddle needs one strike
+
+def test_split_strikes_make_it_a_strangle_and_price_it_as_one():
+    """When the nearest call and put strikes differ, both breakevens used to be
+    computed off the call's — understating the lower one by the whole gap."""
+    v = make_view(iv=18, hv=30, iv_rank=8)
+    calls = v.chain[v.expiry]["call"]
+    puts = v.chain[v.expiry]["put"]
+    # Take the 200 put away so the nearest put is 195 while the nearest call is 200.
+    puts.pop(200.0)
+    plan = strategy._long_straddle(v, 0.1)
+
+    assert plan.key == "long_strangle" and plan.name == "Long Strangle"
+    debit = strategy.net_cost(plan.legs) / 100
+    assert plan.breakevens == [pytest.approx(195 - debit, abs=0.01),
+                               pytest.approx(200 + debit, abs=0.01)]
+    assert calls[200.0].strike == 200.0      # the call leg is untouched
+
+
+def test_a_straddle_with_one_strike_is_still_a_straddle():
+    plan = strategy._long_straddle(make_view(iv=18, hv=30, iv_rank=8), 0.1)
+    assert plan.key == "long_straddle"
+    assert len({leg.strike for leg in plan.legs}) == 1
+
+
+def test_alternatives_never_repeat_the_primary_structure():
+    v = make_view(iv=18, hv=30, iv_rank=8)
+    v.chain[v.expiry]["put"].pop(200.0)      # the straddle degrades to a strangle
+    r = strategy.recommend(make_row(), v)
+    keys = [r.plan["key"]] + [a["key"] for a in r.alternatives]
+    assert len(keys) == len(set(keys))

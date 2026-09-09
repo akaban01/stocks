@@ -24,8 +24,19 @@ if hasattr(sys.stdout, "reconfigure"):
 import pandas as pd
 import yaml
 
-from spread_scanner import (alerts, charts, data, halal, indicators, leaps, options,
-                            report, scanner, strategy, universe)
+from spread_scanner import (
+    alerts,
+    charts,
+    data,
+    halal,
+    indicators,
+    leaps,
+    options,
+    report,
+    scanner,
+    strategy,
+    universe,
+)
 
 DEFAULT_PARAMS = {
     "horizon_days": 10,
@@ -93,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default="config.yaml", help="path to config YAML")
     ap.add_argument("--tickers", help="comma-separated tickers, overrides config")
     ap.add_argument("--outdir", help="output directory, overrides config")
+    ap.add_argument("--alert-file", default="alert.json",
+                    help="where to stage the alert for send_alerts.py")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -140,11 +153,18 @@ def main(argv: list[str] | None = None) -> int:
         print("No tickers to scan. Add some to config.yaml or pass --tickers.", file=sys.stderr)
         return 2
 
+    # Every ticker enters the pipeline in Yahoo's spelling. Class shares are
+    # published as BRK.B and Yahoo only answers to BRK-B, so a dotted holding
+    # downloaded nothing and disappeared behind one "No data for:" line.
+    tickers = list(dict.fromkeys(universe.to_yahoo(t) for t in tickers))
+
     # ---- Halal screening ----------------------------------------------------
     hs = cfg.get("halal_screen") or {}
     formula = hs.get("financial_formula") or {}
+    screen_mode = "none"
     if formula.get("enabled"):
         recv = formula.get("max_receivables_ratio", None)
+        screen_mode = str(formula.get("mode", "filter"))
         print("Running halal financial-ratio formula (industry + debt/cash ratios)...")
         kept, dropped, screen_details = halal.screen_universe(
             tickers,
@@ -154,10 +174,19 @@ def main(argv: list[str] | None = None) -> int:
         )
         for t, reason in dropped:
             print(f"  rejected {t}: {reason}")
-        if str(formula.get("mode", "filter")) == "filter":
+        if screen_mode == "filter":
             tickers = kept
             print(f"  {len(kept)} compliant, {len(dropped)} rejected.")
+        else:
+            # `annotate` keeps the names that failed. That is only defensible if
+            # the failure is *visible*: a name that failed the industry screen
+            # for being a bank has to arrive at the page saying so, not as a row
+            # that looks exactly like a compliant one on a page whose whole
+            # premise is a screened watchlist.
+            print(f"  annotate mode: keeping all {len(tickers)} names; "
+                  f"{len(dropped)} are flagged non-compliant in the payload.")
     elif hs.get("live_sector_filter"):
+        screen_mode = "industry"
         print("Running halal sector screen...")
         tickers, dropped = halal.filter_tickers(tickers)
         for t, reason in dropped:
@@ -177,8 +206,24 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:
             pass
 
-    print(f"Downloading {len(tickers)} tickers ({params['history_period']})...")
-    raw = data.download(tickers, period=params["history_period"])
+    # One download, not two. The charts want a decade of the same daily bars the
+    # scan wants a year of, and the decade is a strict superset — pulling both
+    # asked a free endpoint for every price twice a day for nothing. The long
+    # frames are kept for the charts step below; the scan runs on a slice.
+    opt_cfg = cfg.get("options") or {}
+    charts_cfg = cfg.get("charts") or {}
+    charts_period = str(charts_cfg.get("history_period", "10y"))
+    scan_period = str(params["history_period"])
+    long_days = data.period_days(charts_period) if charts_cfg.get("enabled", True) else None
+    share_download = bool(long_days and (data.period_days(scan_period) or 0) <= long_days)
+
+    fetch_period = charts_period if share_download else scan_period
+    print(f"Downloading {len(tickers)} tickers ({fetch_period})...")
+    downloaded = data.download(tickers, period=fetch_period)
+    craw = downloaded if share_download else {}
+    raw = data.slice_period(downloaded, scan_period) if share_download else downloaded
+    if share_download:
+        print(f"  the charts ({charts_period}) and the scan ({scan_period}) share this download.")
     print(f"Got data for {len(raw)}/{len(tickers)} tickers.")
 
     missing = sorted(set(t.upper() for t in tickers) - set(raw))
@@ -187,20 +232,35 @@ def main(argv: list[str] | None = None) -> int:
 
     df = scanner.scan(raw, params)
 
-    # Attach the halal financial-ratio + earnings columns from the screen (if it ran).
+    # Attach the halal financial-ratio columns from the screen (if it ran).
     if not df.empty and screen_details:
         df["debt_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "debt_ratio", None))
         df["cash_ratio"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "cash_ratio", None))
-        df["earnings_in_days"] = df["ticker"].map(lambda t: getattr(screen_details.get(t), "earnings_in_days", None))
+
+    # Earnings dates. The guardrail that flips undefined risk to defined, and
+    # every earnings warning on every card, reads one column — so the column has
+    # to exist however the universe was screened. It used to be attached only
+    # inside the financial-formula branch, which meant `--tickers` runs and
+    # sector-filtered runs silently had the check switched off while the page
+    # rendered an empty Earnings column that looked like "nothing due".
+    top_n = int(opt_cfg.get("top_n", 15))
+    earnings = {t: res.earnings_in_days for t, res in screen_details.items()}
+    if not df.empty:
+        # Only the names that get an option chain can use it, and each lookup is
+        # a fundamentals call, so this does not fetch the whole universe.
+        need = [t for t in df.head(top_n)["ticker"] if t not in earnings]
+        if need and opt_cfg.get("enabled"):
+            print(f"Fetching earnings dates for {len(need)} name(s) the screen did not cover...")
+            earnings.update(halal.earnings_calendar(need))
+        df["earnings_in_days"] = df["ticker"].map(earnings.get)
 
     # ---- Options / IV layer -------------------------------------------------
     # Read the option chain for the most coiled names: IV rank, the IV-vs-HV
     # risk premium, term structure, skew and liquidity. This is what decides
     # whether you should be buying or selling premium.
-    opt_cfg = cfg.get("options") or {}
     views: dict[str, options.OptionView] = {}
     if opt_cfg.get("enabled") and not df.empty:
-        head = df.head(int(opt_cfg.get("top_n", 15)))
+        head = df.head(top_n)
         rows = list(zip(head["ticker"], head["price"], head["em_pct"]))
         hv_now, hv_hist = _hv_context(raw, params)
         print(f"Reading option chains for the top {len(rows)} names (IV rank, term structure, skew)...")
@@ -259,6 +319,37 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Built {sum(len(b['candidates']) for b in long_blocks.values())} long-dated spreads "
               f"across {len(long_blocks)} names.")
 
+    # The compliance screen's own verdict, per name. In `filter` mode this is
+    # every survivor saying why it survived; in `annotate` mode it is the only
+    # thing distinguishing a name that failed from one that passed.
+    screens = {t: {"compliant": bool(res.compliant),
+                   "industry_ok": bool(res.industry_ok),
+                   "industry": res.industry,
+                   "debt_ratio": res.debt_ratio,
+                   "cash_ratio": res.cash_ratio,
+                   "receivables_ratio": res.receivables_ratio,
+                   "reasons": list(res.reasons or [])}
+               for t, res in screen_details.items()}
+
+    # A scanned name the screen has no verdict for. `screen_universe` returns a
+    # ScreenResult per ticker, so this needs a join to drift — a spelling the
+    # price feed normalized differently, say. It is still worth a third state
+    # rather than an absent one: "we did not check this" is a different claim
+    # from "this passed", and on a page whose premise is a screened watchlist it
+    # is the one that must not be silent. Publishing it beats both dropping the
+    # row and failing the whole day's publish over one name.
+    if screen_mode in ("filter", "annotate"):
+        for ticker in (df["ticker"] if not df.empty else []):
+            if ticker in screens:
+                continue
+            screens[ticker] = {
+                "compliant": None, "industry_ok": None, "industry": "",
+                "debt_ratio": None, "cash_ratio": None, "receivables_ratio": None,
+                "reasons": ["it was not checked against the industry or balance-sheet "
+                            "rules this run — treat it as unverified, not as passing"],
+            }
+            print(f"  ! {ticker} has no screen verdict — published as unscreened.")
+
     scan_path = report.write_scan(
         df, outdir, params,
         weights=scanner.SCORE_WEIGHTS,
@@ -266,6 +357,14 @@ def main(argv: list[str] | None = None) -> int:
         recommendations=recs,
         option_views=views,
         long_spreads=long_blocks,
+        screens=screens,
+        screen_meta={"mode": screen_mode,
+                     "thresholds": {"max_debt_ratio": formula.get("max_debt_ratio", 0.33),
+                                    "max_cash_ratio": formula.get("max_cash_ratio", 0.33),
+                                    "max_receivables_ratio": formula.get("max_receivables_ratio")}
+                     if formula.get("enabled") else {},
+                     "earnings_checked": sum(1 for v in earnings.values() if v is not None),
+                     "earnings_names": len(earnings)},
         universe={"scanned": int(len(df)), "requested": len(tickers),
                   "source": ("cli" if args.tickers
                              else "config" if universe_fallback
@@ -284,26 +383,35 @@ def main(argv: list[str] | None = None) -> int:
 
     # Per-ticker price history for the frontend to draw. Best-effort: a failure
     # here must never break the main scan.
-    charts_cfg = cfg.get("charts") or {}
     if charts_cfg.get("enabled", True):
-        cperiod = str(charts_cfg.get("history_period", "10y"))
         cshow = charts_cfg.get("display_years", charts.DEFAULT_DISPLAY_YEARS)
         cshow = int(cshow) if cshow else None
         try:
-            print(f"Collecting price history for the charts ({cperiod}, cards show {cshow or 'all'}y)...")
-            craw = data.download(tickers, period=cperiod)
-            if not craw:                       # reuse the scan download if the fetch came back empty
-                craw = raw
-            charts_path = charts.write_charts(craw, outdir, period_label=cperiod,
+            print(f"Collecting price history for the charts ({charts_period}, "
+                  f"cards show {cshow or 'all'}y)...")
+            if not craw:                       # not shareable (or came back empty) — fetch it
+                craw = data.download(tickers, period=charts_period) or raw
+            charts_path = charts.write_charts(craw, outdir, period_label=charts_period,
                                               display_years=cshow)
             print(f"Wrote {charts_path}")
         except Exception as exc:               # noqa: BLE001 — charts are optional, log and move on
             print(f"Charts skipped ({type(exc).__name__}: {exc})", file=sys.stderr)
 
+    # Stage the alert; `send_alerts.py` posts it. Nothing is sent from here,
+    # because at this point the scan has not been validated yet — and a scan CI
+    # refuses to publish had already pinged the webhook about it.
     alert_cfg = cfg.get("alerts") or {}
+    Path(args.alert_file).unlink(missing_ok=True)
     if alert_cfg.get("enabled") and not df.empty:
-        alerts.maybe_alert(df, float(alert_cfg.get("score_threshold", 60)), prev_scores,
-                           recommendations=recs)
+        pending = alerts.build_alert(df, float(alert_cfg.get("score_threshold", 60)),
+                                     prev_scores, recommendations=recs)
+        if pending is None:
+            print(f"Alerts: no new crossings of score ≥ "
+                  f"{float(alert_cfg.get('score_threshold', 60)):g}.")
+        else:
+            alerts.stage(pending, args.alert_file)
+            print(f"Alerts: staged {len(pending['tickers'])} ticker(s) in {args.alert_file} "
+                  "— run send_alerts.py after the scan is validated.")
     return 0
 
 

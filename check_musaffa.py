@@ -16,6 +16,13 @@ key or account is required; robots.txt permits ``/stock/`` paths.
 This is a courtesy read of a handful of public pages once in a while — keep it
 that way (small watchlist, not a bulk crawler) and leave the polite delay in.
 
+⚠️ Advisory only. The verdict is scraped out of an embedded state blob with a
+regular expression, inside a 6,000-character window around the ticker anchor —
+so a layout change turns a real answer into "unrated" rather than into an error,
+and a page that renders two stocks near each other could in principle be read
+across. Nothing in the pipeline consumes this script's output: it prints for a
+human to read, and the human is the one who decides.
+
 Usage
 -----
     python check_musaffa.py            # first 15 from config.yaml
@@ -36,6 +43,8 @@ import urllib.request
 from pathlib import Path
 
 import yaml
+
+from spread_scanner.net import retry
 
 STOCK_URL = "https://musaffa.com/stock/{ticker}/"
 _HEADERS = {"User-Agent": "Mozilla/5.0 (spread-scanner halal-check)"}
@@ -97,10 +106,14 @@ def _extract(html: str, ticker: str) -> dict:
 def check_ticker(ticker: str, timeout: int = 30) -> dict:
     """Fetch and parse one ticker's public Musaffa page. Fails soft."""
     url = STOCK_URL.format(ticker=ticker.upper())
-    req = urllib.request.Request(url, headers=_HEADERS)
-    try:
+
+    def _get() -> str:
+        req = urllib.request.Request(url, headers=_HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
+            return resp.read().decode("utf-8", errors="replace")
+
+    try:
+        html = retry(_get, attempts=2, label=f"{ticker} musaffa page")
     except Exception as exc:  # noqa: BLE001 — one bad name shouldn't abort the batch
         return {"ticker": ticker.upper(), "status_raw": None,
                 "status": f"error ({type(exc).__name__})", "ranking": None,

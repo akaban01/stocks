@@ -1,7 +1,6 @@
 """The webhook message says what to do, not just that something moved."""
 
 import pandas as pd
-import pytest
 
 from spread_scanner import alerts, strategy
 from conftest import make_row, make_view
@@ -28,7 +27,10 @@ def test_message_carries_the_recommendation():
     assert "AAA" in msg
     assert "SELL premium" in msg
     assert "Iron Condor" in msg
-    assert "IV rank" in msg
+    # The blended premium score, named as itself. It is not IV rank, and the
+    # message used to say it was.
+    assert "premium 88/100 rich" in msg
+    assert "IV rank" not in msg
     assert "credit" in msg
     assert "Not financial advice" in msg
 
@@ -55,6 +57,55 @@ def test_maybe_alert_posts_once_for_a_new_crossing(monkeypatch):
     assert alerts.maybe_alert(df, 60.0, {}, recommendations=recs) == 1
     assert "BUY premium" in sent["msg"]
     assert alerts.maybe_alert(df, 60.0, {"AAA": 75.0}) == 0     # no longer new
+
+
+def test_staged_alerts_are_not_sent_until_asked(tmp_path, monkeypatch):
+    """Nothing leaves the machine at scan time: the run stages, and the send
+    happens after the scan has been validated."""
+    sent = []
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    monkeypatch.setattr(alerts, "_post", lambda url, msg: sent.append(msg))
+    df = _rows("AAA")
+    payload = alerts.build_alert(df, 60.0, {}, None)
+    assert payload["tickers"] == ["AAA"]
+
+    path = alerts.stage(payload, tmp_path / "alert.json")
+    assert path.exists() and sent == []
+
+    assert alerts.send_staged(path) == 1
+    assert len(sent) == 1
+    # The file is consumed, so a later run can never re-send yesterday's alert.
+    assert not path.exists()
+    assert alerts.send_staged(path) == 0
+
+
+def test_a_failed_send_keeps_the_staged_message(tmp_path, monkeypatch):
+    """Consuming the file before posting meant a webhook that was down took the
+    alert with it. `run.py` clears any leftover before staging fresh, so keeping
+    it cannot re-send a stale one either."""
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    monkeypatch.setattr(alerts, "_post", lambda url, msg: (_ for _ in ()).throw(OSError("down")))
+    path = alerts.stage(alerts.build_alert(_rows("AAA"), 60.0, {}, None), tmp_path / "alert.json")
+    assert alerts.send_staged(path) == 0
+    assert path.exists(), "the message survives a failed post"
+
+    sent = []
+    monkeypatch.setattr(alerts, "_post", lambda url, msg: sent.append(msg))
+    assert alerts.send_staged(path) == 1
+    assert len(sent) == 1 and not path.exists()
+
+
+def test_an_unreadable_staged_file_is_discarded(tmp_path, monkeypatch):
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "https://hooks.slack.test/x")
+    path = tmp_path / "alert.json"
+    path.write_text("{not json", encoding="utf-8")
+    assert alerts.send_staged(path) == 0
+    assert not path.exists()
+
+
+def test_nothing_crossing_stages_nothing():
+    df = _rows("AAA")
+    assert alerts.build_alert(df, 60.0, {"AAA": 70.0}) is None
 
 
 def test_a_failing_webhook_never_breaks_the_run(monkeypatch, capsys):

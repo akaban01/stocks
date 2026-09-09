@@ -46,6 +46,8 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
 | `public/data/backtest.json` | `backtest.py` | does the score work? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set |
+| `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
+| `alert.json` (repo root, gitignored) | `run.py` | the pending webhook message, posted later by `send_alerts.py` |
 
 Shipping the *copy* inside `scan.json` is deliberate: an explanation can never
 drift from the field it explains, and any other client — a notebook, a bot, your
@@ -74,6 +76,13 @@ Each ticker gets a **Setup Score (0–100)** — higher means more coiled — a
 **Premium Score (0–100)** blending IV rank (45%), the IV/HV risk premium (40%) and
 the term structure (15%). Premium score is what decides buy vs sell.
 
+> **On history.** A name is scored only once it has at least half of
+> `params.percentile_lookback` bars (60 by default). Below that the two
+> percentile terms — two thirds of the score — come off a handful of points, and
+> a number computed that way has no business being ranked against a name with a
+> full year. A name with enough to score but less than the full lookback is
+> published carrying `"limited history"`.
+
 > **On IV rank.** Free data sources publish no historical implied volatility, so
 > IV rank and percentile here are ranked against each name's own trailing
 > **realized**-vol distribution. Implied vol forecasts forward realized vol, so
@@ -84,21 +93,27 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > **Does the score actually work?** Yes, in the way that matters. The backtest
 > (5y, the live universe — see the **Does it work?** tab, or
 > `public/data/backtest.json`) shows coiled names break out of their *own*
-> compressed ±1σ band **~44%** of the time vs **~30%** for calm names — a real
-> *expansion* edge. (They don't move more in raw % — the score targets low-vol
+> compressed ±1σ band **~44%** of the time vs **~30%** for calm names — an
+> *expansion* edge, described rather than proven: the score being measured was
+> fitted on this same history, and the universe is whatever passes the screen
+> *today*, measured backwards. The out-of-sample split is the calibration panel
+> next to it. (They don't move more in raw % — the score targets low-vol
 > names — so the edge is relative, which is exactly what a both-ways straddle
 > trader wants.) Re-runs each day.
 
 ## Quick start (local)
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt     # runtime deps + pytest + ruff
+                                        # (requirements.txt alone is runtime only)
 
+python calibrate.py                    # fit the score weights -> weights.json
 python run.py                          # scan + IV read + strategies -> public/data/
 python run.py --tickers AAPL,MSFT,NVDA # ad-hoc one-off scan
+python send_alerts.py                  # post the alert run.py staged, if any
 python backtest.py --years 5           # validate the score on history
-python calibrate.py --years 5          # re-fit the score weights
 python -m pytest -q                    # the test suite (network-free)
+ruff check .                           # the lint CI runs
 
 # then view the dashboard — fetch() does not work over file://
 python -m http.server 8765 --directory public   # http://localhost:8765
@@ -163,7 +178,11 @@ Modifiers, applied on top:
   the momentum `lean` alone never promotes a neutral structure to a one-sided one.
 - **Earnings inside the expiry** forces defined risk, and warns on the side that
   matters: buying premium means paying event premium that gets crushed after the
-  print; selling it means the crush is the trade and the gap is the risk.
+  print; selling it means the crush is the trade and the gap is the risk. The date
+  is read for every name that gets priced, whichever way the universe was screened
+  — it used to be attached only when the financial-ratio screen ran, so an
+  ad-hoc `--tickers` scan had this guardrail silently switched off behind an
+  Earnings column of dashes.
 - **Liquidity** caps the leg count. `poor` stands aside outright with the actual
   bid/ask in the reason; `fair` or `unknown` drops the 4-leg condor to a single
   2-leg credit spread.
@@ -174,8 +193,23 @@ Modifiers, applied on top:
 Every plan also carries a `risk_form` note saying **what actually secures it** —
 a debit you have already paid (`defined_debit`), margin against a short option
 (`short_premium`), shares you already own (`covered`), or a long option
-(`option_covered`, the diagonal). That is a different question from how likely
-the trade is to win, and it is the one that decides how the position can hurt you.
+(`option_covered`, the diagonal and the calendar). That is a different question
+from how likely the trade is to win, and it is the one that decides how the
+position can hurt you.
+
+Two structures deliberately publish *less* than the others, because the model
+behind the missing numbers does not apply to them:
+
+- **The calendar spread gets no breakeven and no probability of profit.** Its legs
+  expire a month or two apart, so there is no single price at which it settles:
+  what it is worth at the front expiry depends on implied volatility that day. It
+  used to publish both, from a pair of strikes placed by hand at
+  `strike × (1 ± 0.6σ)` — which the page then rendered exactly like a vertical's.
+  The same rule is why the long-dated diagonal has never quoted one.
+- **The covered call's `net` is the credit, not the cost of the stock.** The shares
+  leg is marked `own` — it is stock you already hold, not a leg of this order — so
+  it is excluded from the net rather than priced as a sale of a hundred contracts
+  of stock. Its `max_loss` is still the real one: the shares going to zero.
 
 ## The Spreads tab — the same names at ~13 months
 
@@ -202,9 +236,11 @@ Five structures are priced off the real long-dated chain:
 
 | Structure | Legs | What it is |
 |---|---|---|
-| **LEAPS Bull Call / Bear Put Spread** | ATM long, ~15% OTM short | Direction with a year of room, at a cost fixed on day one |
+| **LEAPS Bull Call Spread** | ATM long call, ~15% OTM short call | Direction with a year of room, at a cost fixed on day one |
+| **LEAPS Bear Put Spread** | ATM long put, ~15% OTM short put | The same shape pointed down |
 | **Poor Man's Covered Call** | ~20% ITM long-dated call + short **front-month** call | Covered-call income on a fraction of the capital — the long call, not stock, secures the short one |
-| **LEAPS Bull Put / Bear Call Spread** | ~20% OTM short + wing | Paid up front to be right slowly, capital committed for the year |
+| **LEAPS Bull Put Spread** | ~20% OTM short put + lower wing | Paid up front to be right slowly, capital committed for the year |
+| **LEAPS Bear Call Spread** | ~20% OTM short call + higher wing | The same, above the price |
 
 The tab is a sortable table — ticker, structure, expiry, legs, net debit/credit,
 max profit, max loss, reward-to-risk, that return annualised, breakeven,
@@ -328,7 +364,14 @@ tickers:
 of the ETFs in `universe.etfs` (default **SPUS** + **HLAL**) and unions them by
 weight ([`spread_scanner/universe.py`](spread_scanner/universe.py)). Starting from
 a fund's published holdings means the list is maintained by someone else. If the
-fetch fails, it falls back to the curated `tickers:` list in the config.
+fetch fails, it falls back to the curated `tickers:` list in the config — and the
+substitution reaches the page as a banner, because a scan of the fallback list
+otherwise looks exactly like a scan of the funds' live holdings.
+
+Tickers are normalized to Yahoo's spelling on the way in: the holdings page writes
+class shares as `BRK.B` and every Yahoo endpoint answers only to `BRK-B`, so a
+dotted holding downloaded nothing and vanished from the scan behind a single
+console line.
 
 **2. Verify — the financial-ratio formula.** Every fetched name is re-checked
 ([`spread_scanner/halal.py`](spread_scanner/halal.py)) on its industry and its
@@ -343,7 +386,15 @@ AND  accounts receivable / market cap    < 33%   (optional)
 
 The resulting **Debt%** and **Cash%** show in every report so you can see the
 verification. Set `halal_screen.financial_formula.mode: annotate` to keep names
-that fail (just flagging the ratios) instead of dropping them.
+that fail instead of dropping them — each one then arrives carrying its verdict:
+a **Fails screen** badge on its card, the reason underneath it, a `fails` in the
+scanner table's **Screen** column, and a banner naming every flagged name at the
+top of the page. A name the screen could not reach at all is a third state,
+**Not screened**, and never renders as a pass: "we did not check this" and "this
+passed" are different claims, and only one of them is safe to imply. (Until
+recently only the two ratios reached the payload, so a
+name kept for being a bank rendered exactly like one that passed. On a page whose
+premise is a screened watchlist, that was the worst failure mode available.)
 
 > ⚠️ **Approximate.** The ratios use spot values from `yfinance` rather than the
 > trailing averages a formal screen would use, and "interest-bearing securities"
@@ -361,7 +412,7 @@ universe:
 halal_screen:
   financial_formula:
     enabled: true
-    mode: filter         # 'filter' drops failures; 'annotate' keeps + reports ratios
+    mode: filter         # 'filter' drops failures; 'annotate' keeps them, flagged
     max_debt_ratio: 0.33
     max_cash_ratio: 0.33
 options:
@@ -409,6 +460,10 @@ git remote add origin git@github.com:<you>/<repo>.git
 git push -u origin main
 ```
 
+The test workflow triggers on pushes to `main` *or* `master`
+([`tests.yml`](.github/workflows/tests.yml)); if you rename the default branch to
+something else, add it there or pushes will run no tests at all.
+
 Then in the repo: **Settings → Actions → General → Workflow permissions →
 Read and write**, so the Action can commit. Trigger it once by hand from the
 **Actions** tab (workflow_dispatch) to confirm it works; after that it runs daily.
@@ -442,7 +497,17 @@ public/assets/styles.css   the design system
 
 Nothing generates these — edit and reload. `app.js` reads all of its trading copy
 from `scan.json`'s `reference` block, so adding a strategy on the Python side
-surfaces in the UI without touching the frontend.
+surfaces in the UI without touching the frontend. The palette lives once, as
+custom properties in `styles.css`: the charts read `--up` / `--down` / `--wait`
+off the stylesheet at render time rather than restating the hex values, so a
+theme change moves the whole page rather than everything except the charts.
+
+Every table header is sortable **from the keyboard** as well as the mouse
+(`tabindex` + Enter/Space, `aria-sort` for the current column), the tab strip
+takes arrow keys with a roving tabindex, and every focusable element paints a
+visible `:focus-visible` ring. If you restyle, keep those: dropping the outline
+without replacing it is a WCAG 2.4.7 failure, which is exactly how it was lost
+the first time.
 
 ## Alerts (Slack / Discord)
 
@@ -458,12 +523,17 @@ was below it on the previous run — so you don't get spammed with the same setu
 The payload shape (Slack `text` vs Discord `content`) is auto-detected from the URL.
 No webhook configured = the step quietly does nothing.
 
+`run.py` only *stages* the message (`alert.json`); `send_alerts.py` posts it, from
+a workflow step that runs after the scan has been validated. A scan whose option
+feed came back empty is one CI refuses to publish — and, now, one it does not
+notify you about either.
+
 The message carries the recommendation, not just the score:
 
 ```
 📈 Spread Scanner — 1 ticker(s) crossed score ≥ 60:
 • NVDA  score 78 · 🔒12d  price 118.45  ±6.8%/10d  [113.68 ↔ 123.23]
-   ↳ 🔴 SELL premium: Iron Condor · IV rank 92/100 rich
+   ↳ 🔴 SELL premium: Iron Condor · premium 92/100 rich
    ↳ Sell 1× 2026-09-19 100 put; Buy 1× 2026-09-19 90 put; … — net credit $208.00 per spread
 ```
 
@@ -479,19 +549,31 @@ score = 100 × [ w_compression × (1 − bandwidth_percentile)
 
 The weights are **data-calibrated**, not hand-picked. [`calibrate.py`](calibrate.py)
 sets each weight ∝ how much that feature lifts the band-break (expansion) rate,
-measured on a **train** split and validated **out-of-sample**:
+measured on a **train** split and validated **out-of-sample**. It runs as the first
+step of the daily workflow, writing `weights.json` — the model both `run.py` and
+`backtest.py` load, so the live score and the backtested score cannot be two
+different functions — plus `public/data/calibration.json`, which is the
+calibration half of the **Does it work?** tab.
+
+The figures below are one run's, kept as an illustration of the shape of the
+answer:
 
 | Feature | weight | OOS check (test split) |
 |---|---|---|
 | compression | 29% | calibrated weights separate high- vs low-score band-break rate by **+19 pts** |
-| vol room | 48% | vs **+14 pts** for the old hand-set heuristic — |
-| squeeze | 23% | the calibration holds up out of sample. |
+| vol room | 48% | vs **+14 pts** for the hand-set heuristic — |
+| squeeze | 23% | the calibration held up out of sample. |
 
-Re-run `python calibrate.py` after changing the universe or horizon. It writes
-`weights.json` — the live "model" the scanner loads each run — plus
-`public/data/calibration.json` for the **Does it work?** tab. All indicator math lives
-in [`spread_scanner/indicators.py`](spread_scanner/indicators.py), computed without
-look-ahead.
+**The live numbers are in `public/data/calibration.json`, and they are the ones to
+read** — the universe changes, so these will not reproduce exactly. When no
+`weights.json` exists the scanner falls back to the constants in
+[`scanner.py`](spread_scanner/scanner.py) (the same three numbers, which is why the
+table matches them) and says so: `scan.json` records `weights.source` as `default`
+rather than `auto-calibrated`, and the dashboard header prints whichever it used.
+
+Re-run `python calibrate.py` after changing the universe or horizon. All indicator
+math lives in [`spread_scanner/indicators.py`](spread_scanner/indicators.py),
+computed without look-ahead.
 
 The **Premium Score** that picks buy-vs-sell is a separate, simpler blend
 ([`spread_scanner/options.py`](spread_scanner/options.py)):
@@ -510,11 +592,20 @@ history of implied volatility to fit them against. They are constants at the top
 `options.py` — `CHEAP_BELOW`, `RICH_ABOVE` and the `premium_score` blend — so they
 are easy to move if you disagree.
 
+> ⚠️ **Two of those three terms are one signal seen twice.** Because free data
+> publishes no implied-vol history, `iv_rank` ranks IV against the *realized*-vol
+> distribution, and `f(IV / HV)` is IV over realized. Both are the same
+> implied-versus-realized comparison — one against a year of readings, one against
+> today's — so **85% of this number moves together** and only the 15%
+> term-structure term is independent of it. Read the score as one strong opinion
+> with a small tiebreaker, not as three votes.
+
 ## Development
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 157 network-free tests
+python -m pytest -q          # 290 network-free tests
+ruff check .                 # the lint CI runs — see ruff.toml
 ```
 
 Everything is tested without touching the network. `tests/conftest.py` builds
@@ -529,15 +620,31 @@ score / classification helpers, every branch of the strategy decision table
 (max profit, max loss, breakevens, credit-to-width, sizing) and the JSON payloads
 — including that `NaN` never reaches a file the browser has to parse.
 
-CI runs the suite **before** generating or deploying anything, then re-validates the
-generated `scan.json` before the commit
+CI lints and runs the suite **before** generating or deploying anything, then
+re-validates the generated `scan.json` before the commit
 ([`.github/workflows/update.yml`](.github/workflows/update.yml)), so neither a broken
-change nor a malformed payload reaches the dashboard.
+change nor a malformed payload reaches the dashboard. Alerts are posted from a step
+**after** that validation, so a scan CI refuses to publish is not one you get
+notified about either.
+
+Dependencies carry upper bounds and [Dependabot](.github/dependabot.yml) proposes the
+bumps, so an upstream major release arrives as a pull request the suite runs against
+rather than inside the next scheduled scan.
+
+Network calls retry at the level their failures actually appear at. Most raise, and
+[`spread_scanner/net.py`](spread_scanner/net.py) retries those with backoff. `yf.download`
+does not: a ticker that fails is caught inside yfinance, filed as an empty frame and
+returned normally, so the batch looks like a success and a wrapper around the call
+never sees it. The only signal a caller gets is that the ticker is missing from the
+result — so `data.download` re-requests exactly the missing subset, once. A name that is
+genuinely dead stays missing and costs one extra request per run; a live one no longer
+disappears for the day over a single 429.
 
 ### Layout
 
 ```
 run.py                       scan -> screen -> IV read -> strategies -> JSON
+send_alerts.py               posts what run.py staged, after CI validates it
 backtest.py / calibrate.py   validation + weight fitting -> JSON
 spread_scanner/
   universe.py  halal.py      building and screening the watchlist
@@ -550,9 +657,17 @@ spread_scanner/
   charts.py                  the price history payload
   seasonality.py             the same closes grouped by calendar month
   backtest.py                the validation payload
-  alerts.py                  Slack / Discord webhook
+  alerts.py                  Slack / Discord webhook (staged, then sent)
+  net.py                     retry with backoff, for every network edge
 public/                      the frontend (hand-written) + data/ (generated)
 ```
+
+## License
+
+[MIT](LICENSE). A public repository with no licence file is "all rights
+reserved" by default, which is not what a repository published to read and
+learn from wants to say. Nothing in it is a warranty — least of all about the
+trades it prints.
 
 ---
 

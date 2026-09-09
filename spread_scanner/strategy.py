@@ -52,7 +52,14 @@ WING_MAX_STEPS = 6
 
 # --- gates -------------------------------------------------------------------
 MIN_SCORE_FOR_FAIR_IV = 55.0   # at fair IV, only a genuinely coiled name is worth a trade
-MIN_CREDIT_TO_WIDTH = 0.20     # a credit spread paying less than this isn't worth the risk
+# The credit a vertical should pay for the width it risks. This is a *warning*
+# threshold, not a gate: the long wing is placed by `wing_strike` (~40% of the
+# distance from spot to the short strike), so the width — and therefore this
+# ratio — is set by that rule rather than by the market's pricing. Gating on it
+# would stand aside on nearly every vertical this engine builds while saying the
+# price was wrong, when what is thin is the structure. The card flags it, the
+# payload carries the number, and the reader decides.
+MIN_CREDIT_TO_WIDTH = 0.20
 MAX_CONTRACTS = 20
 
 # What actually secures each structure. This is the difference between a trade
@@ -253,14 +260,29 @@ def make_leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | N
     )
 
 
+# One option contract covers this many shares. Share legs are quoted per share
+# and are not multiplied.
+CONTRACT_MULTIPLIER = 100
+
+
 def net_cost(legs: list[Leg]) -> float | None:
-    """Net cost per spread in dollars. Positive = debit, negative = credit."""
+    """Net cost per spread in dollars. Positive = debit, negative = credit.
+
+    Only legs this order actually transacts count. A leg with ``action="own"``
+    is stock you already hold — the covered call's shares — and it is not a
+    sale: pricing it as one subtracted 100 shares at spot from the net and
+    reported a $2,000,326 "credit" on a $200 stock. Nothing here is a share
+    *trade* today, but the multiplier is still applied per right rather than
+    per leg, so adding one later cannot reintroduce the same error."""
     total = 0.0
     for leg in legs:
+        if leg.action == "own":
+            continue
         if leg.mid is None:
             return None
-        total += (leg.mid if leg.action == "buy" else -leg.mid) * leg.qty
-    return round(total * 100, 2)
+        mult = 1 if leg.right == "share" else CONTRACT_MULTIPLIER
+        total += (leg.mid if leg.action == "buy" else -leg.mid) * leg.qty * mult
+    return round(total, 2)
 
 
 def sigma_to_expiry(view: OptionView, dte: int) -> float:
@@ -337,9 +359,21 @@ def resolve_risk_form(basis: str) -> dict:
     return {"tier": tier, "note": note}
 
 
+def _single_expiry(plan: Plan) -> bool:
+    """Do all of this plan's legs expire on the same date?"""
+    return len({leg.expiry for leg in plan.legs if leg.expiry}) <= 1
+
+
 def _finish(plan: Plan, view: OptionView, sigma: float, budget: float) -> Plan:
     plan.net = net_cost(plan.legs)
-    plan.pop = pop_estimate(view.spot, plan.breakevens, plan.profit_zone, sigma)
+    # `pop_estimate` is a terminal-price model: it asks where the stock lands on
+    # one expiry. A structure whose legs expire on different dates has no single
+    # terminal price — a calendar's outcome turns on what implied volatility is
+    # doing at the *front* expiry with the back leg still alive — so it gets no
+    # probability rather than a confident-looking one. The long-dated engine
+    # refuses the same way for the diagonal (see leaps.long_spreads).
+    plan.pop = (pop_estimate(view.spot, plan.breakevens, plan.profit_zone, sigma)
+                if _single_expiry(plan) else None)
     plan.risk_form = resolve_risk_form(plan.risk_form.get("basis", "none"))
     plan.sizing = size_position(plan, budget)
     plan.playbook = PLAYBOOK.get(plan.key, "")
@@ -355,9 +389,19 @@ def _long_straddle(view: OptionView, sigma: float) -> Plan | None:
     legs = [x for x in (make_leg("buy", call, exp), make_leg("buy", put, exp)) if x]
     if len(legs) < 2:
         return None
+    # A straddle is one strike. When the nearest listed call and put strikes are
+    # not the same one — a gap on one side of the chain — what has actually been
+    # built is a strangle, and it has to say so: the breakevens sit around two
+    # different strikes, and pricing both off the call's understated the lower
+    # one by the whole gap.
+    split = call.strike != put.strike
     plan = Plan(
-        key="long_straddle", name="Long Straddle", action="BUY_PREMIUM", bias="neutral",
-        thesis="Options are cheap and the chart is coiled — pay for the move, either direction.",
+        key="long_strangle" if split else "long_straddle",
+        name="Long Strangle" if split else "Long Straddle",
+        action="BUY_PREMIUM", bias="neutral",
+        thesis=("Options are cheap and the chart is coiled — pay for the move, either direction."
+                + (" The chain lists no common strike at the money, so this is a strangle "
+                   "rather than a straddle." if split else "")),
         playbook="", vega="long", theta="negative", risk="defined",
         legs=legs, expiry=exp, dte=dte, profit_zone="outside",
         risk_form={"basis": "debit"}, manage=_manage_long(),
@@ -367,7 +411,7 @@ def _long_straddle(view: OptionView, sigma: float) -> Plan | None:
         per_share = debit / 100
         plan.max_loss = debit
         plan.max_profit = None                     # unlimited to the upside
-        plan.breakevens = [round(call.strike - per_share, 2), round(call.strike + per_share, 2)]
+        plan.breakevens = [round(put.strike - per_share, 2), round(call.strike + per_share, 2)]
     return plan
 
 
@@ -525,12 +569,32 @@ def _short_strangle(view: OptionView, sigma: float) -> Plan | None:
     return plan
 
 
+# How far past the front expiry the back leg of a calendar has to sit, and how
+# far it may sit. Too close and there is no term-structure edge to harvest; too
+# far and the "calendar" is a front month sold against a LEAPS, which is a
+# different trade with a different vega profile. Both are in calendar days.
+CALENDAR_MIN_GAP_DTE = 14
+CALENDAR_MAX_GAP_DTE = 120
+
+
 def _calendar(view: OptionView, sigma: float) -> Plan | None:
     """Sell the front expiry, buy the same strike further out."""
-    exps = [e for e in view.chain if e != view.expiry]
-    if not exps:
+    front_dte = view.days_to_expiry or 0
+    dte_by_date = {e["date"]: e["dte"] for e in view.expiries if e.get("dte") is not None}
+    # The back month is chosen, not taken in whatever order the chain came in.
+    # `exps[0]` was the first key of a dict that also holds the ≈13-month LEAPS
+    # expiry: when the ~60-day chain failed to fetch and the long one did not,
+    # this built a "calendar" against a leg a year out without noticing.
+    candidates = []
+    for exp in view.chain:
+        if exp == view.expiry:
+            continue
+        gap = (dte_by_date.get(exp) or 0) - front_dte
+        if CALENDAR_MIN_GAP_DTE <= gap <= CALENDAR_MAX_GAP_DTE:
+            candidates.append((gap, exp))
+    if not candidates:
         return None
-    back = exps[0]
+    back = min(candidates)[1]
     front_q = pick_quote(view, view.expiry, "call", view.spot)
     back_q = pick_quote(view, back, "call", front_q.strike if front_q else view.spot)
     if front_q is None or back_q is None or back_q.strike != front_q.strike:
@@ -538,21 +602,30 @@ def _calendar(view: OptionView, sigma: float) -> Plan | None:
     legs = [x for x in (make_leg("sell", front_q, view.expiry), make_leg("buy", back_q, back)) if x]
     if len(legs) < 2:
         return None
-    back_dte = next((e["dte"] for e in view.expiries if e["date"] == back), None)
+    back_dte = dte_by_date.get(back)
     plan = Plan(
         key="calendar_spread", name="Calendar Spread", action="NEUTRAL_INCOME", bias="neutral",
-        thesis="The near expiry is priced richer than the far one — sell the front, own the back.",
+        thesis="The near expiry is priced richer than the far one — sell the front, own the back. "
+               "It profits while price stays near the strike and the front decays faster than the "
+               "back; where exactly it stops profiting depends on implied volatility at the front "
+               "expiry, which is why no breakeven or probability is quoted for it.",
         playbook="", vega="long", theta="positive", risk="defined",
         legs=legs, expiry=back, dte=back_dte, profit_zone="inside",
-        risk_form={"basis": "credit"}, manage=_manage_calendar(),
+        # Not a margin trade. The short front call is secured by the long back
+        # call at the same strike — assignment is covered by the leg you own,
+        # exactly as in a diagonal — and the position is entered for a debit,
+        # not a credit. Calling it short premium against margin described a
+        # trade this is not.
+        risk_form={"basis": "long_option"}, manage=_manage_calendar(),
     )
     debit = net_cost(legs)
     if debit is not None and debit > 0:
         plan.max_loss = debit
         plan.max_profit = None                     # depends on where vol lands at front expiry
-        # Rough profit zone: the position works while price stays near the strike.
-        plan.breakevens = [round(front_q.strike * (1 - sigma * 0.6), 2),
-                           round(front_q.strike * (1 + sigma * 0.6), 2)]
+        # No breakevens: the pair of strikes either side of the short strike that
+        # used to be published here were `strike × (1 ± 0.6σ)` — a placed number,
+        # not a computed one — and feeding them to the terminal-price model
+        # turned them into a confident-looking probability of profit.
     return plan
 
 
@@ -672,7 +745,7 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
             alts = ["long_straddle", "long_strangle"]
         else:
             primary = "long_straddle"
-            alts = ["long_strangle" if primary == "long_straddle" else "long_straddle"]
+            alts = ["long_strangle"]
             if bias != "neutral":
                 alts.append("bull_call_spread" if bullish else "bear_put_spread")
         return primary, alts, avoid, ""
@@ -684,6 +757,9 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
                              "— you'd be paying up for the move you want.")
                             if view.iv_rank is not None else
                             "Premium is rich — buying it here means overpaying for the move."}]
+        # Which single vertical stands in for a condor: the side the skew pays
+        # for, unless there is a lean to follow. Only the non-directional
+        # branches use it.
         put_side = "bull_put_spread" if (bullish or view.skew_label == "put_skew") else "bear_call_spread"
         if directional:
             primary = "bull_put_spread" if bullish else "bear_call_spread"
@@ -733,7 +809,16 @@ def _confidence(view: OptionView, row: dict, strength: str, plan: Plan,
     dist = abs(view.premium_score - 50) / 50
     conf = 0.30 + 0.35 * min(dist, 1.0)
     conf += 0.15 * min(float(row.get("score") or 0) / 100, 1.0)
-    conf += {"strong": 0.10, "weak": 0.03, "none": 0.06}[strength]
+    # How well the directional read agrees with the structure that was picked.
+    # A one-sided plan wants a direction and should not lean hard on a weak one.
+    # A both-ways plan is happiest with *no* direction: a weak lean is its worst
+    # input — enough to tilt the fills, not enough to trade on. That is why
+    # "none" scores above "weak" for a neutral structure. It reads like a
+    # transposition in a flat table, so the table is no longer flat.
+    if plan.bias == "neutral":
+        conf += {"strong": 0.04, "weak": 0.03, "none": 0.06}[strength]
+    else:
+        conf += {"strong": 0.10, "weak": 0.05, "none": 0.0}[strength]
     conf += {"good": 0.10, "fair": 0.04, "poor": -0.15, "unknown": 0.0}[view.liquidity]
     if view.iv_rank is None:
         conf -= 0.08                 # ranking IV without history is a weaker read
@@ -794,8 +879,14 @@ def _warnings(view: OptionView, row: dict, plan: Plan, earnings_inside: bool) ->
         out.append("Undefined risk: the loss on this structure is open-ended. Only trade it with a hard "
                    "mental stop and margin you can afford to lose.")
     if plan.credit_to_width is not None and plan.credit_to_width < MIN_CREDIT_TO_WIDTH:
-        out.append(f"The credit is only {plan.credit_to_width:.0%} of the spread width — thin compensation. "
-                   "Widen the wings or pass.")
+        out.append(f"The credit is only {plan.credit_to_width:.0%} of the spread width, under the "
+                   f"{MIN_CREDIT_TO_WIDTH:.0%} this scanner treats as thin compensation. Bringing the "
+                   "long wing closer to the short strike collects a larger share of a smaller width; "
+                   "otherwise pass.")
+    if plan.legs and not _single_expiry(plan):
+        out.append("The legs expire on different dates, so there is no single price at which this "
+                   "position settles: no breakeven and no probability of profit is quoted for it. "
+                   "What it is worth at the front expiry depends on implied volatility that day.")
     if plan.net is None and plan.legs:
         out.append("Some legs had no two-sided market, so the net price, max loss and probability "
                    "below could not be computed. Price it in your broker before deciding.")
@@ -874,7 +965,19 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
         plan = _stand_aside(reason)
         plan.sizing = {"risk_budget": risk_budget, "contracts": 0}
 
-    alternatives = [p.as_dict() for k in alt_keys if (p := build(k)) is not None][:3]
+    # De-duplicate by the key the *built* plan carries, not by the key asked
+    # for: a straddle degrades into a strangle when the chain lists no common
+    # strike, and the strangle alternative would then be the same trade twice.
+    alternatives: list[dict] = []
+    seen_keys = {plan.key}
+    for key in alt_keys:
+        alt = build(key)
+        if alt is None or alt.key in seen_keys:
+            continue
+        seen_keys.add(alt.key)
+        alternatives.append(alt.as_dict())
+        if len(alternatives) == 3:
+            break
 
     conf = _confidence(view, row, strength, plan, earnings_inside)
     return Recommendation(
