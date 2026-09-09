@@ -166,5 +166,94 @@
     return out;
   }
 
-  return { weekId: weekId, median: median, index: index, year: year, run: run };
+  /* ---- what the trade would actually have cost and paid ------------------
+
+     A debit vertical, priced off each year's own entry, and the one part of
+     this tab that involves money rather than percentages.
+
+     Read the honesty of it before the numbers. **The debit is yours, not the
+     market's.** This repo holds ten years of stock bars and no option history
+     at all, so nothing here can look up what an eight-week call spread really
+     cost in October 2018. You supply that as a share of the width, and it is
+     held constant across every year — which is exactly what it is not in life,
+     because the debit rises with implied volatility and implied volatility
+     rises when the market is frightened.
+
+     Everything downstream of that one assumption is exact. A vertical held to
+     expiry is worth `clamp(exit − long strike, 0, width)` and nothing else — no
+     model, no volatility, no time value, just the close we already have. So the
+     shape of the answer is real even where its level rests on your number, and
+     `breakeven` reports the debit that would have made the whole run wash, so
+     you can compare that with a quote instead of guessing.
+
+     Strikes are percentages of each year's entry, for the reason the target is:
+     $250 meant something very different in 2016. `long` is the strike you buy
+     (0 = at the money) and `short` the one you sell, both measured *toward* the
+     trade's direction, so a put spread is written with the same two positive
+     numbers as a call spread. */
+  function economics(result, opt) {
+    var up = opt.dir !== "down";
+    var lots = Math.max(1, Math.round(opt.contracts || 1));
+    var out = { rows: [], paid: 0, received: 0, net: 0, won: 0, lost: 0, flat: 0,
+                maxed: 0, worthless: 0, years: 0, roi: null, breakeven: null,
+                best: null, worst: null, lots: lots, why: null };
+
+    // The short strike has to sit beyond the long one, or there is no spread —
+    // refused with a reason rather than divided by zero.
+    if (!(opt.short > opt.long)) {
+      out.why = "the short strike has to sit beyond the long one";
+      return out;
+    }
+
+    var grossWidth = 0, grossValue = 0;
+    for (var i = 0; i < result.rows.length; i++) {
+      var r = result.rows[i];
+      if (!r.settled) continue;              // no exit, nothing to settle against
+
+      var kLong = r.entry * (up ? 1 + opt.long / 100 : 1 - opt.long / 100);
+      var kShort = r.entry * (up ? 1 + opt.short / 100 : 1 - opt.short / 100);
+      var width = Math.abs(kShort - kLong);
+      var debit = width * opt.debit / 100;
+      // Worth at expiry, and the whole of it: a vertical is intrinsic value by
+      // then. Capped at the width because the short strike is what caps it.
+      var worth = up ? Math.min(Math.max(r.exit - kLong, 0), width)
+                     : Math.min(Math.max(kLong - r.exit, 0), width);
+
+      // 100 shares to a contract — the US equity option multiplier, and the
+      // reason a $0.40 debit is $40 of real money.
+      var paid = debit * 100 * lots;
+      var back = worth * 100 * lots;
+      var row = { year: r.year, entry: r.entry, exit: r.exit, exit_pct: r.exit_pct,
+                  long: kLong, short: kShort, width: width, debit: debit, worth: worth,
+                  paid: paid, received: back, net: back - paid,
+                  roi: paid ? ((back - paid) / paid) * 100 : null,
+                  maxed: worth >= width - 1e-9, worthless: worth <= 1e-9 };
+      out.rows.push(row);
+
+      out.paid += paid;
+      out.received += back;
+      out.years++;
+      grossWidth += width;
+      grossValue += worth;
+      if (row.net > 1e-9) out.won++;
+      else if (row.net < -1e-9) out.lost++;
+      else out.flat++;
+      if (row.maxed) out.maxed++;
+      if (row.worthless) out.worthless++;
+      if (out.best === null || row.net > out.best.net) out.best = row;
+      if (out.worst === null || row.net < out.worst.net) out.worst = row;
+    }
+
+    out.net = out.received - out.paid;
+    out.roi = out.paid ? (out.net / out.paid) * 100 : null;
+    // The debit, as a share of width, that would have made the whole run wash:
+    // total paid equals total received when d = 100 × Σworth / Σwidth. It is the
+    // number to take to a live quote — under it this run made money, over it it
+    // did not, and it needs no view on what the spread cost in 2018.
+    out.breakeven = grossWidth ? (grossValue / grossWidth) * 100 : null;
+    return out;
+  }
+
+  return { weekId: weekId, median: median, index: index, year: year, run: run,
+           economics: economics };
 });

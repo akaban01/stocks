@@ -54,6 +54,23 @@ def run_trial(data: dict, ticker: str, **opts) -> dict:
     return json.loads(done.stdout)
 
 
+def run_economics(data: dict, ticker: str, spread: dict, **opts) -> dict:
+    """Run `SpreadTrial.run` then `SpreadTrial.economics` over its rows."""
+    options = {"dir": "up", "week": 37, "hold": 8, "target": 8, "years": 30, **opts}
+    deal = {"dir": options["dir"], "long": 0, "short": 8, "debit": 40, "contracts": 1, **spread}
+    script = f"""
+      const trial = require({json.dumps(str(TRIAL_JS))});
+      const payload = {json.dumps(data)};
+      const series = payload.series.find(s => s.ticker === {json.dumps(ticker)});
+      const at = trial.index(payload);
+      const result = trial.run(payload, series, {json.dumps(options)}, at);
+      process.stdout.write(JSON.stringify(trial.economics(result, {json.dumps(deal)})));
+    """
+    done = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
 # ---- building payloads by hand --------------------------------------------
 
 def payload(bars: dict[str, list], first_week: tuple[int, int] = (2016, 1)) -> dict:
@@ -445,3 +462,159 @@ def test_an_empty_payload_still_produces_a_whole_result():
                 "decided", "rate", "touch_rate", "median_best", "median_worst", "asked"):
         assert key in result, key
     assert result["rows"] == [] and result["decided"] == 0 and result["rate"] is None
+
+
+# ---- the money: what a debit vertical cost and paid -------------------------
+#
+# The debit is an assumption (this repo holds no option history), but everything
+# downstream of it is exact: a vertical held to expiry is intrinsic value and
+# nothing else. These pin that arithmetic.
+
+def test_a_spread_that_expires_past_the_short_strike_pays_the_full_width():
+    closes = flat(300)
+    closes[107] = 200.0                    # miles above a +8% short strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 1},
+                         week=week, hold=8)
+    row = next(r for r in econ["rows"] if r["exit"] == 200.0)
+
+    assert row["long"] == pytest.approx(100.0), "a 0% long strike is at the money"
+    assert row["short"] == pytest.approx(108.0)
+    assert row["width"] == pytest.approx(8.0)
+    assert row["paid"] == pytest.approx(320.0), "40% of an $8 width, times 100 shares"
+    assert row["received"] == pytest.approx(800.0), "capped at the width, not the 100% move"
+    assert row["net"] == pytest.approx(480.0)
+    assert row["roi"] == pytest.approx(150.0)
+    assert row["maxed"] is True
+
+
+def test_a_spread_that_expires_under_the_long_strike_is_a_total_loss():
+    data = payload({"AAA": flat(300)})     # flat: the exit sits exactly at the long strike
+    econ = run_economics(data, "AAA", {"long": 2, "short": 8, "debit": 40, "contracts": 1},
+                         hold=8)
+    row = econ["rows"][0]
+
+    assert row["worth"] == pytest.approx(0.0), "the exit never reached the long strike"
+    assert row["received"] == pytest.approx(0.0)
+    assert row["net"] == pytest.approx(-row["paid"]), "the debit is the whole of the risk"
+    assert row["worthless"] is True
+    assert econ["worthless"] == econ["years"] and econ["won"] == 0
+
+
+def test_a_spread_that_expires_between_the_strikes_pays_the_part_it_reached():
+    closes = flat(300)
+    closes[107] = 104.0                    # halfway between a 0% and an +8% strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 1},
+                         week=week, hold=8)
+    row = next(r for r in econ["rows"] if r["exit"] == 104.0)
+
+    assert row["worth"] == pytest.approx(4.0), "half the width"
+    assert row["received"] == pytest.approx(400.0)
+    assert row["net"] == pytest.approx(80.0), "a $4 payout against a $3.20 debit"
+    assert row["maxed"] is False and row["worthless"] is False
+
+
+def test_contracts_multiply_every_cash_figure_and_leave_the_return_alone():
+    closes = flat(300)
+    closes[107] = 200.0
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    one = run_economics(data, "AAA", {"contracts": 1}, week=week, hold=8)
+    five = run_economics(data, "AAA", {"contracts": 5}, week=week, hold=8)
+
+    assert five["paid"] == pytest.approx(one["paid"] * 5)
+    assert five["received"] == pytest.approx(one["received"] * 5)
+    assert five["net"] == pytest.approx(one["net"] * 5)
+    assert five["roi"] == pytest.approx(one["roi"]), "a return per dollar is size-independent"
+
+
+def test_a_put_spread_is_written_with_the_same_two_positive_numbers():
+    """Going down, the strikes flip below the entry and the payoff reads the other way."""
+    closes = flat(300)
+    closes[107] = 88.0                     # −12%, past a −8% short strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40},
+                         week=week, hold=8, dir="down")
+    row = next(r for r in econ["rows"] if r["exit"] == 88.0)
+
+    assert row["long"] == pytest.approx(100.0) and row["short"] == pytest.approx(92.0)
+    assert row["width"] == pytest.approx(8.0)
+    assert row["worth"] == pytest.approx(8.0), "a put spread pays as the name falls"
+    assert row["maxed"] is True
+
+
+def test_the_strikes_are_a_percentage_of_each_years_own_entry():
+    """The same reason the target is a distance: $250 meant something else in 2016."""
+    closes = flat(300)
+    closes[99] = 50.0                      # a much cheaper entry for this one year
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    row = next(r for r in run_economics(data, "AAA", {"long": 0, "short": 10, "debit": 50},
+                                        week=week, hold=8)["rows"] if r["entry"] == 50.0)
+
+    assert row["long"] == pytest.approx(50.0) and row["short"] == pytest.approx(55.0)
+    assert row["width"] == pytest.approx(5.0), "a 10% width is $5 here and $10 on a $100 name"
+
+
+def test_the_breakeven_is_the_debit_that_would_have_washed_the_whole_run():
+    closes = flat(300)
+    closes[107] = 200.0                    # one year takes the full width
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    deal = {"long": 0, "short": 8}
+    econ = run_economics(data, "AAA", dict(deal, debit=40), week=week, hold=8)
+
+    # One year in five takes the full width and the rest expire worthless, so
+    # 40% of width is far too much to pay — the breakeven says how much is not.
+    assert econ["net"] < 0 and 0 < econ["breakeven"] < 40
+    washed = run_economics(data, "AAA", dict(deal, debit=econ["breakeven"]), week=week, hold=8)
+    assert washed["net"] == pytest.approx(0.0, abs=1e-6), "paying it exactly washes"
+    assert run_economics(data, "AAA", dict(deal, debit=econ["breakeven"] - 5),
+                         week=week, hold=8)["net"] > 0, "paying less than it made money"
+    assert run_economics(data, "AAA", dict(deal, debit=econ["breakeven"] + 5),
+                         week=week, hold=8)["net"] < 0, "and paying more lost it"
+
+
+def test_a_short_strike_at_or_inside_the_long_one_is_refused_with_a_reason():
+    data = payload({"AAA": flat(300)})
+    for bad in ({"long": 8, "short": 8}, {"long": 10, "short": 4}):
+        econ = run_economics(data, "AAA", bad, hold=8)
+        assert econ["rows"] == [] and econ["years"] == 0
+        assert "beyond" in econ["why"], econ["why"]
+
+
+def test_only_settled_years_reach_the_money_table():
+    """An open window has no exit, so there is nothing to settle a vertical against."""
+    closes = flat(300)
+    data = payload({"AAA": closes})
+    _, week = at(data, 298)
+    result = run_trial(data, "AAA", week=week, hold=8)
+    econ = run_economics(data, "AAA", {}, week=week, hold=8)
+
+    assert result["open"] >= 1, "this fixture is meant to leave a window running"
+    assert econ["years"] == result["decided"]
+    assert ({r["year"] for r in econ["rows"]}
+            == {r["year"] for r in result["rows"] if r.get("settled")})
+
+
+def test_the_totals_are_the_rows_added_up():
+    closes = flat(300)
+    closes[107] = 130.0
+    closes[159] = 90.0
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 3},
+                         week=week, hold=8)
+
+    assert econ["years"] == len(econ["rows"]) > 1
+    assert econ["paid"] == pytest.approx(sum(r["paid"] for r in econ["rows"]))
+    assert econ["received"] == pytest.approx(sum(r["received"] for r in econ["rows"]))
+    assert econ["net"] == pytest.approx(econ["received"] - econ["paid"])
+    assert econ["roi"] == pytest.approx(econ["net"] / econ["paid"] * 100)
+    assert econ["won"] + econ["lost"] + econ["flat"] == econ["years"]
+    assert econ["best"]["net"] >= econ["worst"]["net"]
+    assert econ["lots"] == 3

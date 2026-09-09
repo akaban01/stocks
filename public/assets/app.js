@@ -31,6 +31,11 @@
     });
   }
   function money(v, digits) { return has(v) && !isNaN(v) ? "$" + num(Math.abs(v), digits === undefined ? 2 : digits) : "—"; }
+  // money() drops the sign, which is right for a price and wrong for a P&L.
+  function cash(v, digits) {
+    if (!has(v) || isNaN(v)) return "—";
+    return (v < 0 ? "−$" : "$") + num(Math.abs(v), digits === undefined ? 0 : digits);
+  }
   function pct(v, digits) { return has(v) && !isNaN(v) ? num(v, digits === undefined ? 1 : digits) + "%" : "—"; }
 
   // The actions that mean "there is a trade here" — as opposed to standing
@@ -1424,8 +1429,24 @@
   var rpAt = null;                          // "2025-W37" -> position on the axis
   var rpSort = { key: "rate", dir: -1 };
 
+  // The optional money section. `dir` is not in here: a debit spread is a call
+  // spread going up and a put spread going down, and that is the same question
+  // the direction chip already answers — two controls for one fact would let
+  // them disagree.
+  var sp = { on: false, long: 0, short: 8, debit: 40, contracts: 1 };
+  var spSort = { key: "net", dir: -1 };
+
+  function spDeal() {
+    return { dir: rp.dir, long: sp.long, short: sp.short, debit: sp.debit,
+             contracts: sp.contracts };
+  }
+
   function rpStore() {
     try { localStorage.setItem("repeat", JSON.stringify(rp)); } catch (e) { /* private mode */ }
+  }
+
+  function spStore() {
+    try { localStorage.setItem("repeat-spread", JSON.stringify(sp)); } catch (e) { /* private */ }
   }
 
   function signed(v, digits) {
@@ -1722,6 +1743,211 @@
       "here as the first of those two conditions, not as a backtested return.</p></div>";
   }
 
+  // ------------------------------------------------- the money section
+  //
+  // The same years, priced as a debit vertical. Two tables, deliberately its
+  // own: everything above this point is percentages of the stock and needs no
+  // assumption beyond the closes, and everything below rests on a debit nobody
+  // can look up. Keeping them apart is how a reader can tell which half is
+  // measurement and which half is their own input.
+
+  /* One name, year by year — the cash that left and the cash that came back. */
+  function spYearTable(econ) {
+    if (!econ.rows.length) {
+      return '<p class="empty">No year here has a finished window to settle a spread against.</p>';
+    }
+    var lots = econ.lots > 1 ? " ×" + econ.lots : "";
+    var body = econ.rows.map(function (r) {
+      // The two ends a vertical can reach are named where they happen: "max"
+      // and "expired worthless" read as outcomes where a bare number reads as
+      // arithmetic.
+      var note = r.maxed ? ' <span class="tag buy">max</span>'
+        : r.worthless ? ' <span class="tag sell">worthless</span>' : "";
+      return '<tr><td class="t">' + r.year + "</td>" +
+        '<td class="r">' + money(r.entry) + "</td>" +
+        '<td class="r">' + money(r.long) + " / " + money(r.short) + "</td>" +
+        '<td class="r out">−' + cash(r.paid) + "</td>" +
+        '<td class="r">' + money(r.exit) + " (" + signed(r.exit_pct) + ")</td>" +
+        '<td class="r ' + (r.maxed ? "maxed" : r.worthless ? "zero" : "") + '">+' +
+          cash(r.received) + note + "</td>" +
+        '<td class="r net ' + (r.net > 0 ? "up" : r.net < 0 ? "down" : "") + '">' +
+          cash(r.net) + "</td>" +
+        '<td class="r">' + signed(r.roi, 0) + "</td></tr>";
+    }).join("");
+
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + econ.years + " year" + (econ.years === 1 ? "" : "s") + lots + "</td>" +
+      "<td></td><td></td>" +
+      '<td class="r out">−' + cash(econ.paid) + "</td>" +
+      "<td></td>" +
+      '<td class="r">+' + cash(econ.received) + "</td>" +
+      '<td class="r net ' + (econ.net > 0 ? "up" : econ.net < 0 ? "down" : "") + '">' +
+        cash(econ.net) + "</td>" +
+      '<td class="r">' + signed(econ.roi, 0) + "</td></tr></tfoot>";
+
+    return '<div class="tablewrap"><table class="scan money"><thead><tr>' +
+      '<th>Year</th><th class="r">Entry</th><th class="r">Long / short</th>' +
+      '<th class="r">Cash out</th><th class="r">Stock at expiry</th>' +
+      '<th class="r">Cash in</th><th class="r">Net</th><th class="r">Return</th>' +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
+  }
+
+  /* What the same structure would have done on every other name. */
+  function spAllTable(d) {
+    var floor = d.min_years || 3;
+    var rows = [];
+    for (var i = 0; i < d.series.length; i++) {
+      var econ = SpreadTrial.economics(rpTrial(d, d.series[i]), spDeal());
+      if (!econ.years) continue;
+      rows.push({ ticker: d.series[i].ticker, years: econ.years, paid: econ.paid,
+                  received: econ.received, net: econ.net, roi: econ.roi, won: econ.won,
+                  breakeven: econ.breakeven, thin: econ.years < floor });
+    }
+    if (!rows.length) return "";
+
+    var key = spSort.key;
+    rows.sort(function (a, b) {
+      if (key === "ticker") return a.ticker.localeCompare(b.ticker) * spSort.dir;
+      // Same floor, same reason as the ranking above: a name with two judged
+      // years is reported, never ranked. It matters more here, not less — the
+      // biggest net on the screen could be one lucky year.
+      if (a.thin !== b.thin) return a.thin ? 1 : -1;
+      var x = has(a[key]) ? a[key] : -Infinity, y = has(b[key]) ? b[key] : -Infinity;
+      return (x === y ? a.years - b.years : x - y) * spSort.dir;
+    });
+
+    function th(k, label, cls) {
+      return sortableTh(k, label, cls || "",
+        spSort.key === k ? (spSort.dir === 1 ? "ascending" : "descending") : "none");
+    }
+    var sum = rows.reduce(function (a, r) {
+      a.paid += r.paid; a.received += r.received; a.years += r.years; a.won += r.won;
+      return a;
+    }, { paid: 0, received: 0, years: 0, won: 0 });
+    var net = sum.received - sum.paid;
+
+    var body = rows.map(function (r) {
+      return '<tr class="srow' + (r.thin ? " thin" : "") +
+        (r.ticker === rp.ticker ? " picked" : "") + '" data-ticker="' + esc(r.ticker) +
+        '" tabindex="0" title="' + esc(r.thin
+          ? r.ticker + " has only " + r.years + " settled year" + (r.years === 1 ? "" : "s") +
+            " here — shown, but not ranked"
+          : "show " + r.ticker + " above") + '">' +
+        '<td class="t">' + esc(r.ticker) + "</td>" +
+        '<td class="r">' + r.years + "</td>" +
+        '<td class="r">' + r.won + "</td>" +
+        '<td class="r out">−' + cash(r.paid) + "</td>" +
+        '<td class="r">+' + cash(r.received) + "</td>" +
+        '<td class="r net ' + (r.net > 0 ? "up" : r.net < 0 ? "down" : "") + '">' +
+          cash(r.net) + "</td>" +
+        '<td class="r">' + signed(r.roi, 0) + "</td>" +
+        '<td class="r">' + num(r.breakeven, 0) + "%</td></tr>";
+    }).join("");
+
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + rows.length + " name" + (rows.length === 1 ? "" : "s") + "</td>" +
+      '<td class="r">' + sum.years + "</td>" +
+      '<td class="r">' + sum.won + "</td>" +
+      '<td class="r out">−' + cash(sum.paid) + "</td>" +
+      '<td class="r">+' + cash(sum.received) + "</td>" +
+      '<td class="r net ' + (net > 0 ? "up" : net < 0 ? "down" : "") + '">' + cash(net) + "</td>" +
+      '<td class="r">' + signed(sum.paid ? (net / sum.paid) * 100 : null, 0) + "</td>" +
+      '<td class="r faint" title="' + esc("no total: each name breaks even at its own debit") +
+        '">—</td></tr></tfoot>';
+
+    return "<h3>The same structure, every name</h3>" +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Every name bought on the same ' +
+      "rule and priced on the same assumption — so this column of nets is one assumption " +
+      "repeated twenty-nine times, not twenty-nine pieces of evidence. <b>Breakeven</b> is the " +
+      "debit, as a share of width, that would have left that name exactly square: under it the " +
+      "run made money, over it it did not, and it is the one column here that needs no view on " +
+      "what the spread cost. Click a row to bring that name up above.</p>" +
+      '<div class="tablewrap"><table class="scan money rank"><thead><tr>' +
+      th("ticker", "Name") + th("years", "Years", "r") + th("won", "Won", "r") +
+      th("paid", "Cash out", "r") + th("received", "Cash in", "r") + th("net", "Net", "r") +
+      th("roi", "Return", "r") + th("breakeven", "Breakeven", "r") +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
+  }
+
+  function spTiles(econ) {
+    function tile(cls, k, v) {
+      return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
+        "</div></div>";
+    }
+    var verdict = econ.net > 0 ? "cheap" : econ.net < 0 ? "rich" : "fair";
+    var structure = (rp.dir === "up" ? "call" : "put") + " debit spread, " + num(sp.long, 1) +
+      "% / " + num(sp.short, 1) + "%, held " + rp.hold + " weeks";
+    return '<div class="rulebar">' +
+      tile(verdict,
+           "Net over " + econ.years + " year" + (econ.years === 1 ? "" : "s") + " — " +
+           cash(econ.net),
+           cash(econ.received) + " came back against " + cash(econ.paid) + " paid out, on a " +
+           structure + (econ.lots > 1 ? ", " + econ.lots + " contracts a year" : "") +
+           ". Commission and slippage are not in it, and neither is the fact that a real debit "
+           + "would not have been the same every year.") +
+      tile("fair", "Return on the money risked — " + signed(econ.roi, 0),
+           "Net divided by everything paid in. Not annualised, and not a portfolio return: the "
+           + "cash is only at risk for " + rp.hold + " weeks of each year, and a debit vertical "
+           + "can lose all of it.") +
+      tile(econ.breakeven === null ? "fair" : sp.debit <= econ.breakeven ? "cheap" : "rich",
+           "Breakeven debit — " + num(econ.breakeven, 0) + "% of width",
+           "Pay less than this and the run made money, more and it did not. This is the one "
+           + "number here that does not rest on your assumption, so it is the one to take to a "
+           + "live quote. You have set " + num(sp.debit, 0) + "%.") +
+      tile("fair", "Won " + econ.won + " of " + econ.years +
+           (econ.maxed ? " · " + econ.maxed + " at max" : ""),
+           econ.worthless + " expired worthless, which for a debit vertical means the whole "
+           + "premium gone. A win rate is not an edge until the sizes are in it — that is what "
+           + "the net on the left is for.") +
+      "</div>";
+  }
+
+  function spDraw() {
+    var host = $("#moneybody"), d = store.weekly, section = $("#spreadsection");
+    if (section) section.hidden = !sp.on;
+    if (!sp.on || !d || !host) return;
+
+    var series = null;
+    for (var i = 0; i < d.series.length; i++) {
+      if (d.series[i].ticker === rp.ticker) { series = d.series[i]; break; }
+    }
+    if (!series) { host.innerHTML = ""; return; }
+
+    var econ = SpreadTrial.economics(rpTrial(d, series), spDeal());
+    if (econ.why) {
+      host.innerHTML = '<p class="empty">' + esc(econ.why) +
+        " — the strike you sell is what caps the payout, so it has to sit further out than the " +
+        "one you buy.</p>";
+      return;
+    }
+
+    host.innerHTML = (econ.years ? spTiles(econ) : "") +
+      "<h3>" + esc(rp.ticker) + ", year by year</h3>" +
+      spYearTable(econ) + spAllTable(d);
+
+    // Scoped to table.money, and spSort is its own: the ranking above sorts on
+    // keys this table does not have, and sharing one sort state made picking a
+    // column in one table quietly scramble the other.
+    wireSort(host.querySelectorAll("table.money thead th"), function (k) {
+      if (spSort.key === k) spSort.dir = -spSort.dir;
+      else { spSort.key = k; spSort.dir = k === "ticker" ? 1 : -1; }
+      spDraw();
+      var again = host.querySelector('table.money thead th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
+
+    var picks = host.querySelectorAll("tr.srow[data-ticker]");
+    for (var p = 0; p < picks.length; p++) {
+      picks[p].addEventListener("click", function () { rpPick(this.dataset.ticker); });
+      picks[p].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          rpPick(this.dataset.ticker);
+        }
+      });
+    }
+  }
+
   function rpDraw() {
     var d = store.weekly, host = $("#repeatbody");
     if (!d) return;
@@ -1777,6 +2003,9 @@
         }
       });
     }
+
+    // The money section reads the same trial, so it redraws whenever this does.
+    spDraw();
   }
 
   function rpPick(ticker) {
@@ -1814,6 +2043,56 @@
     var v = Math.round(Number(el.value));
     if (isNaN(v)) v = fallback;
     return Math.min(hi, Math.max(lo, v));
+  }
+
+  // The money controls. Separate from wireRepeat's, because they redraw only
+  // the money section — re-running the whole tab to change a contract count
+  // would rebuild thirty names' worth of tables for nothing.
+  function wireSpread() {
+    // Like rpNum but without the rounding: these controls step in halves, and a
+    // 2.5% strike offset that silently became 3% would be a lie on the table.
+    function spNum(el, lo, hi, fallback) {
+      var v = Number(el.value);
+      if (isNaN(v) || el.value === "") v = fallback;
+      return Math.min(hi, Math.max(lo, v));
+    }
+    function onChange(fn) {
+      return function () { fn(this); spStore(); spDraw(); };
+    }
+    $("#sp-long").addEventListener("input", onChange(function (el) {
+      sp.long = spNum(el, -50, 100, 0);
+    }));
+    $("#sp-short").addEventListener("input", onChange(function (el) {
+      sp.short = spNum(el, -50, 200, 8);
+    }));
+    $("#sp-debit").addEventListener("input", onChange(function (el) {
+      // A debit of 0 is free money and a debit of 100 is the whole width for
+      // certain — neither is a spread, so the range stops short of both.
+      sp.debit = spNum(el, 1, 99, 40);
+    }));
+    $("#sp-contracts").addEventListener("input", onChange(function (el) {
+      sp.contracts = Math.round(spNum(el, 1, 1000, 1));
+    }));
+    $("#sp-on").addEventListener("change", function () {
+      sp.on = this.checked;
+      spStore();
+      spDraw();
+      if (sp.on) $("#spreadcontrols").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("repeat-spread") || "null"); } catch (e) {
+      saved = null;
+    }
+    if (saved) {
+      for (var key in sp) if (has(saved[key])) sp[key] = saved[key];
+    }
+    $("#sp-on").checked = !!sp.on;
+    $("#sp-long").value = sp.long;
+    $("#sp-short").value = sp.short;
+    $("#sp-debit").value = sp.debit;
+    $("#sp-contracts").value = sp.contracts;
+    $("#spreadsection").hidden = !sp.on;
   }
 
   function renderRepeat() {
@@ -2057,6 +2336,7 @@
       views[v].addEventListener("click", function () { showChartView(this.dataset.view); });
     }
     wireRepeat();
+    wireSpread();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;

@@ -390,6 +390,49 @@ rather than totalled: a median of medians is not a median.
 > independent ones** — these names move together, so a year that was good for the
 > market was good for most of the list at once. It is one broad answer, not 279.
 
+### Optional: price it as a debit spread
+
+Everything above is percentages of the stock and rests on nothing but the closes.
+This section is the other half of the question — **what it would have cost and
+what it would have paid, in dollars** — and it is opened deliberately, because it
+needs one number this repo does not hold.
+
+> ⚠️ **The debit is yours, not the market's.** There are ten years of stock bars
+> here and no option history, so nothing can look up what an eight-week call
+> spread really cost in October 2018. You set it as a share of the width and it
+> is held constant across every year. In life it is not: the debit climbs with
+> implied volatility, and implied volatility climbs when the market is
+> frightened — so the years you most want the trade are the years it cost most.
+> A constant debit therefore flatters a strategy whose good years were panicky
+> ones.
+
+Everything downstream of that single assumption is exact. A vertical held to
+expiry is worth `clamp(exit − long strike, 0, width)` and nothing else — no
+model, no volatility, no time value, just the close already on the page.
+
+| Control | What it means |
+|---|---|
+| **Long strike** | the strike you buy, as % from that year's entry. `0` is at the money |
+| **Short strike** | the strike you sell, further out. It is what caps the payout, so it must sit beyond the long one — the page refuses the trade and says so otherwise |
+| **Debit paid** | what you pay, as a **share of the width**. A share, not a dollar amount, because $2 was a different trade when the name was $25 |
+| **Contracts** | position size. 100 shares to a contract, so a $0.40 debit is $40 of real money |
+
+Direction comes from the chip you already set: **up is a call debit spread, down
+is a put debit spread**, written with the same two positive numbers.
+
+Two tables, both with totals: the chosen name year by year — entry, strikes, cash
+out, where the stock expired, cash in, net, return — and the same structure across
+every other name, sorted by net.
+
+**The number to trust most is the breakeven.** It is the debit, as a share of
+width, that would have left the run exactly square: under it this run made money,
+over it it did not. It is the one figure here that does not depend on your
+assumption, which makes it the one you can take to a live quote.
+
+Not in any of it: commission, slippage, assignment, early exercise, dividends, or
+the fact that a real chain has strikes at $2.50 intervals rather than wherever a
+percentage of the entry happens to land.
+
 ### What it refuses to do
 
 The counting rules live in `spread_scanner/weekly.py` and ship inside
@@ -601,7 +644,7 @@ No build step, no dependencies, no external assets:
 
 ```
 public/index.html          the shell and the tab markup
-public/assets/trial.js     the Repeat test's counting rules, on their own
+public/assets/trial.js     the Repeat test's counting rules and spread maths, on their own
 public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```

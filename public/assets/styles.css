@@ -351,6 +351,25 @@ table.scan tfoot td {
   font-variant-numeric: tabular-nums; font-weight: 700;
 }
 table.scan tfoot td.faint { font-weight: 400; }
+
+/* ---------------------------------------------------- the money section */
+
+/* The opener for the optional debit-spread section. A real checkbox, so it is
+   focusable, announced and toggled by the keyboard without any of that being
+   re-implemented here. */
+.moneyhead { margin: 26px 0 14px; padding-top: 20px; border-top: 1px solid var(--line); }
+.toggle { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 700; }
+.toggle input { width: 16px; height: 16px; accent-color: var(--link); cursor: pointer; }
+.toggle span { font-size: .92rem; }
+
+/* Cash columns carry their own sign, so they are not coloured by it — a debit
+   is money leaving whether or not the trade worked, and painting it red would
+   say the wrong thing. Only the net is a verdict. */
+table.money td.out { color: var(--text-dim); }
+table.money td.net.up { color: var(--buy); font-weight: 700; }
+table.money td.net.down { color: var(--sell); font-weight: 700; }
+table.money td.maxed { color: var(--buy); }
+table.money td.zero { color: var(--sell); }
 .pill {
   display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px;
   border-radius: 6px; font-weight: 700; color: #fff; font-size: .8rem;

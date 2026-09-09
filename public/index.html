@@ -161,6 +161,44 @@
       </div>
 
       <div id="repeatbody"><p class="loading">Loading the weekly history…</p></div>
+
+      <!-- Optional: the same years, priced as a debit vertical. Off by default —
+           it is a second question, and the one number it needs is one this repo
+           does not hold, so it is opened deliberately rather than shown to
+           everyone who lands on the tab. -->
+      <div class="moneyhead">
+        <label class="toggle">
+          <input id="sp-on" type="checkbox">
+          <span>Price it as a debit spread — real cash in, cash out, net</span>
+        </label>
+      </div>
+
+      <div id="spreadsection" hidden>
+        <div class="notice">
+          <b>The debit is yours, not the market's.</b> This repo holds ten years of stock bars
+          and no option history, so nothing here can look up what this spread really cost in
+          October 2018 — you set it below, as a share of the width, and it is held constant
+          across every year. In life it is not: the debit climbs with implied volatility, and
+          implied volatility climbs when the market is frightened, so the years you most want
+          the trade are the years it cost most. Everything after that one number is exact — a
+          vertical held to expiry is worth the distance from the long strike, capped at the
+          width, and that comes from the closes already on this page. The
+          <b>breakeven debit</b> in the totals is the number to take to a live quote.
+        </div>
+
+        <div class="controls" id="spreadcontrols">
+          <label class="ctl"><span>Long strike, % from entry</span>
+            <input id="sp-long" type="number" min="-50" max="100" step="0.5" value="0"></label>
+          <label class="ctl"><span>Short strike, % from entry</span>
+            <input id="sp-short" type="number" min="-50" max="200" step="0.5" value="8"></label>
+          <label class="ctl"><span>Debit paid, % of width</span>
+            <input id="sp-debit" type="number" min="1" max="99" step="1" value="40"></label>
+          <label class="ctl"><span>Contracts</span>
+            <input id="sp-contracts" type="number" min="1" max="1000" step="1" value="1"></label>
+        </div>
+
+        <div id="moneybody"></div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------- validation -->
