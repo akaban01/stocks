@@ -588,6 +588,28 @@ def test_a_short_strike_at_or_inside_the_long_one_is_refused_with_a_reason():
         assert "beyond" in econ["why"], econ["why"]
 
 
+def test_a_debit_outside_the_width_is_refused_with_a_reason():
+    """The debit control clamps to 1–99%; the restore path is not the control.
+
+    `economics` is reached from two directions — the input handlers, which clamp,
+    and a `repeat-spread` blob out of localStorage, which is whatever the last
+    version of this page wrote or whatever someone typed into devtools. A debit
+    of 0 made every ROI infinite and a negative one paid you to open a debit
+    spread; both used to render as outcomes, with nothing to say they were not.
+    """
+    data = payload({"AAA": flat(300)})
+    for bad in (0, -5, 100, 140, None):
+        econ = run_economics(data, "AAA", {"debit": bad}, hold=8)
+        assert econ["rows"] == [] and econ["years"] == 0, bad
+        assert econ["roi"] is None and econ["net"] == 0, bad
+        assert "debit" in econ["why"], (bad, econ["why"])
+
+    # And the two ends the control does allow still price a run.
+    for fine in (1, 99):
+        econ = run_economics(data, "AAA", {"debit": fine}, hold=8)
+        assert econ["why"] is None and econ["years"] > 0, fine
+
+
 def test_only_settled_years_reach_the_money_table():
     """An open window has no exit, so there is nothing to settle a vertical against."""
     closes = flat(300)

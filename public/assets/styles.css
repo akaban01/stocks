@@ -27,6 +27,13 @@
   --wait: #8b949e;
   --wait-bg: #1a1f27;
 
+  /* Touched — the price was there, which is not the same claim as the trade
+     having closed there, so it does not get the verdict's green. Its own hue,
+     off the buy/sell axis entirely: a reader scanning the Exit column and a
+     reader scanning the Touched column are asking different questions, and one
+     green answering both is what this colour exists to stop. */
+  --touch: #58b6c4;
+
   --up: #5fd07a;
   --down: #f0816f;
   --warn: #f0c992;
@@ -500,6 +507,7 @@ table.rank td.hit { color: var(--buy); }
 table.rank td.miss { color: var(--sell); }
 table.rank td.soft-hit { color: var(--buy-soft); }
 table.rank td.soft-miss { color: var(--sell-soft); }
+table.rank td.touch { color: var(--touch); }
 
 /* Under the ranking floor, and the greying outranks all of it on specificity —
    deliberately. A name with two judged years should not be the greenest row on
@@ -509,6 +517,10 @@ table.rank tbody tr.thin > td b { font-weight: 400; }
 
 table.trial td.hit { color: var(--buy); font-weight: 700; }
 table.trial td.miss { color: var(--sell); font-weight: 700; }
+/* Not bold, unlike the two above: the verdict columns are the ones a reader is
+   meant to land on, and a touch that shouted as loudly as an exit is the whole
+   confusion this tab is trying to undo. */
+table.trial td.touch { color: var(--touch); }
 table.trial td.open { color: var(--neutral); font-weight: 700; }
 table.trial td.skipped { color: var(--text-faint); }
 table.trial tbody tr.dim td { color: var(--text-faint); }

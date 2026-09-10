@@ -12,6 +12,12 @@
   "use strict";
 
   var DATA_DIR = "data/";
+  // The payload shape this page was written against. Every file the backend
+  // writes carries the same `schema_version`, so one constant checks them all —
+  // and having it in one place is the point: scan.json was the only one being
+  // checked, which is how weekly.json came to be read by a page that had no way
+  // of noticing it was reading a stale one.
+  var SCHEMA_MAJOR = "2";
   var store = { scan: null, charts: null, weekly: null, backtest: null, calibration: null };
   var filters = { actions: new Set(), query: "" };
 
@@ -1436,6 +1442,34 @@
   var sp = { on: false, long: 0, short: 8, debit: 40, contracts: 1 };
   var spSort = { key: "net", dir: -1 };
 
+  /* One range per numeric control, declared once. Two paths write into `sp` —
+     the input handlers and the localStorage restore — and only the first of
+     them used to clamp, so a stale or hand-edited `repeat-spread` carrying
+     `debit: 0` went straight into the arithmetic. Neither path gets to hold its
+     own copy of the bounds now; the markup's min/max are the same numbers, and
+     a control that disagreed with this table would be the bug this fixes. */
+  var SP_RANGE = {
+    long:      { lo: -50, hi: 100, fallback: 0 },
+    short:     { lo: -50, hi: 200, fallback: 8 },
+    // Neither end is a spread: at 0% of width the structure is free, at 100%
+    // you have paid the whole of what it can ever be worth.
+    debit:     { lo: 1, hi: 99, fallback: 40 },
+    contracts: { lo: 1, hi: 1000, fallback: 1, whole: true }
+  };
+
+  /* A value forced into its control's range. Not rounded unless the control
+     says to: these step in halves, and a 2.5% strike offset that silently
+     became 3% would be a lie on the table. Keys with no range — `on`, which is
+     a checkbox — come back untouched. */
+  function spClamp(key, value) {
+    var r = SP_RANGE[key];
+    if (!r) return value;
+    var v = Number(value);
+    if (value === "" || value === null || isNaN(v)) v = r.fallback;
+    v = Math.min(r.hi, Math.max(r.lo, v));
+    return r.whole ? Math.round(v) : v;
+  }
+
   function spDeal() {
     return { dir: rp.dir, long: sp.long, short: sp.short, debit: sp.debit,
              contracts: sp.contracts };
@@ -1577,13 +1611,16 @@
           '</td><td class="skipped">Skipped</td></tr>';
       }
       // Exit and Touched are coloured independently, and a year that touched
-      // and then closed back under the target is exactly why: green in Touched
-      // (the profit was there to take), red at the exit (you did not take it,
-      // and the exit is what the verdict and a vertical both settle on).
+      // and then closed back under the target is exactly why: the exit reads
+      // red (you did not take it, and the exit is what the verdict and a
+      // vertical both settle on) while Touched still reads that the profit was
+      // there to take. Different claims, so different colours — Touched has its
+      // own, off the buy/sell axis, rather than borrowing the verdict's green
+      // and quietly saying the same word twice.
       var exit = r.settled
         ? '<td class="r ' + (r.closed_past ? "hit" : "miss") + '">' + signed(r.exit_pct) + "</td>"
         : '<td class="r faint">running</td>';
-      var touched = '<td class="r' + (r.touched ? " hit" : "") + '">' +
+      var touched = '<td class="r' + (r.touched ? " touch" : "") + '">' +
         (r.touched ? "week " + r.hit_in : "—") + "</td>";
       // An unfinished window that has already touched is said out loud, because
       // it is the one row a reader might expect in a column it is not in.
@@ -1613,7 +1650,8 @@
       '<td class="r ' + (t.rate >= 50 ? "hit" : "miss") + '">' + t.hit + " of " + t.decided +
         "</td>" +
       '<td class="r">' + signed(t.median_best) + "</td>" +
-      '<td class="r' + (t.touched ? " hit" : "") + '">' + t.touched + " of " + t.decided + "</td>" +
+      '<td class="r' + (t.touched ? " touch" : "") + '">' + t.touched + " of " + t.decided +
+        "</td>" +
       '<td class="r">' + signed(t.median_worst) + "</td>" +
       "<td>" + num(t.rate, 0) + "% closed · " + num(t.touch_rate, 0) + "% touched</td>" +
       "</tr></tfoot>";
@@ -1678,7 +1716,7 @@
         '<td class="r' + (r.hit ? " hit" : "") + '">' + r.hit + "</td>" +
         '<td class="r' + (r.decided - r.hit ? " miss" : "") + '">' + (r.decided - r.hit) + "</td>" +
         '<td class="r ' + (r.rate >= 50 ? "hit" : "miss") + '"><b>' + num(r.rate, 0) + "%</b></td>" +
-        '<td class="r' + (r.touched ? " hit" : "") + '">' +
+        '<td class="r' + (r.touched ? " touch" : "") + '">' +
           (r.decided ? num((r.touched / r.decided) * 100, 0) + "%" : "—") + "</td>" +
         '<td class="r soft-hit">' + signed(r.best) + "</td>" +
         '<td class="r soft-miss">' + signed(r.worst) + "</td></tr>";
@@ -1703,7 +1741,7 @@
       '<td class="r' + (sum.decided - sum.hit ? " miss" : "") + '">' + (sum.decided - sum.hit) +
         "</td>" +
       '<td class="r ' + (pooled >= 50 ? "hit" : "miss") + '">' + num(pooled, 0) + "%</td>" +
-      '<td class="r' + (sum.touched ? " hit" : "") + '">' + num(pooledTouch, 0) + "%</td>" +
+      '<td class="r' + (sum.touched ? " touch" : "") + '">' + num(pooledTouch, 0) + "%</td>" +
       '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
       '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
       "</tr></tfoot>";
@@ -1714,9 +1752,10 @@
       " by the close of the last week, run across the whole screened list. Click a row to bring " +
       "that name up above. Names with fewer than " + floor + " judged years sit at the bottom, " +
       "greyed: they are reported, never ranked. Green is the target met at the close, red is not, " +
-      "and the muted pair on the right is how far each window travelled either way. And these " +
-      "names move together, so twenty-nine of them agreeing is nearer one piece of evidence than " +
-      "twenty-nine.</p>" +
+      "the blue column is the looser <i>touched</i> test that decides nothing, and the muted " +
+      "pair on the right is how far each window travelled either way. And these " +
+      "names move together, so " + rows.length + " of them agreeing is nearer one piece of " +
+      "evidence than " + rows.length + ".</p>" +
       '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
       th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Closed", "r") +
       '<th class="r">Fell short</th>' + th("rate", "Closed %", "r") +
@@ -1730,11 +1769,72 @@
       esc(String(sum.decided)) + " separate ones.</p>";
   }
 
+  // The rules this tab is read by, in the order they are printed, and the one
+  // that belongs under the money tables instead — `strikes` is only about a
+  // strike-settled payout, so it is noise on a tab where the money section is
+  // switched off.
+  var RP_RULES = ["entry", "window", "result", "touch", "incomplete", "prices"];
+  var SP_RULES = ["strikes"];
+
+  /* The bullets the payload has, and — separately — the names of the ones it
+     does not. Both halves are returned because both get rendered: see
+     rpMissing below for why the second is not simply dropped. */
+  function rpRules(d, keys) {
+    var r = (d && d.reference) || {};
+    var out = { html: "", missing: [] };
+    var have = [];
+    for (var i = 0; i < keys.length; i++) {
+      if (r[keys[i]]) have.push("<li>" + esc(r[keys[i]]) + "</li>");
+      else out.missing.push(keys[i]);
+    }
+    out.html = have.join("");
+    return out;
+  }
+
+  /* The payload is a shape this page does not understand.
+
+     scan.json has always been checked for its major version and weekly.json
+     never was, which is the more serious omission of the two: scan.json is
+     mostly labelled values, and this one is arrays walked by position. Loud,
+     and at the top, because nothing below it can be trusted to mean what it
+     says. A missing *rule* is a different and much smaller thing — it is said
+     at the foot of the tab instead, with the rules. */
+  function rpStale(d) {
+    var v = d && d.schema_version;
+    var wrong = !v
+      ? "It carries no schema version at all."
+      : String(v).split(".")[0] !== SCHEMA_MAJOR
+        ? "It declares schema " + v + ", and this page reads " + SCHEMA_MAJOR + ".x."
+        : "";
+    if (!wrong) return "";
+    return '<div class="notice"><b>This history is not the shape this page was written for.</b> ' +
+      esc(wrong) + " Everything below is still computed from the closes in it, but which column " +
+      "is which rests on a layout that may have moved. A hard reload picks up the current file; " +
+      "if that changes nothing, the scan that writes it has not run since the page did.</div>";
+  }
+
+  /* Which definitions this payload does not carry, named rather than dropped.
+
+     `.filter(r[k])` is a nicety everywhere else on this page and a bug here.
+     These bullets *are* the rules, they are renamed far more often than the
+     schema version is bumped — `hit` and `finish` became `result` and `touch`
+     one release ago — and a list printed two bullets short reads exactly like a
+     complete one. Said quietly and in place, though: an additive rule that a
+     day-old payload has not caught up with is a gap in the prose, not a reason
+     to distrust the numbers. */
+  function rpMissing(d) {
+    var gone = rpRules(d, RP_RULES).missing.concat(rpRules(d, SP_RULES).missing);
+    if (!gone.length) return "";
+    var one = gone.length === 1;
+    return '<p class="faint" style="font-size:.83rem;margin-top:10px">This history does not carry ' +
+      (one ? "the rule " : "the rules ") + "<code>" + gone.map(esc).join("</code>, <code>") +
+      "</code>, so " + (one ? "that definition is" : "those definitions are") + " absent from the " +
+      "list above rather than inapplicable to it — it was written by an older scan than this " +
+      "page. The next scan restores " + (one ? "it" : "them") + ".</p>";
+  }
+
   function rpCaveats(d) {
-    var r = d.reference || {};
-    var rules = ["entry", "window", "result", "touch", "incomplete", "prices"]
-      .filter(function (k) { return r[k]; })
-      .map(function (k) { return "<li>" + esc(r[k]) + "</li>"; }).join("");
+    var rules = rpRules(d, RP_RULES).html;
     return '<div class="panelcard" style="margin-top:18px">' +
       "<h3>What this test does, exactly</h3>" +
       (rules ? "<ul>" + rules + "</ul>" : "") +
@@ -1745,7 +1845,8 @@
       "behaviour comes from. Above all, <b>a stock finishing past your level is not the spread " +
       "paying out</b>: a debit vertical reaches its maximum only at expiry with the name still " +
       "past the short strike, and the Spreads tab is where that is priced. Read a closing rate " +
-      "here as the first of those two conditions, not as a backtested return.</p></div>";
+      "here as the first of those two conditions, not as a backtested return.</p>" +
+      rpMissing(d) + "</div>";
   }
 
   // ---------------------------------------------- which week was the best one
@@ -1781,7 +1882,21 @@
       if (best === null || cell.rate > best.rate ||
           (cell.rate === best.rate && (cell.exit || 0) > (best.exit || 0))) best = cell;
     }
-    rpSweepCache = { key: key, weeks: weeks, best: best };
+    // What the winner beat, which is the half that makes the winner mean
+    // anything. The best of 53 tries is high by construction, so the strip also
+    // carries the runner-up and the middle of the rankable weeks: a week that
+    // tops the field by twenty points and a week that tops it by two are the
+    // same crown and very different evidence.
+    var ranked = weeks.filter(function (c) { return c.rate !== null && !c.thin; });
+    var second = null;
+    for (var j = 0; j < ranked.length; j++) {
+      if (ranked[j] === best) continue;
+      if (second === null || ranked[j].rate > second.rate) second = ranked[j];
+    }
+    var middle = SpreadTrial.median(ranked.map(function (c) { return c.rate; }));
+
+    rpSweepCache = { key: key, weeks: weeks, best: best, second: second,
+                     median: middle, ranked: ranked.length };
     return rpSweepCache;
   }
 
@@ -1817,9 +1932,20 @@
 
     var sweep = rpSweep(d, series);
     var goal = rpGoal() + rpSide();
+    // The field the best week won against, in words. There is a button here
+    // that adopts the winner in one click, directly under a warning that the
+    // best of 53 tries is a high bar to clear by luck — and a warning with no
+    // number in it loses that argument to a button every time. This is the
+    // number: how far ahead of the runner-up, and of the middle week, the crown
+    // actually sits.
+    var field = sweep.best && sweep.second
+      ? "runner-up week " + sweep.second.week + " at " + num(sweep.second.rate, 0) +
+        "%, middle of the " + sweep.ranked + " rankable weeks " + num(sweep.median, 0) + "%"
+      : "";
     var say = sweep.best
       ? "How often each buy week closed " + goal + ", on these settings. Best is week " +
-        sweep.best.week + " at " + num(sweep.best.rate, 0) + "%."
+        sweep.best.week + " at " + num(sweep.best.rate, 0) + "%" +
+        (field ? ", against a " + field + "." : ".")
       : "How often each buy week closed " + goal + ", on these settings.";
 
     var bars = sweep.weeks.map(function (c) {
@@ -1840,7 +1966,8 @@
     if (sweep.best) {
       var when = rpWeekWhen(d, sweep.best.week);
       pointer = '<button type="button" class="bestweek" data-week="' + sweep.best.week +
-        '" title="' + esc("set the slider to week " + sweep.best.week) + '">' +
+        '" title="' + esc("set the slider to week " + sweep.best.week +
+          (field ? " — the week that won, against a " + field : "")) + '">' +
         "Best here: <b>week " + sweep.best.week + "</b>" + (when ? " · w/c " + esc(when) : "") +
         " · " + num(sweep.best.rate, 0) + "% (" + sweep.best.hit + " of " + sweep.best.decided +
         ")</button>";
@@ -1849,7 +1976,8 @@
     host.innerHTML = '<div class="heatbar" role="img" aria-label="' + esc(say) + '">' + bars +
       "</div>" + pointer +
       '<span class="heatnote">' + (sweep.best
-        ? "best of 53 weeks tried — and the best of 53 tries is a high bar to clear by luck"
+        ? esc("best of 53 weeks tried" + (field ? " · " + field : "") +
+              " — and the best of 53 tries is a high bar to clear by luck")
         : "no week here has enough judged years to rank") + "</span>";
 
     var jump = host.querySelector(".bestweek");
@@ -1913,17 +2041,43 @@
       "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
   }
 
-  /* What the same structure would have done on every other name. */
-  function spAllTable(d) {
+  /* One `economics` run per name, memoised.
+
+     spDraw() is called on every control change *and* on every sort click, and
+     each call was re-running the whole trial for every name on the screen — a
+     ranking that was already computed, thrown away to re-order one column of
+     it. Keyed on what the rows are made of: the trial settings and the deal.
+     Not the sort, which is applied to the rows afterwards, and not the picked
+     name, which is a class on a row rather than a number in it. Same treatment
+     rpSweep already gets, for the same reason, and it matters more here — the
+     sweep runs one name and this runs the list. */
+  var spAllCache = { key: null, rows: [] };
+
+  function spAllRows(d) {
+    var key = [rp.dir, rp.week, rp.hold, rp.target, rp.years,
+               sp.long, sp.short, sp.debit, sp.contracts].join("|");
+    if (spAllCache.key === key) return spAllCache.rows;
+
     var floor = d.min_years || 3;
+    var deal = spDeal();
     var rows = [];
     for (var i = 0; i < d.series.length; i++) {
-      var econ = SpreadTrial.economics(rpTrial(d, d.series[i]), spDeal());
+      var econ = SpreadTrial.economics(rpTrial(d, d.series[i]), deal);
       if (!econ.years) continue;
       rows.push({ ticker: d.series[i].ticker, years: econ.years, paid: econ.paid,
                   received: econ.received, net: econ.net, roi: econ.roi, won: econ.won,
                   breakeven: econ.breakeven, thin: econ.years < floor });
     }
+    spAllCache = { key: key, rows: rows };
+    return rows;
+  }
+
+  /* What the same structure would have done on every other name. */
+  function spAllTable(d) {
+    // Copied before sorting: the array behind it is the cache, and reordering
+    // that in place would leave a later reader holding rows in whatever order
+    // the last click on a header wanted them.
+    var rows = spAllRows(d).slice();
     if (!rows.length) return "";
 
     var key = spSort.key;
@@ -1979,7 +2133,8 @@
     return "<h3>The same structure, every name</h3>" +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Every name bought on the same ' +
       "rule and priced on the same assumption — so this column of nets is one assumption " +
-      "repeated twenty-nine times, not twenty-nine pieces of evidence. <b>Breakeven</b> is the " +
+      "repeated " + rows.length + " times, not " + rows.length + " pieces of evidence. " +
+      "<b>Breakeven</b> is the " +
       "debit, as a share of width, that would have left that name exactly square: under it the " +
       "run made money, over it it did not, and it is the one column here that needs no view on " +
       "what the spread cost. Click a row to bring that name up above.</p>" +
@@ -2023,6 +2178,20 @@
       "</div>";
   }
 
+  /* The one rule that belongs to the money tables rather than to the trial
+     above them: these closes are dividend-adjusted and option strikes never
+     are, so a window spanning an ex-dividend date travels slightly further here
+     than the real price did against the real strike. Printed next to the payout
+     it bends rather than in the caveat list at the foot of the tab — with the
+     money section switched off, nothing on this page settles against a strike
+     and the note is noise. */
+  function spRules(d) {
+    var rules = rpRules(d, SP_RULES).html;
+    if (!rules) return "";
+    return '<div class="panelcard" style="margin-top:18px">' +
+      "<h3>And one thing these closes are not</h3><ul>" + rules + "</ul></div>";
+  }
+
   function spDraw() {
     var host = $("#moneybody"), d = store.weekly, section = $("#spreadsection");
     if (section) section.hidden = !sp.on;
@@ -2044,7 +2213,7 @@
 
     host.innerHTML = (econ.years ? spTiles(econ) : "") +
       "<h3>" + esc(rp.ticker) + ", year by year</h3>" +
-      spYearTable(econ) + spAllTable(d);
+      spYearTable(econ) + spAllTable(d) + spRules(d);
 
     // Scoped to table.money, and spSort is its own: the ranking above sorts on
     // keys this table does not have, and sharing one sort state made picking a
@@ -2100,7 +2269,7 @@
     }
     if (t.skipped) pending.push(t.skipped + " skipped for want of data");
 
-    host.innerHTML = short + rpTiles(t) +
+    host.innerHTML = rpStale(d) + short + rpTiles(t) +
       (pending.length
         ? '<p class="faint" style="font-size:.83rem;margin:-12px 0 16px">' +
           esc(pending.join(" · ")) + " — counted in neither column.</p>"
@@ -2171,30 +2340,19 @@
   // the money section — re-running the whole tab to change a contract count
   // would rebuild thirty names' worth of tables for nothing.
   function wireSpread() {
-    // Like rpNum but without the rounding: these controls step in halves, and a
-    // 2.5% strike offset that silently became 3% would be a lie on the table.
-    function spNum(el, lo, hi, fallback) {
-      var v = Number(el.value);
-      if (isNaN(v) || el.value === "") v = fallback;
-      return Math.min(hi, Math.max(lo, v));
+    // One handler shape for all four: read the field, clamp it through the
+    // table above, store, redraw.
+    function onNum(id, key) {
+      $(id).addEventListener("input", function () {
+        sp[key] = spClamp(key, this.value);
+        spStore();
+        spDraw();
+      });
     }
-    function onChange(fn) {
-      return function () { fn(this); spStore(); spDraw(); };
-    }
-    $("#sp-long").addEventListener("input", onChange(function (el) {
-      sp.long = spNum(el, -50, 100, 0);
-    }));
-    $("#sp-short").addEventListener("input", onChange(function (el) {
-      sp.short = spNum(el, -50, 200, 8);
-    }));
-    $("#sp-debit").addEventListener("input", onChange(function (el) {
-      // A debit of 0 is free money and a debit of 100 is the whole width for
-      // certain — neither is a spread, so the range stops short of both.
-      sp.debit = spNum(el, 1, 99, 40);
-    }));
-    $("#sp-contracts").addEventListener("input", onChange(function (el) {
-      sp.contracts = Math.round(spNum(el, 1, 1000, 1));
-    }));
+    onNum("#sp-long", "long");
+    onNum("#sp-short", "short");
+    onNum("#sp-debit", "debit");
+    onNum("#sp-contracts", "contracts");
     $("#sp-on").addEventListener("change", function () {
       sp.on = this.checked;
       spStore();
@@ -2207,7 +2365,14 @@
       saved = null;
     }
     if (saved) {
-      for (var key in sp) if (has(saved[key])) sp[key] = saved[key];
+      // Through the same clamp the controls use. What comes back here is
+      // whatever was in localStorage the last time any version of this page
+      // wrote it — or whatever someone typed into devtools — so it is input,
+      // not state, and it is treated as input.
+      for (var key in sp) {
+        if (!has(saved[key])) continue;
+        sp[key] = key === "on" ? !!saved[key] : spClamp(key, saved[key]);
+      }
     }
     $("#sp-on").checked = !!sp.on;
     $("#sp-long").value = sp.long;
@@ -2472,10 +2637,11 @@
 
     load("scan").then(function (d) {
       if (!d || !d.schema_version) throw new Error("scan.json is missing or malformed");
-      if (d.schema_version.split(".")[0] !== "2") {
+      if (d.schema_version.split(".")[0] !== SCHEMA_MAJOR) {
         $("#schema-warning").hidden = false;
         $("#schema-warning").textContent =
-          "This page expects scan schema 2.x but the data says " + d.schema_version +
+          "This page expects scan schema " + SCHEMA_MAJOR + ".x but the data says " +
+          d.schema_version +
           ". Some fields may not render.";
       }
       $("#loading").hidden = true;
