@@ -1478,8 +1478,13 @@
   // under node by tests/test_trial.py — what closing past the target, a miss, a
   // still-open year and a skipped one mean is the whole point of this tab, and
   // it was the one part of it nothing could check.
-  function rpTrial(d, s) {
-    return SpreadTrial.run(d, s, rp, rpAt);
+  function rpTrial(d, s, week) {
+    if (week === undefined) return SpreadTrial.run(d, s, rp, rpAt);
+    // A one-off run on a different buy week, for the sweep below. Copied rather
+    // than assigned onto rp and put back: a throw in the middle of 53 of those
+    // would leave the control and the state disagreeing.
+    return SpreadTrial.run(d, s, { dir: rp.dir, week: week, hold: rp.hold,
+                                   target: rp.target, years: rp.years }, rpAt);
   }
 
   // ---- rendering
@@ -1743,6 +1748,122 @@
       "here as the first of those two conditions, not as a backtested return.</p></div>";
   }
 
+  // ---------------------------------------------- which week was the best one
+  //
+  // The slider asks you to pick one week out of fifty-three with nothing to go
+  // on. This runs the trial on every one of them and paints the answer under
+  // the control — a band per week, red through grey to green — and then names
+  // the best one in words, because a colour is not a number and a strip of 53
+  // of them is unreadable on a phone. The words are the accessible copy of it;
+  // the strip is the thing you can see at a glance.
+  //
+  // Memoised on everything *except* the week, since the sweep does not depend on
+  // which week is selected: without that, dragging the slider re-ran 53 trials
+  // per pixel.
+  var rpSweepCache = { key: null, weeks: [], best: null };
+
+  function rpSweep(d, series) {
+    var key = [rp.ticker, rp.dir, rp.hold, rp.target, rp.years].join("|");
+    if (rpSweepCache.key === key) return rpSweepCache;
+
+    var floor = d.min_years || 3;
+    var weeks = [], best = null;
+    for (var w = 1; w <= 53; w++) {
+      var t = rpTrial(d, series, w);
+      var cell = { week: w, rate: t.rate, decided: t.decided, hit: t.hit,
+                   exit: t.median_exit, thin: t.decided < floor };
+      weeks.push(cell);
+      // A week the history barely covers is shown but never crowned — the same
+      // floor the ranking uses, for the same reason. ISO week 53 falls in about
+      // one year in six, so it would otherwise win the title on three lucky
+      // years and send you to buy in the last week of December.
+      if (cell.rate === null || cell.thin) continue;
+      if (best === null || cell.rate > best.rate ||
+          (cell.rate === best.rate && (cell.exit || 0) > (best.exit || 0))) best = cell;
+    }
+    rpSweepCache = { key: key, weeks: weeks, best: best };
+    return rpSweepCache;
+  }
+
+  /* Red at 0%, grey at 50%, green at 100% — the three colours the tab already
+     means those things with. */
+  function rpHeatColour(rate) {
+    var stops = [[0, 240, 129, 111], [50, 110, 119, 129], [100, 63, 185, 80]];
+    var lo = stops[0], hi = stops[stops.length - 1];
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (rate >= stops[i][0] && rate <= stops[i + 1][0]) { lo = stops[i]; hi = stops[i + 1]; }
+    }
+    var span = hi[0] - lo[0];
+    var f = span ? (rate - lo[0]) / span : 0;
+    function mix(a, b) { return Math.round(a + (b - a) * f); }
+    return "rgb(" + mix(lo[1], hi[1]) + "," + mix(lo[2], hi[2]) + "," + mix(lo[3], hi[3]) + ")";
+  }
+
+  function rpWeekWhen(d, week) {
+    var want = "W" + (week < 10 ? "0" : "") + week;
+    for (var i = d.weeks.length - 1; i >= 0; i--) {
+      if (d.weeks[i].slice(5) !== want) continue;
+      var when = new Date(d.starts[i] + "T00:00:00");
+      if (isNaN(when.getTime())) return "";
+      return when.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+    return "";
+  }
+
+  function rpHeat(d, series) {
+    var host = $("#rp-heat");
+    if (!host) return;
+    if (!series) { host.innerHTML = ""; return; }
+
+    var sweep = rpSweep(d, series);
+    var goal = rpGoal() + rpSide();
+    var say = sweep.best
+      ? "How often each buy week closed " + goal + ", on these settings. Best is week " +
+        sweep.best.week + " at " + num(sweep.best.rate, 0) + "%."
+      : "How often each buy week closed " + goal + ", on these settings.";
+
+    var bars = sweep.weeks.map(function (c) {
+      var cls = "hs";
+      if (c.week === rp.week) cls += " now";
+      if (sweep.best && c.week === sweep.best.week) cls += " top";
+      if (c.rate === null) {
+        return '<i class="' + cls + ' none" title="' + esc("week " + c.week + " — no judged year")
+          + '"></i>';
+      }
+      var note = "week " + c.week + " — " + num(c.rate, 0) + "% closed " + goal + ", " +
+        c.hit + " of " + c.decided + (c.thin ? " (too few years to rank)" : "");
+      return '<i class="' + cls + (c.thin ? " thin" : "") + '" style="background:' +
+        rpHeatColour(c.rate) + '" title="' + esc(note) + '"></i>';
+    }).join("");
+
+    var pointer = "";
+    if (sweep.best) {
+      var when = rpWeekWhen(d, sweep.best.week);
+      pointer = '<button type="button" class="bestweek" data-week="' + sweep.best.week +
+        '" title="' + esc("set the slider to week " + sweep.best.week) + '">' +
+        "Best here: <b>week " + sweep.best.week + "</b>" + (when ? " · w/c " + esc(when) : "") +
+        " · " + num(sweep.best.rate, 0) + "% (" + sweep.best.hit + " of " + sweep.best.decided +
+        ")</button>";
+    }
+
+    host.innerHTML = '<div class="heatbar" role="img" aria-label="' + esc(say) + '">' + bars +
+      "</div>" + pointer +
+      '<span class="heatnote">' + (sweep.best
+        ? "best of 53 weeks tried — and the best of 53 tries is a high bar to clear by luck"
+        : "no week here has enough judged years to rank") + "</span>";
+
+    var jump = host.querySelector(".bestweek");
+    if (jump) {
+      jump.addEventListener("click", function () {
+        rp.week = Number(this.dataset.week);
+        $("#rp-week").value = rp.week;
+        rpStore();
+        rpWeekLabel(d);
+        rpDraw();
+      });
+    }
+  }
+
   // ------------------------------------------------- the money section
   //
   // The same years, priced as a debit vertical. Two tables, deliberately its
@@ -1955,6 +2076,7 @@
     for (var i = 0; i < d.series.length; i++) {
       if (d.series[i].ticker === rp.ticker) { series = d.series[i]; break; }
     }
+    rpHeat(d, series);
     if (!series) {
       host.innerHTML = '<p class="empty">No weekly history for that name.</p>';
       return;

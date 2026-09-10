@@ -148,10 +148,15 @@
             <button class="chip sell" data-dir="down" aria-pressed="false">Down ↓</button>
           </div>
         </div>
-        <label class="ctl wide">
-          <span>Buy week — <b id="rp-weeklabel">37</b></span>
-          <input id="rp-week" type="range" min="1" max="53" step="1" value="37">
-        </label>
+        <!-- A div, not a label, because the heat strip below the slider carries a
+             button and a label may not contain one. The caption keeps the input's
+             accessible name via aria-labelledby. -->
+        <div class="ctl wide">
+          <span id="rp-weekcap">Buy week — <b id="rp-weeklabel">37</b></span>
+          <input id="rp-week" type="range" min="1" max="53" step="1" value="37"
+                 aria-labelledby="rp-weekcap">
+          <div id="rp-heat" class="heat"></div>
+        </div>
         <label class="ctl"><span>Hold, weeks</span>
           <input id="rp-hold" type="number" min="1" max="52" step="1" value="8"></label>
         <label class="ctl"><span>Target move by exit, %</span>

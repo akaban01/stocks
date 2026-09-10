@@ -434,6 +434,42 @@ table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight:
 }
 .ctl select:focus, .ctl input:focus { outline: none; border-color: var(--link); }
 .ctl input[type="range"] { width: 100%; accent-color: var(--link); margin: 4px 0 0; }
+/* The buy-week heat strip: one band per ISO week, under the slider it explains.
+   Deliberately not painted onto the range track itself — a custom track means
+   giving up `accent-color` and hand-rolling a thumb in three browsers, and the
+   thumb's travel is inset by half its own width anyway, so a gradient on the
+   track would not line up with the weeks any better than this does. Alignment
+   here is a hint; the button underneath is the fact. */
+.heat { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+.heatbar {
+  display: flex; gap: 1px; height: 14px; border-radius: 3px; overflow: hidden;
+  background: var(--surface-2);
+}
+.heatbar .hs { flex: 1 1 0; min-width: 0; position: relative; }
+.heatbar .hs.none { background: var(--surface-2); }
+/* Too few judged years to rank. Faded rather than hidden — the week exists, it
+   just cannot win, and a gap in the strip would read as missing data. */
+.heatbar .hs.thin { opacity: .35; }
+/* Where you are, and where the best week is. Both are marks with a shape, not
+   just a colour: an inset ring for the current week, a notch for the best. */
+.heatbar .hs.now { box-shadow: inset 0 0 0 2px var(--text); }
+.heatbar .hs.top::after {
+  content: ""; position: absolute; left: 50%; top: 0; width: 0; height: 0;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--text);
+}
+
+.bestweek {
+  align-self: flex-start; background: none; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); color: var(--text-dim); font: inherit; font-size: .76rem;
+  padding: 3px 8px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.bestweek b { color: var(--buy); }
+.bestweek:hover { border-color: var(--buy); color: var(--text); }
+.bestweek:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
+.heatnote { font-size: .68rem; color: var(--text-faint); }
+
 
 /* Ten years at a glance: one block per year, its colour the verdict. */
 .yearstrip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }

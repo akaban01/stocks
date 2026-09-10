@@ -351,10 +351,19 @@ Six controls, and the answer redraws as you turn any of them:
 |---|---|
 | **Name** | one of the screened names — the ranked table below runs every one of them on the same settings |
 | **Direction** | an upside target (a call spread's thesis) or a downside one (a put spread's) |
-| **Buy week** | the ISO week of the year you place it. The label names the calendar dates, because "week 37" is not something anyone can place on a calendar |
+| **Buy week** | the ISO week of the year you place it. The label names the calendar dates, because "week 37" is not something anyone can place on a calendar. Underneath it, a **heat strip**: every one of the 53 weeks run on your current settings, red through grey to green, with the best one named and clickable |
 | **Hold** | how many weeks the trade runs — the buy week plus the N−1 after it |
 | **Target** | how far the name has to move **by the close of the last week**, as a percentage. May be zero or negative — see below |
 | **Years** | how many years back to repeat it |
+
+**The best week is found by trying all of them.** The strip under the slider runs
+the same test on every ISO week and paints the rate, so you can see whether the
+week you picked sits on a green ridge or on the one good week in a red field —
+which is most of what tells a pattern from a coincidence. A week under the
+3-judged-year floor is faded and can never be crowned: ISO week 53 falls in about
+one year in six and would otherwise win the title on three lucky years. And the
+headline it reports is *the best of 53 tries*, which is a high bar to clear by
+luck and a low one to clear by chance — the strip says so under itself.
 
 **The target is a distance, not a level.** $250 meant something very different in
 2016, so each year's target price is computed from that year's own entry, and

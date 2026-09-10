@@ -128,7 +128,7 @@
     var out = { rows: [], hit: 0, miss: 0, open: 0, skipped: 0, touched: 0,
                 touched_open: 0, decided: 0, rate: null, touch_rate: null,
                 median_best: null, median_worst: null, median_weeks: null,
-                asked: opt.years };
+                median_exit: null, asked: opt.years };
     var last = (payload.weeks || []).length - 1;
     if (last < 0 || !series) return out;
 
@@ -163,6 +163,10 @@
     out.median_worst = median(settled.map(function (r) { return r.worst_pct; }));
     out.median_weeks = median(settled.filter(function (r) { return r.touched; })
                                      .map(function (r) { return r.hit_in; }));
+    // The typical outcome, as opposed to how often it cleared a line. Two weeks
+    // can close past the target equally often and still be nothing alike, so
+    // this is what separates them when the rates tie.
+    out.median_exit = median(settled.map(function (r) { return r.exit_pct; }));
     return out;
   }
 

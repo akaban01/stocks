@@ -459,7 +459,8 @@ def test_an_empty_payload_still_produces_a_whole_result():
              "series": [{"ticker": "AAA", "close": [], "high": [], "low": []}]}
     result = run_trial(empty, "AAA")
     for key in ("rows", "hit", "miss", "open", "skipped", "touched", "touched_open",
-                "decided", "rate", "touch_rate", "median_best", "median_worst", "asked"):
+                "decided", "rate", "touch_rate", "median_best", "median_worst",
+                "median_exit", "asked"):
         assert key in result, key
     assert result["rows"] == [] and result["decided"] == 0 and result["rate"] is None
 
