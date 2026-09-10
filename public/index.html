@@ -125,8 +125,15 @@
     <section id="panel-repeat" class="panel" data-tab="repeat" role="tabpanel" aria-labelledby="tab-repeat" hidden>
       <div class="lede">
         One trade, placed in the <b>same week every year</b>. Set the week you would buy, how long
-        you would hold it and how far the name has to move — this counts the years that got there
-        against the years that did not, over the same weekly history behind the Charts tab.
+        you would hold it and how far the name has to move — this counts the years that
+        <b>closed</b> past that move against the years that did not, over the same weekly
+        history behind the Charts tab. The verdict is the <b>exit</b>: eight weeks at +1% asks
+        whether the name is 1% up at the close of week eight, not whether it got there and gave
+        it back. Whether it was ever touched is reported beside it, never as it.
+        <br>The target can be <b>zero or negative</b>. An in-the-money vertical is already past
+        its breakeven at today's price, so its real question is <i>did it hold up</i> rather than
+        <i>did it travel</i> — set −3% and this counts the years that closed no worse than 3%
+        down.
         <br>A target is a <b>distance, not a level</b>: $250 meant something very different in 2016,
         so you set a percentage and each year's target price is worked out from that year's own
         entry. Every one of them is in the table.
@@ -141,19 +148,62 @@
             <button class="chip sell" data-dir="down" aria-pressed="false">Down ↓</button>
           </div>
         </div>
-        <label class="ctl wide">
-          <span>Buy week — <b id="rp-weeklabel">37</b></span>
-          <input id="rp-week" type="range" min="1" max="53" step="1" value="37">
-        </label>
+        <!-- A div, not a label, because the heat strip below the slider carries a
+             button and a label may not contain one. The caption keeps the input's
+             accessible name via aria-labelledby. -->
+        <div class="ctl wide">
+          <span id="rp-weekcap">Buy week — <b id="rp-weeklabel">37</b></span>
+          <input id="rp-week" type="range" min="1" max="53" step="1" value="37"
+                 aria-labelledby="rp-weekcap">
+          <div id="rp-heat" class="heat"></div>
+        </div>
         <label class="ctl"><span>Hold, weeks</span>
           <input id="rp-hold" type="number" min="1" max="52" step="1" value="8"></label>
-        <label class="ctl"><span>Target move, %</span>
-          <input id="rp-target" type="number" min="0.5" max="300" step="0.5" value="8"></label>
+        <label class="ctl"><span>Target move by exit, %</span>
+          <input id="rp-target" type="number" min="-95" max="300" step="0.5" value="8"></label>
         <label class="ctl"><span>Years to repeat</span>
           <input id="rp-years" type="number" min="2" max="25" step="1" value="10"></label>
       </div>
 
       <div id="repeatbody"><p class="loading">Loading the weekly history…</p></div>
+
+      <!-- Optional: the same years, priced as a debit vertical. Off by default —
+           it is a second question, and the one number it needs is one this repo
+           does not hold, so it is opened deliberately rather than shown to
+           everyone who lands on the tab. -->
+      <div class="moneyhead">
+        <label class="toggle">
+          <input id="sp-on" type="checkbox">
+          <span>Price it as a debit spread — real cash in, cash out, net</span>
+        </label>
+      </div>
+
+      <div id="spreadsection" hidden>
+        <div class="notice">
+          <b>The debit is yours, not the market's.</b> This repo holds ten years of stock bars
+          and no option history, so nothing here can look up what this spread really cost in
+          October 2018 — you set it below, as a share of the width, and it is held constant
+          across every year. In life it is not: the debit climbs with implied volatility, and
+          implied volatility climbs when the market is frightened, so the years you most want
+          the trade are the years it cost most. Everything after that one number is exact — a
+          vertical held to expiry is worth the distance from the long strike, capped at the
+          width, and that comes from the closes already on this page. The
+          <b>breakeven debit</b> in the totals is the number to take to a live quote.
+        </div>
+
+        <div class="controls" id="spreadcontrols">
+          <label class="ctl"><span>Long strike, % from entry</span>
+            <input id="sp-long" type="number" min="-50" max="100" step="0.5" value="0"></label>
+          <label class="ctl"><span>Short strike, % from entry</span>
+            <input id="sp-short" type="number" min="-50" max="200" step="0.5" value="8"></label>
+          <label class="ctl"><span>Debit paid, % of width</span>
+            <input id="sp-debit" type="number" min="1" max="99" step="1" value="40"></label>
+          <label class="ctl"><span>Contracts</span>
+            <input id="sp-contracts" type="number" min="1" max="1000" step="1" value="1"></label>
+        </div>
+
+        <div id="moneybody"></div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------- validation -->

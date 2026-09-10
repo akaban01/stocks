@@ -31,6 +31,11 @@
     });
   }
   function money(v, digits) { return has(v) && !isNaN(v) ? "$" + num(Math.abs(v), digits === undefined ? 2 : digits) : "—"; }
+  // money() drops the sign, which is right for a price and wrong for a P&L.
+  function cash(v, digits) {
+    if (!has(v) || isNaN(v)) return "—";
+    return (v < 0 ? "−$" : "$") + num(Math.abs(v), digits === undefined ? 0 : digits);
+  }
   function pct(v, digits) { return has(v) && !isNaN(v) ? num(v, digits === undefined ? 1 : digits) + "%" : "—"; }
 
   // The actions that mean "there is a trade here" — as opposed to standing
@@ -1403,8 +1408,14 @@
   // -------------------------------------------------------- repeat test
   //
   // "Buy in week 37 every year, hold it eight weeks — how many of those years
-  // reached +8%?" The trial runs here, in the browser, because every control
-  // re-runs it and there is no server on Pages to re-run it on.
+  // *closed* at least 8% up?" The trial runs here, in the browser, because every
+  // control re-runs it and there is no server on Pages to re-run it on.
+  //
+  // The verdict is the exit: where the window closed, not the best price it saw
+  // inside it. Touching is reported next to it — green in the table, because it
+  // is worth knowing you could have taken profit early — but a year that
+  // touched and then closed back under the target reads red at the exit and
+  // counts as a miss.
   //
   // What the backend owns is the half that is quietly easy to get wrong, and it
   // arrives in weekly.json already done: whole ISO weeks only, the week in
@@ -1418,8 +1429,24 @@
   var rpAt = null;                          // "2025-W37" -> position on the axis
   var rpSort = { key: "rate", dir: -1 };
 
+  // The optional money section. `dir` is not in here: a debit spread is a call
+  // spread going up and a put spread going down, and that is the same question
+  // the direction chip already answers — two controls for one fact would let
+  // them disagree.
+  var sp = { on: false, long: 0, short: 8, debit: 40, contracts: 1 };
+  var spSort = { key: "net", dir: -1 };
+
+  function spDeal() {
+    return { dir: rp.dir, long: sp.long, short: sp.short, debit: sp.debit,
+             contracts: sp.contracts };
+  }
+
   function rpStore() {
     try { localStorage.setItem("repeat", JSON.stringify(rp)); } catch (e) { /* private mode */ }
+  }
+
+  function spStore() {
+    try { localStorage.setItem("repeat-spread", JSON.stringify(sp)); } catch (e) { /* private */ }
   }
 
   function signed(v, digits) {
@@ -1427,44 +1454,79 @@
     return (v >= 0 ? "+" : "") + num(v, digits === undefined ? 1 : digits) + "%";
   }
 
+  /* The target as a signed move on the price, which is the form every label
+     wants — and the form that stays right when the target is zero or negative.
+
+     It is allowed to be. An in-the-money vertical is already past its breakeven
+     at today's price, so the honest question for one is not "how far did it
+     travel" but "did it hold up": −3% over eight weeks asks how many years
+     finished no worse than 3% down, which is exactly what that spread needs.
+     Going down, the sign flips — a downside target of −3% is a level 3% *above*
+     the entry that the name has to close under. */
+  function rpMove() { return rp.dir === "up" ? rp.target : -rp.target; }
+
+  function rpGoal() {
+    var m = rpMove();
+    return (m > 0 ? "+" : m < 0 ? "−" : "") + num(Math.abs(m), 1) + "%";
+  }
+
+  // "or better" for an upside trade, "or lower" for a downside one — the side
+  // of the target a year has to finish on to count.
+  function rpSide() { return rp.dir === "up" ? " or better" : " or lower"; }
+
   // The counting itself lives in assets/trial.js, on its own so it can be run
-  // under node by tests/test_trial.py — what a hit, a miss, a still-open year
-  // and a skipped one mean is the whole point of this tab, and it was the one
-  // part of it nothing could check.
-  function rpTrial(d, s) {
-    return SpreadTrial.run(d, s, rp, rpAt);
+  // under node by tests/test_trial.py — what closing past the target, a miss, a
+  // still-open year and a skipped one mean is the whole point of this tab, and
+  // it was the one part of it nothing could check.
+  function rpTrial(d, s, week) {
+    if (week === undefined) return SpreadTrial.run(d, s, rp, rpAt);
+    // A one-off run on a different buy week, for the sweep below. Copied rather
+    // than assigned onto rp and put back: a throw in the middle of 53 of those
+    // would leave the control and the state disagreeing.
+    return SpreadTrial.run(d, s, { dir: rp.dir, week: week, hold: rp.hold,
+                                   target: rp.target, years: rp.years }, rpAt);
   }
 
   // ---- rendering
 
   function rpTiles(t) {
     var up = rp.dir === "up";
-    var goal = (up ? "+" : "−") + num(rp.target, 1) + "%";
+    var goal = rpGoal();
+    // A target at or behind the entry — an in-the-money thesis — starts on the
+    // right side of the line, so touching it is close to automatic and carries
+    // no information. Said out loud rather than left to look like a 100% record.
+    var beyond = rp.target > 0;
     function tile(cls, k, v) {
       return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
         "</div></div>";
     }
     var verdict = t.rate === null ? "fair" : t.rate >= 50 ? "cheap" : "rich";
-    var reached = t.decided
-      ? t.hit + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") + num(t.rate, 0) + "%)"
-      : "no year could be judged";
-    var settled = t.decided
-      ? t.finished + " of " + t.decided + " window" + (t.decided === 1 ? "" : "s") +
-        " (" + num(t.finish_rate, 0) + "%)"
-      : "no window has finished yet";
+    function years(n) {
+      return n + " of " + t.decided + (t.decided === 1 ? " year (" : " years (") +
+        num((n / t.decided) * 100, 0) + "%)";
+    }
+    var ended = t.decided ? years(t.hit) : "no year could be judged";
+    var brushed = t.decided ? years(t.touched) : "no window has finished yet";
 
     return '<div class="rulebar">' +
-      tile(verdict, "Touched " + goal + " — " + reached,
+      tile(verdict, "Closed " + goal + rpSide() + " — " + ended,
            t.decided
-             ? "The high" + (up ? "" : " — the low, for a downside target") +
-               " reached the target at some point inside the " + rp.hold + "-week window" +
-               (t.median_weeks ? ", typically in week " + num(t.median_weeks, 0) + " of it" : "") + "."
+             ? "Where the " + rp.hold + "-week window actually closed, measured against the entry. "
+               + "This is the verdict: " + goal + " over " + rp.hold + " weeks asks whether the "
+               + "name is there at the end of week " + rp.hold + ", not whether it got there on "
+               + "the way. A vertical settles against this close."
              : "Nothing in the window could be scored — widen the years, or pick a week the "
                + "history covers.") +
-      tile(t.finish_rate === null ? "fair" : t.finish_rate >= 50 ? "cheap" : "rich",
-           "Finished past it — " + settled,
-           "Where it actually closed the window. A vertical settles against this, not against the "
-           + "high — which is why this number is the smaller one.") +
+      tile("fair", "Touched it on the way — " + brushed,
+           beyond
+             ? "The looser test: the " + (up ? "high" : "low") + " reached " + goal +
+               " at some point inside the window" +
+               (t.median_weeks ? ", typically in week " + num(t.median_weeks, 0) + " of it" : "") +
+               ". It says the price was there, not that you were still in the trade when it was — "
+               + "so it only pays if you take profit early, and it is never the smaller number."
+             : "With the target at or behind the entry, the trade opens on the right side of it, "
+               + "so touching is close to automatic and says nothing. On an in-the-money thesis "
+               + "like this one it is the verdict on the left that carries the whole answer.") +
       tile("fair", "Best it got — " + signed(t.median_best),
            "Median of the furthest each window travelled toward the target. Half the years did "
            + "better than this, half worse.") +
@@ -1481,20 +1543,24 @@
      is not a channel everyone has (WCAG 1.4.1). */
   function rpStrip(t) {
     if (!t.rows.length) return "";
-    var labels = { hit: "touched", miss: "missed", open: "still open", skipped: "skipped" };
+    var labels = { hit: "closed past the target", miss: "fell short", open: "still open",
+                   skipped: "skipped" };
     var marks = { hit: "✓", miss: "✗", open: "•", skipped: "–" };
     return '<div class="yearstrip">' + t.rows.map(function (r) {
       var note = r.state === "skipped" ? (r.why || "no data")
-        : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, best " +
-                               signed(r.best_pct) + (r.touched ? ", already touched" : "")
-        : "entry " + money(r.entry) + ", target " + money(r.target) + ", best " +
-          signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
-          (r.touched ? ", touched in week " + r.hit_in : "") +
-          ", closed " + signed(r.exit_pct);
+        : r.state === "open" ? "ran " + r.ran + " of " + rp.hold + " weeks so far, " +
+                               signed(r.open_pct) + " as it stands, best " + signed(r.best_pct) +
+                               (r.touched ? ", target already touched" : "")
+        : "entry " + money(r.entry) + ", target " + money(r.target) + ", closed " +
+          signed(r.exit_pct) + ", best " + signed(r.best_pct) + ", worst " + signed(r.worst_pct) +
+          (r.touched ? ", touched in week " + r.hit_in + " on the way" : ", never touched it");
       var say = r.year + " — " + labels[r.state] + ": " + note;
+      // The percentage on the block is the one the colour is about: where the
+      // window closed, or where an unfinished one stands so far.
+      var shown = r.settled ? signed(r.exit_pct)
+        : r.state === "open" ? signed(r.open_pct) : "—";
       return '<div class="yr ' + r.state + '" title="' + esc(say) + '" aria-label="' + esc(say) +
-        '"><b>' + r.year + "</b><span>" + marks[r.state] + " " +
-        (r.best_pct === undefined ? "—" : signed(r.best_pct)) + "</span></div>";
+        '"><b>' + r.year + "</b><span>" + marks[r.state] + " " + shown + "</span></div>";
     }).join("") + "</div>";
   }
 
@@ -1503,48 +1569,71 @@
       return '<p class="empty">No year in this history has an ISO week ' + rp.week +
         " to buy in.</p>";
     }
-    var labels = { hit: "Touched", miss: "Missed", open: "Still open", skipped: "Skipped" };
+    var labels = { hit: "Closed past", miss: "Fell short", open: "Still open", skipped: "Skipped" };
     var body = t.rows.map(function (r) {
       if (r.state === "skipped") {
         return '<tr class="dim"><td class="t">' + r.year + "</td><td>" + esc(r.start) +
           '</td><td colspan="6" class="faint">' + esc(r.why || "not enough history") +
           '</td><td class="skipped">Skipped</td></tr>';
       }
+      // Exit and Touched are coloured independently, and a year that touched
+      // and then closed back under the target is exactly why: green in Touched
+      // (the profit was there to take), red at the exit (you did not take it,
+      // and the exit is what the verdict and a vertical both settle on).
       var exit = r.settled
-        ? '<td class="r ' + (r.finished ? "hit" : "") + '">' + signed(r.exit_pct) + "</td>"
+        ? '<td class="r ' + (r.closed_past ? "hit" : "miss") + '">' + signed(r.exit_pct) + "</td>"
         : '<td class="r faint">running</td>';
+      var touched = '<td class="r' + (r.touched ? " hit" : "") + '">' +
+        (r.touched ? "week " + r.hit_in : "—") + "</td>";
       // An unfinished window that has already touched is said out loud, because
-      // it is the one row a reader might expect in the hit column and will not
-      // find there.
+      // it is the one row a reader might expect in a column it is not in.
       var verdict = r.state === "open"
         ? (r.touched ? "Touched, still open" : "Still open") + " (" + r.ran + "/" + rp.hold + "w)"
         : labels[r.state];
       return "<tr><td class=\"t\">" + r.year + "</td><td>" + esc(r.start) + "</td>" +
         '<td class="r" title="' + esc("the last close of the week beginning " + r.entry_week +
           " — you buy as week " + rp.week + " opens") + '">' + money(r.entry) + "</td>" +
-        '<td class="r">' + money(r.target) + "</td>" +
-        '<td class="r">' + signed(r.best_pct) + "</td>" +
-        '<td class="r">' + (r.touched ? "week " + r.hit_in : "—") + "</td>" +
-        '<td class="r">' + signed(r.worst_pct) + "</td>" + exit +
+        '<td class="r">' + money(r.target) + "</td>" + exit +
+        '<td class="r">' + signed(r.best_pct) + "</td>" + touched +
+        '<td class="r">' + signed(r.worst_pct) + "</td>" +
         '<td class="' + r.state + '">' + verdict + "</td></tr>";
     }).join("");
 
+    // The bottom line: the two counts this whole tab exists to tell apart, added
+    // up under the columns they came from. The tiles say it in prose; a reader
+    // who has just scanned a column wants it at the foot of that column. Only
+    // the judged years are in it — an open or skipped year is in neither count,
+    // so the cell beside the total says how many were set aside rather than
+    // letting the reader work it out from a total that does not match the rows.
+    var unjudged = t.open + t.skipped;
+    var foot = !t.decided ? "" : "<tfoot><tr>" +
+      '<td class="t">' + t.decided + " judged year" + (t.decided === 1 ? "" : "s") + "</td>" +
+      '<td class="faint">' + (unjudged ? unjudged + " set aside" : "") + "</td>" +
+      "<td></td><td></td>" +
+      '<td class="r ' + (t.rate >= 50 ? "hit" : "miss") + '">' + t.hit + " of " + t.decided +
+        "</td>" +
+      '<td class="r">' + signed(t.median_best) + "</td>" +
+      '<td class="r' + (t.touched ? " hit" : "") + '">' + t.touched + " of " + t.decided + "</td>" +
+      '<td class="r">' + signed(t.median_worst) + "</td>" +
+      "<td>" + num(t.rate, 0) + "% closed · " + num(t.touch_rate, 0) + "% touched</td>" +
+      "</tr></tfoot>";
+
     return '<div class="tablewrap"><table class="scan trial"><thead><tr>' +
       "<th>Year</th><th>Buy week</th><th class=\"r\">Entry</th><th class=\"r\">Target</th>" +
-      '<th class="r">Best</th><th class="r">Touched</th><th class="r">Worst</th>' +
-      '<th class="r">At exit</th><th>Result</th>' +
-      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+      '<th class="r">At exit</th><th class="r">Best</th><th class="r">Touched</th>' +
+      '<th class="r">Worst</th><th>Result</th>' +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
   }
 
   /* The same settings run across every name — the reason to keep this on one
-     screen is that a 60% hit rate means nothing until you can see whether the
+     screen is that a 60% record means nothing until you can see whether the
      other twenty-eight names did 30% or 80% on the same question. */
   function rpAllTable(d) {
     var floor = d.min_years || 3;
     var rows = d.series.map(function (s) {
       var t = rpTrial(d, s);
       return { ticker: s.ticker, hit: t.hit, decided: t.decided, rate: t.rate,
-               finished: t.finished, best: t.median_best, worst: t.median_worst,
+               touched: t.touched, best: t.median_best, worst: t.median_worst,
                thin: t.decided < floor };
     }).filter(function (r) { return r.decided > 0; });
     if (!rows.length) return "";
@@ -1570,6 +1659,13 @@
       return sortableTh(k, label, cls || "",
         rpSort.key === k ? (rpSort.dir === 1 ? "ascending" : "descending") : "none");
     }
+    // The same green and red the year table uses, so one meaning carries down
+    // both: the verdict columns at full strength, the two excursion columns
+    // muted so they cannot outshout it. Green on Median best and red on Median
+    // worst are about the *direction*, not the sign — going down, the best a
+    // window got is a fall. A zero is left uncoloured; a green 0 would be
+    // saying "good" about nothing having happened. The colour is never the only
+    // channel — every cell it lands on is a number that already says it.
     var body = rows.map(function (r) {
       return '<tr class="srow' + (r.thin ? " thin" : "") +
         (r.ticker === rp.ticker ? " picked" : "") + '" data-ticker="' + esc(r.ticker) +
@@ -1579,32 +1675,64 @@
           : "show " + r.ticker + " above") + '">' +
         '<td class="t">' + esc(r.ticker) + "</td>" +
         '<td class="r">' + r.decided + "</td>" +
-        '<td class="r">' + r.hit + "</td>" +
-        '<td class="r">' + (r.decided - r.hit) + "</td>" +
-        '<td class="r"><b>' + num(r.rate, 0) + "%</b></td>" +
-        '<td class="r">' + (r.decided ? num((r.finished / r.decided) * 100, 0) + "%" : "—") + "</td>" +
-        '<td class="r">' + signed(r.best) + "</td>" +
-        '<td class="r">' + signed(r.worst) + "</td></tr>";
+        '<td class="r' + (r.hit ? " hit" : "") + '">' + r.hit + "</td>" +
+        '<td class="r' + (r.decided - r.hit ? " miss" : "") + '">' + (r.decided - r.hit) + "</td>" +
+        '<td class="r ' + (r.rate >= 50 ? "hit" : "miss") + '"><b>' + num(r.rate, 0) + "%</b></td>" +
+        '<td class="r' + (r.touched ? " hit" : "") + '">' +
+          (r.decided ? num((r.touched / r.decided) * 100, 0) + "%" : "—") + "</td>" +
+        '<td class="r soft-hit">' + signed(r.best) + "</td>" +
+        '<td class="r soft-miss">' + signed(r.worst) + "</td></tr>";
     }).join("");
+
+    // Pooled across every name shown, the short histories included: pooling has
+    // none of the problem the ranking floor exists to stop — a name with two
+    // judged years puts two years into the denominator, not a 100% record at the
+    // top of a list. What it does have is the correlation problem, which gets
+    // worse the bigger the number looks, so it is said under the table.
+    var sum = rows.reduce(function (a, r) {
+      a.decided += r.decided; a.hit += r.hit; a.touched += r.touched; return a;
+    }, { decided: 0, hit: 0, touched: 0 });
+    var pooled = sum.decided ? (sum.hit / sum.decided) * 100 : null;
+    var pooledTouch = sum.decided ? (sum.touched / sum.decided) * 100 : null;
+    var medianNote = "no total: a median of medians is not a median. The per-name figures are "
+      + "in the column above.";
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + rows.length + " name" + (rows.length === 1 ? "" : "s") + "</td>" +
+      '<td class="r">' + sum.decided + "</td>" +
+      '<td class="r' + (sum.hit ? " hit" : "") + '">' + sum.hit + "</td>" +
+      '<td class="r' + (sum.decided - sum.hit ? " miss" : "") + '">' + (sum.decided - sum.hit) +
+        "</td>" +
+      '<td class="r ' + (pooled >= 50 ? "hit" : "miss") + '">' + num(pooled, 0) + "%</td>" +
+      '<td class="r' + (sum.touched ? " hit" : "") + '">' + num(pooledTouch, 0) + "%</td>" +
+      '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
+      '<td class="r faint" title="' + esc(medianNote) + '">—</td>' +
+      "</tr></tfoot>";
 
     return "<h2>The same question, every name</h2>" +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Week ' + rp.week + ", " + rp.hold +
-      " weeks, " + (rp.dir === "up" ? "+" : "−") + num(rp.target, 1) +
-      "%, run across the whole screened list. Click a row to bring that name up above. " +
-      "Names with fewer than " + floor + " judged years sit at the bottom, greyed: they are " +
-      "reported, never ranked. And these names move together, so twenty-nine of them agreeing is " +
-      "nearer one piece of evidence than twenty-nine.</p>" +
+      " weeks, " + rpGoal() + rpSide() +
+      " by the close of the last week, run across the whole screened list. Click a row to bring " +
+      "that name up above. Names with fewer than " + floor + " judged years sit at the bottom, " +
+      "greyed: they are reported, never ranked. Green is the target met at the close, red is not, " +
+      "and the muted pair on the right is how far each window travelled either way. And these " +
+      "names move together, so twenty-nine of them agreeing is nearer one piece of evidence than " +
+      "twenty-nine.</p>" +
       '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
-      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Touched", "r") +
-      '<th class="r">Missed</th>' + th("rate", "Hit rate", "r") +
-      '<th class="r">Finished</th>' + th("best", "Median best", "r") +
+      th("ticker", "Name") + th("decided", "Years", "r") + th("hit", "Closed", "r") +
+      '<th class="r">Fell short</th>' + th("rate", "Closed %", "r") +
+      '<th class="r">Touched %</th>' + th("best", "Median best", "r") +
       th("worst", "Median worst", "r") +
-      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>" +
+      '<p class="faint" style="font-size:.83rem;margin:8px 0 0">' + sum.decided +
+      " judged years stand behind that bottom line, and they are not " + sum.decided +
+      " independent ones — these names move together, so a year that was good for the market was " +
+      "good for most of the list at once. Read it as one broad answer to the question, not as " +
+      esc(String(sum.decided)) + " separate ones.</p>";
   }
 
   function rpCaveats(d) {
     var r = d.reference || {};
-    var rules = ["entry", "window", "hit", "finish", "incomplete", "prices"]
+    var rules = ["entry", "window", "result", "touch", "incomplete", "prices"]
       .filter(function (k) { return r[k]; })
       .map(function (k) { return "<li>" + esc(r[k]) + "</li>"; }).join("");
     return '<div class="panelcard" style="margin-top:18px">' +
@@ -1614,10 +1742,331 @@
       "Ten years is ten observations, and this list is whoever passes the screen <i>today</i> — " +
       "the names that would have dragged a week's record down are the ones no longer here to be " +
       "measured. Nothing here knows about earnings dates, which is where a lot of week-shaped " +
-      "behaviour comes from. Above all, <b>a stock reaching your level is not the spread paying " +
-      "out</b>: a debit vertical reaches its maximum only at expiry with the name still past the " +
-      "short strike, and the Spreads tab is where that is priced. Read a hit rate here as the " +
-      "first of those two conditions, not as a backtested return.</p></div>";
+      "behaviour comes from. Above all, <b>a stock finishing past your level is not the spread " +
+      "paying out</b>: a debit vertical reaches its maximum only at expiry with the name still " +
+      "past the short strike, and the Spreads tab is where that is priced. Read a closing rate " +
+      "here as the first of those two conditions, not as a backtested return.</p></div>";
+  }
+
+  // ---------------------------------------------- which week was the best one
+  //
+  // The slider asks you to pick one week out of fifty-three with nothing to go
+  // on. This runs the trial on every one of them and paints the answer under
+  // the control — a band per week, red through grey to green — and then names
+  // the best one in words, because a colour is not a number and a strip of 53
+  // of them is unreadable on a phone. The words are the accessible copy of it;
+  // the strip is the thing you can see at a glance.
+  //
+  // Memoised on everything *except* the week, since the sweep does not depend on
+  // which week is selected: without that, dragging the slider re-ran 53 trials
+  // per pixel.
+  var rpSweepCache = { key: null, weeks: [], best: null };
+
+  function rpSweep(d, series) {
+    var key = [rp.ticker, rp.dir, rp.hold, rp.target, rp.years].join("|");
+    if (rpSweepCache.key === key) return rpSweepCache;
+
+    var floor = d.min_years || 3;
+    var weeks = [], best = null;
+    for (var w = 1; w <= 53; w++) {
+      var t = rpTrial(d, series, w);
+      var cell = { week: w, rate: t.rate, decided: t.decided, hit: t.hit,
+                   exit: t.median_exit, thin: t.decided < floor };
+      weeks.push(cell);
+      // A week the history barely covers is shown but never crowned — the same
+      // floor the ranking uses, for the same reason. ISO week 53 falls in about
+      // one year in six, so it would otherwise win the title on three lucky
+      // years and send you to buy in the last week of December.
+      if (cell.rate === null || cell.thin) continue;
+      if (best === null || cell.rate > best.rate ||
+          (cell.rate === best.rate && (cell.exit || 0) > (best.exit || 0))) best = cell;
+    }
+    rpSweepCache = { key: key, weeks: weeks, best: best };
+    return rpSweepCache;
+  }
+
+  /* Red at 0%, grey at 50%, green at 100% — the three colours the tab already
+     means those things with. */
+  function rpHeatColour(rate) {
+    var stops = [[0, 240, 129, 111], [50, 110, 119, 129], [100, 63, 185, 80]];
+    var lo = stops[0], hi = stops[stops.length - 1];
+    for (var i = 0; i < stops.length - 1; i++) {
+      if (rate >= stops[i][0] && rate <= stops[i + 1][0]) { lo = stops[i]; hi = stops[i + 1]; }
+    }
+    var span = hi[0] - lo[0];
+    var f = span ? (rate - lo[0]) / span : 0;
+    function mix(a, b) { return Math.round(a + (b - a) * f); }
+    return "rgb(" + mix(lo[1], hi[1]) + "," + mix(lo[2], hi[2]) + "," + mix(lo[3], hi[3]) + ")";
+  }
+
+  function rpWeekWhen(d, week) {
+    var want = "W" + (week < 10 ? "0" : "") + week;
+    for (var i = d.weeks.length - 1; i >= 0; i--) {
+      if (d.weeks[i].slice(5) !== want) continue;
+      var when = new Date(d.starts[i] + "T00:00:00");
+      if (isNaN(when.getTime())) return "";
+      return when.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+    return "";
+  }
+
+  function rpHeat(d, series) {
+    var host = $("#rp-heat");
+    if (!host) return;
+    if (!series) { host.innerHTML = ""; return; }
+
+    var sweep = rpSweep(d, series);
+    var goal = rpGoal() + rpSide();
+    var say = sweep.best
+      ? "How often each buy week closed " + goal + ", on these settings. Best is week " +
+        sweep.best.week + " at " + num(sweep.best.rate, 0) + "%."
+      : "How often each buy week closed " + goal + ", on these settings.";
+
+    var bars = sweep.weeks.map(function (c) {
+      var cls = "hs";
+      if (c.week === rp.week) cls += " now";
+      if (sweep.best && c.week === sweep.best.week) cls += " top";
+      if (c.rate === null) {
+        return '<i class="' + cls + ' none" title="' + esc("week " + c.week + " — no judged year")
+          + '"></i>';
+      }
+      var note = "week " + c.week + " — " + num(c.rate, 0) + "% closed " + goal + ", " +
+        c.hit + " of " + c.decided + (c.thin ? " (too few years to rank)" : "");
+      return '<i class="' + cls + (c.thin ? " thin" : "") + '" style="background:' +
+        rpHeatColour(c.rate) + '" title="' + esc(note) + '"></i>';
+    }).join("");
+
+    var pointer = "";
+    if (sweep.best) {
+      var when = rpWeekWhen(d, sweep.best.week);
+      pointer = '<button type="button" class="bestweek" data-week="' + sweep.best.week +
+        '" title="' + esc("set the slider to week " + sweep.best.week) + '">' +
+        "Best here: <b>week " + sweep.best.week + "</b>" + (when ? " · w/c " + esc(when) : "") +
+        " · " + num(sweep.best.rate, 0) + "% (" + sweep.best.hit + " of " + sweep.best.decided +
+        ")</button>";
+    }
+
+    host.innerHTML = '<div class="heatbar" role="img" aria-label="' + esc(say) + '">' + bars +
+      "</div>" + pointer +
+      '<span class="heatnote">' + (sweep.best
+        ? "best of 53 weeks tried — and the best of 53 tries is a high bar to clear by luck"
+        : "no week here has enough judged years to rank") + "</span>";
+
+    var jump = host.querySelector(".bestweek");
+    if (jump) {
+      jump.addEventListener("click", function () {
+        rp.week = Number(this.dataset.week);
+        $("#rp-week").value = rp.week;
+        rpStore();
+        rpWeekLabel(d);
+        rpDraw();
+      });
+    }
+  }
+
+  // ------------------------------------------------- the money section
+  //
+  // The same years, priced as a debit vertical. Two tables, deliberately its
+  // own: everything above this point is percentages of the stock and needs no
+  // assumption beyond the closes, and everything below rests on a debit nobody
+  // can look up. Keeping them apart is how a reader can tell which half is
+  // measurement and which half is their own input.
+
+  /* One name, year by year — the cash that left and the cash that came back. */
+  function spYearTable(econ) {
+    if (!econ.rows.length) {
+      return '<p class="empty">No year here has a finished window to settle a spread against.</p>';
+    }
+    var lots = econ.lots > 1 ? " ×" + econ.lots : "";
+    var body = econ.rows.map(function (r) {
+      // The two ends a vertical can reach are named where they happen: "max"
+      // and "expired worthless" read as outcomes where a bare number reads as
+      // arithmetic.
+      var note = r.maxed ? ' <span class="tag buy">max</span>'
+        : r.worthless ? ' <span class="tag sell">worthless</span>' : "";
+      return '<tr><td class="t">' + r.year + "</td>" +
+        '<td class="r">' + money(r.entry) + "</td>" +
+        '<td class="r">' + money(r.long) + " / " + money(r.short) + "</td>" +
+        '<td class="r out">−' + cash(r.paid) + "</td>" +
+        '<td class="r">' + money(r.exit) + " (" + signed(r.exit_pct) + ")</td>" +
+        '<td class="r ' + (r.maxed ? "maxed" : r.worthless ? "zero" : "") + '">+' +
+          cash(r.received) + note + "</td>" +
+        '<td class="r net ' + (r.net > 0 ? "up" : r.net < 0 ? "down" : "") + '">' +
+          cash(r.net) + "</td>" +
+        '<td class="r">' + signed(r.roi, 0) + "</td></tr>";
+    }).join("");
+
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + econ.years + " year" + (econ.years === 1 ? "" : "s") + lots + "</td>" +
+      "<td></td><td></td>" +
+      '<td class="r out">−' + cash(econ.paid) + "</td>" +
+      "<td></td>" +
+      '<td class="r">+' + cash(econ.received) + "</td>" +
+      '<td class="r net ' + (econ.net > 0 ? "up" : econ.net < 0 ? "down" : "") + '">' +
+        cash(econ.net) + "</td>" +
+      '<td class="r">' + signed(econ.roi, 0) + "</td></tr></tfoot>";
+
+    return '<div class="tablewrap"><table class="scan money"><thead><tr>' +
+      '<th>Year</th><th class="r">Entry</th><th class="r">Long / short</th>' +
+      '<th class="r">Cash out</th><th class="r">Stock at expiry</th>' +
+      '<th class="r">Cash in</th><th class="r">Net</th><th class="r">Return</th>' +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
+  }
+
+  /* What the same structure would have done on every other name. */
+  function spAllTable(d) {
+    var floor = d.min_years || 3;
+    var rows = [];
+    for (var i = 0; i < d.series.length; i++) {
+      var econ = SpreadTrial.economics(rpTrial(d, d.series[i]), spDeal());
+      if (!econ.years) continue;
+      rows.push({ ticker: d.series[i].ticker, years: econ.years, paid: econ.paid,
+                  received: econ.received, net: econ.net, roi: econ.roi, won: econ.won,
+                  breakeven: econ.breakeven, thin: econ.years < floor });
+    }
+    if (!rows.length) return "";
+
+    var key = spSort.key;
+    rows.sort(function (a, b) {
+      if (key === "ticker") return a.ticker.localeCompare(b.ticker) * spSort.dir;
+      // Same floor, same reason as the ranking above: a name with two judged
+      // years is reported, never ranked. It matters more here, not less — the
+      // biggest net on the screen could be one lucky year.
+      if (a.thin !== b.thin) return a.thin ? 1 : -1;
+      var x = has(a[key]) ? a[key] : -Infinity, y = has(b[key]) ? b[key] : -Infinity;
+      return (x === y ? a.years - b.years : x - y) * spSort.dir;
+    });
+
+    function th(k, label, cls) {
+      return sortableTh(k, label, cls || "",
+        spSort.key === k ? (spSort.dir === 1 ? "ascending" : "descending") : "none");
+    }
+    var sum = rows.reduce(function (a, r) {
+      a.paid += r.paid; a.received += r.received; a.years += r.years; a.won += r.won;
+      return a;
+    }, { paid: 0, received: 0, years: 0, won: 0 });
+    var net = sum.received - sum.paid;
+
+    var body = rows.map(function (r) {
+      return '<tr class="srow' + (r.thin ? " thin" : "") +
+        (r.ticker === rp.ticker ? " picked" : "") + '" data-ticker="' + esc(r.ticker) +
+        '" tabindex="0" title="' + esc(r.thin
+          ? r.ticker + " has only " + r.years + " settled year" + (r.years === 1 ? "" : "s") +
+            " here — shown, but not ranked"
+          : "show " + r.ticker + " above") + '">' +
+        '<td class="t">' + esc(r.ticker) + "</td>" +
+        '<td class="r">' + r.years + "</td>" +
+        '<td class="r">' + r.won + "</td>" +
+        '<td class="r out">−' + cash(r.paid) + "</td>" +
+        '<td class="r">+' + cash(r.received) + "</td>" +
+        '<td class="r net ' + (r.net > 0 ? "up" : r.net < 0 ? "down" : "") + '">' +
+          cash(r.net) + "</td>" +
+        '<td class="r">' + signed(r.roi, 0) + "</td>" +
+        '<td class="r">' + num(r.breakeven, 0) + "%</td></tr>";
+    }).join("");
+
+    var foot = "<tfoot><tr>" +
+      '<td class="t">' + rows.length + " name" + (rows.length === 1 ? "" : "s") + "</td>" +
+      '<td class="r">' + sum.years + "</td>" +
+      '<td class="r">' + sum.won + "</td>" +
+      '<td class="r out">−' + cash(sum.paid) + "</td>" +
+      '<td class="r">+' + cash(sum.received) + "</td>" +
+      '<td class="r net ' + (net > 0 ? "up" : net < 0 ? "down" : "") + '">' + cash(net) + "</td>" +
+      '<td class="r">' + signed(sum.paid ? (net / sum.paid) * 100 : null, 0) + "</td>" +
+      '<td class="r faint" title="' + esc("no total: each name breaks even at its own debit") +
+        '">—</td></tr></tfoot>';
+
+    return "<h3>The same structure, every name</h3>" +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Every name bought on the same ' +
+      "rule and priced on the same assumption — so this column of nets is one assumption " +
+      "repeated twenty-nine times, not twenty-nine pieces of evidence. <b>Breakeven</b> is the " +
+      "debit, as a share of width, that would have left that name exactly square: under it the " +
+      "run made money, over it it did not, and it is the one column here that needs no view on " +
+      "what the spread cost. Click a row to bring that name up above.</p>" +
+      '<div class="tablewrap"><table class="scan money rank"><thead><tr>' +
+      th("ticker", "Name") + th("years", "Years", "r") + th("won", "Won", "r") +
+      th("paid", "Cash out", "r") + th("received", "Cash in", "r") + th("net", "Net", "r") +
+      th("roi", "Return", "r") + th("breakeven", "Breakeven", "r") +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
+  }
+
+  function spTiles(econ) {
+    function tile(cls, k, v) {
+      return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
+        "</div></div>";
+    }
+    var verdict = econ.net > 0 ? "cheap" : econ.net < 0 ? "rich" : "fair";
+    var structure = (rp.dir === "up" ? "call" : "put") + " debit spread, " + num(sp.long, 1) +
+      "% / " + num(sp.short, 1) + "%, held " + rp.hold + " weeks";
+    return '<div class="rulebar">' +
+      tile(verdict,
+           "Net over " + econ.years + " year" + (econ.years === 1 ? "" : "s") + " — " +
+           cash(econ.net),
+           cash(econ.received) + " came back against " + cash(econ.paid) + " paid out, on a " +
+           structure + (econ.lots > 1 ? ", " + econ.lots + " contracts a year" : "") +
+           ". Commission and slippage are not in it, and neither is the fact that a real debit "
+           + "would not have been the same every year.") +
+      tile("fair", "Return on the money risked — " + signed(econ.roi, 0),
+           "Net divided by everything paid in. Not annualised, and not a portfolio return: the "
+           + "cash is only at risk for " + rp.hold + " weeks of each year, and a debit vertical "
+           + "can lose all of it.") +
+      tile(econ.breakeven === null ? "fair" : sp.debit <= econ.breakeven ? "cheap" : "rich",
+           "Breakeven debit — " + num(econ.breakeven, 0) + "% of width",
+           "Pay less than this and the run made money, more and it did not. This is the one "
+           + "number here that does not rest on your assumption, so it is the one to take to a "
+           + "live quote. You have set " + num(sp.debit, 0) + "%.") +
+      tile("fair", "Won " + econ.won + " of " + econ.years +
+           (econ.maxed ? " · " + econ.maxed + " at max" : ""),
+           econ.worthless + " expired worthless, which for a debit vertical means the whole "
+           + "premium gone. A win rate is not an edge until the sizes are in it — that is what "
+           + "the net on the left is for.") +
+      "</div>";
+  }
+
+  function spDraw() {
+    var host = $("#moneybody"), d = store.weekly, section = $("#spreadsection");
+    if (section) section.hidden = !sp.on;
+    if (!sp.on || !d || !host) return;
+
+    var series = null;
+    for (var i = 0; i < d.series.length; i++) {
+      if (d.series[i].ticker === rp.ticker) { series = d.series[i]; break; }
+    }
+    if (!series) { host.innerHTML = ""; return; }
+
+    var econ = SpreadTrial.economics(rpTrial(d, series), spDeal());
+    if (econ.why) {
+      host.innerHTML = '<p class="empty">' + esc(econ.why) +
+        " — the strike you sell is what caps the payout, so it has to sit further out than the " +
+        "one you buy.</p>";
+      return;
+    }
+
+    host.innerHTML = (econ.years ? spTiles(econ) : "") +
+      "<h3>" + esc(rp.ticker) + ", year by year</h3>" +
+      spYearTable(econ) + spAllTable(d);
+
+    // Scoped to table.money, and spSort is its own: the ranking above sorts on
+    // keys this table does not have, and sharing one sort state made picking a
+    // column in one table quietly scramble the other.
+    wireSort(host.querySelectorAll("table.money thead th"), function (k) {
+      if (spSort.key === k) spSort.dir = -spSort.dir;
+      else { spSort.key = k; spSort.dir = k === "ticker" ? 1 : -1; }
+      spDraw();
+      var again = host.querySelector('table.money thead th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
+
+    var picks = host.querySelectorAll("tr.srow[data-ticker]");
+    for (var p = 0; p < picks.length; p++) {
+      picks[p].addEventListener("click", function () { rpPick(this.dataset.ticker); });
+      picks[p].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          rpPick(this.dataset.ticker);
+        }
+      });
+    }
   }
 
   function rpDraw() {
@@ -1627,6 +2076,7 @@
     for (var i = 0; i < d.series.length; i++) {
       if (d.series[i].ticker === rp.ticker) { series = d.series[i]; break; }
     }
+    rpHeat(d, series);
     if (!series) {
       host.innerHTML = '<p class="empty">No weekly history for that name.</p>';
       return;
@@ -1640,9 +2090,12 @@
       : "";
     var pending = [];
     if (t.open) {
+      // "Touched", not "past the target": a name can be past it in week three
+      // and back under it by the week the window closes on, and the closing
+      // week is the one that decides.
       var already = !t.touched_open ? ""
-        : t.open === 1 ? " (already past the target)"
-        : " (" + t.touched_open + " of them already past the target)";
+        : t.open === 1 ? " (it has touched the target, but has not closed yet)"
+        : " (" + t.touched_open + " of them have touched the target)";
       pending.push(t.open + (t.open === 1 ? " year is" : " years are") + " still running" + already);
     }
     if (t.skipped) pending.push(t.skipped + " skipped for want of data");
@@ -1672,6 +2125,9 @@
         }
       });
     }
+
+    // The money section reads the same trial, so it redraws whenever this does.
+    spDraw();
   }
 
   function rpPick(ticker) {
@@ -1709,6 +2165,56 @@
     var v = Math.round(Number(el.value));
     if (isNaN(v)) v = fallback;
     return Math.min(hi, Math.max(lo, v));
+  }
+
+  // The money controls. Separate from wireRepeat's, because they redraw only
+  // the money section — re-running the whole tab to change a contract count
+  // would rebuild thirty names' worth of tables for nothing.
+  function wireSpread() {
+    // Like rpNum but without the rounding: these controls step in halves, and a
+    // 2.5% strike offset that silently became 3% would be a lie on the table.
+    function spNum(el, lo, hi, fallback) {
+      var v = Number(el.value);
+      if (isNaN(v) || el.value === "") v = fallback;
+      return Math.min(hi, Math.max(lo, v));
+    }
+    function onChange(fn) {
+      return function () { fn(this); spStore(); spDraw(); };
+    }
+    $("#sp-long").addEventListener("input", onChange(function (el) {
+      sp.long = spNum(el, -50, 100, 0);
+    }));
+    $("#sp-short").addEventListener("input", onChange(function (el) {
+      sp.short = spNum(el, -50, 200, 8);
+    }));
+    $("#sp-debit").addEventListener("input", onChange(function (el) {
+      // A debit of 0 is free money and a debit of 100 is the whole width for
+      // certain — neither is a spread, so the range stops short of both.
+      sp.debit = spNum(el, 1, 99, 40);
+    }));
+    $("#sp-contracts").addEventListener("input", onChange(function (el) {
+      sp.contracts = Math.round(spNum(el, 1, 1000, 1));
+    }));
+    $("#sp-on").addEventListener("change", function () {
+      sp.on = this.checked;
+      spStore();
+      spDraw();
+      if (sp.on) $("#spreadcontrols").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("repeat-spread") || "null"); } catch (e) {
+      saved = null;
+    }
+    if (saved) {
+      for (var key in sp) if (has(saved[key])) sp[key] = saved[key];
+    }
+    $("#sp-on").checked = !!sp.on;
+    $("#sp-long").value = sp.long;
+    $("#sp-short").value = sp.short;
+    $("#sp-debit").value = sp.debit;
+    $("#sp-contracts").value = sp.contracts;
+    $("#spreadsection").hidden = !sp.on;
   }
 
   function renderRepeat() {
@@ -1757,8 +2263,12 @@
       rp.years = rpNum(el, 2, 25, 10);
     }));
     $("#rp-target").addEventListener("input", onChange(function (el) {
+      // Down to −95%, not up from 0.5%: a zero or negative target is the
+      // in-the-money question ("did it hold up"), and it is a real one. The
+      // floor is short of −100% only because the target price has to stay
+      // above zero — see rpMove.
       var v = Number(el.value);
-      rp.target = isNaN(v) ? 8 : Math.min(300, Math.max(0.5, v));
+      rp.target = isNaN(v) ? 8 : Math.min(300, Math.max(-95, v));
     }));
 
     var dirs = document.querySelectorAll("#rp-dir button");
@@ -1948,6 +2458,7 @@
       views[v].addEventListener("click", function () { showChartView(this.dataset.view); });
     }
     wireRepeat();
+    wireSpread();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;

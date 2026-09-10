@@ -2,19 +2,21 @@
 
 The dashboard's Repeat test asks one question over and over: *if I bought this
 name in the same week every year and gave the trade N weeks, how many of those
-years reached my target?* Answering it needs a bar series fine enough to place
-an entry on a chosen week and coarse enough to ship — so this module reduces the
-same daily download the charts use to one **ISO week** (Monday–Sunday) per row,
-keeping the high, the low and the close.
+years **closed** past my target?* Answering it needs a bar series fine enough to
+place an entry on a chosen week and coarse enough to ship — so this module
+reduces the same daily download the charts use to one **ISO week**
+(Monday–Sunday) per row, keeping the high, the low and the close.
 
-Three fields, because the question has two honest answers and they need
-different ones:
+Three fields, because the verdict and the colour beside it need different ones:
 
+* **close** — where the name actually *finished* the window, which is the
+  verdict. "Eight weeks, +1%" asks whether the close of week eight is 1% above
+  the entry; a spike in week three that gave itself back is not an answer to
+  it. It is also what a vertical spread settles against.
 * **high / low** — whether the target was ever *touched* while the trade was on.
-  That is the number that matters if you take profit early, which every
-  management rule in this repo tells you to do.
-* **close** — where the name actually *finished* the window. That is what a
-  vertical spread settles against, and it is usually the smaller number.
+  Reported beside the verdict, never as it: it says the price was there, not
+  that you were still in the trade when it was. That is the number that matters
+  if you take profit early, and it is never the smaller of the two.
 
 Two honesty rules, the same ones :mod:`spread_scanner.seasonality` applies to
 months:
@@ -53,7 +55,7 @@ from .report import SCHEMA_VERSION, write_json
 # it just does not reach a tool whose shortest question spans weeks.
 MIN_WEEKS = 26
 
-# How many judged years a name needs before its hit rate is ranked against the
+# How many judged years a name needs before its rate is ranked against the
 # others. The same floor, for the same reason, as `seasonality.MIN_YEARS`: two
 # years at 100% is not a better answer than ten at 70%, and a table sorted by
 # rate will put it on top unless something stops it. Names under the floor are
@@ -69,24 +71,29 @@ REFERENCE = {
              "baseline for the whole trial, so the buy week's own move counts toward the target.",
     "window": "A hold of N weeks means the buy week plus the N−1 after it. The trade is measured "
               "from the entry price to the close of the last week in that window.",
-    "hit": "A year counts as a hit if the target was touched at any point inside the window — the "
-           "weekly high for an upside target, the weekly low for a downside one. Touched, not "
-           "held: it says the price was there, not that you were still in the trade when it was.",
-    "finish": "Finished is the stricter test: the close of the final week is past the target. A "
-              "vertical spread settles against that close, so this is the number the structure "
-              "actually pays on; touching is what lets you take profit early.",
-    "incomplete": "A year whose window runs past the last complete week is reported as still open "
-                  "and counted in neither column — including when the target is already behind it. "
-                  "An unfinished window can produce a touch but never a miss, so admitting one to "
-                  "the rate would move it in one direction only, and the newest year would quietly "
-                  "hold the headline up. A year with no bars for the entry week, or a gap inside "
-                  "the window, is skipped and said to be skipped.",
-    "ranking": "A name needs at least three judged years before its hit rate is ranked against "
+    "result": "A year counts when the trade *closes* past the target: the close of the last week "
+              "in the window is at or beyond the entry price moved by your percentage. Eight weeks "
+              "at +1% asks whether the name is 1% up at the close of week eight, not whether it "
+              "was ever 1% up along the way. A vertical spread settles against that close, so this "
+              "is the number the structure actually pays on.",
+    "touch": "Touched is the looser test, reported beside the verdict rather than deciding it: the "
+             "weekly high for an upside target, the weekly low for a downside one, at any point "
+             "inside the window. Touched, not held — it says the price was there, not that you "
+             "were still in the trade when it was — so it is the number that matters if you take "
+             "profit early, and it is never the smaller of the two.",
+    "incomplete": "A year whose window runs past the last complete week has no exit yet, so it is "
+                  "reported as still open and counted in neither column — including when the "
+                  "target is already behind it, because a name can be past the target in week "
+                  "three and back under it by week eight. Admitting one would move the rate in a "
+                  "single direction, and the newest year would quietly hold the headline up. A "
+                  "year with no bars for the entry week, or a gap inside the window, is skipped "
+                  "and said to be skipped.",
+    "ranking": "A name needs at least three judged years before its rate is ranked against "
                "the others. Two years at 100% is not a better answer than ten at 70%, and a "
                "shorter history is not a stronger one.",
     "prices": "Split- and dividend-adjusted closes, so a target is a target in today's money. "
-              "Nothing here prices an option: the target is a level the *stock* has to reach, and "
-              "reaching it is necessary for a spread to pay, not sufficient.",
+              "Nothing here prices an option: the target is a level the *stock* has to finish "
+              "past, and finishing past it is necessary for a spread to pay, not sufficient.",
 }
 
 

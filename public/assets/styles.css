@@ -18,8 +18,10 @@
 
   --buy: #3fb950;
   --buy-bg: #0f2915;
+  --buy-soft: #2f7f3b;
   --sell: #f0816f;
   --sell-bg: #2d1512;
+  --sell-soft: #a4655a;
   --neutral: #d29922;
   --neutral-bg: #2a1f08;
   --wait: #8b949e;
@@ -339,6 +341,35 @@ table.scan tbody td { padding: 8px 11px; border-bottom: 1px solid var(--line-sof
 table.scan tbody tr:hover { background: var(--surface); }
 table.scan td.t { font-weight: 700; }
 table.scan td.r { text-align: right; }
+
+/* The bottom line on both Repeat-test tables. Outside tbody deliberately: it
+   never sorts, never highlights on hover, and in the ranked table never becomes
+   a name picker — the row handlers and the sort wiring are both scoped to
+   thead/tbody, so a summary can never be mistaken for a row of data. */
+table.scan tfoot td {
+  padding: 9px 11px; border-top: 2px solid var(--line); background: var(--surface-2);
+  font-variant-numeric: tabular-nums; font-weight: 700;
+}
+table.scan tfoot td.faint { font-weight: 400; }
+
+/* ---------------------------------------------------- the money section */
+
+/* The opener for the optional debit-spread section. A real checkbox, so it is
+   focusable, announced and toggled by the keyboard without any of that being
+   re-implemented here. */
+.moneyhead { margin: 26px 0 14px; padding-top: 20px; border-top: 1px solid var(--line); }
+.toggle { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-weight: 700; }
+.toggle input { width: 16px; height: 16px; accent-color: var(--link); cursor: pointer; }
+.toggle span { font-size: .92rem; }
+
+/* Cash columns carry their own sign, so they are not coloured by it — a debit
+   is money leaving whether or not the trade worked, and painting it red would
+   say the wrong thing. Only the net is a verdict. */
+table.money td.out { color: var(--text-dim); }
+table.money td.net.up { color: var(--buy); font-weight: 700; }
+table.money td.net.down { color: var(--sell); font-weight: 700; }
+table.money td.maxed { color: var(--buy); }
+table.money td.zero { color: var(--sell); }
 .pill {
   display: inline-block; min-width: 34px; text-align: center; padding: 2px 8px;
   border-radius: 6px; font-weight: 700; color: #fff; font-size: .8rem;
@@ -403,6 +434,42 @@ table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight:
 }
 .ctl select:focus, .ctl input:focus { outline: none; border-color: var(--link); }
 .ctl input[type="range"] { width: 100%; accent-color: var(--link); margin: 4px 0 0; }
+/* The buy-week heat strip: one band per ISO week, under the slider it explains.
+   Deliberately not painted onto the range track itself — a custom track means
+   giving up `accent-color` and hand-rolling a thumb in three browsers, and the
+   thumb's travel is inset by half its own width anyway, so a gradient on the
+   track would not line up with the weeks any better than this does. Alignment
+   here is a hint; the button underneath is the fact. */
+.heat { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+.heatbar {
+  display: flex; gap: 1px; height: 14px; border-radius: 3px; overflow: hidden;
+  background: var(--surface-2);
+}
+.heatbar .hs { flex: 1 1 0; min-width: 0; position: relative; }
+.heatbar .hs.none { background: var(--surface-2); }
+/* Too few judged years to rank. Faded rather than hidden — the week exists, it
+   just cannot win, and a gap in the strip would read as missing data. */
+.heatbar .hs.thin { opacity: .35; }
+/* Where you are, and where the best week is. Both are marks with a shape, not
+   just a colour: an inset ring for the current week, a notch for the best. */
+.heatbar .hs.now { box-shadow: inset 0 0 0 2px var(--text); }
+.heatbar .hs.top::after {
+  content: ""; position: absolute; left: 50%; top: 0; width: 0; height: 0;
+  transform: translateX(-50%);
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--text);
+}
+
+.bestweek {
+  align-self: flex-start; background: none; border: 1px solid var(--line);
+  border-radius: var(--radius-sm); color: var(--text-dim); font: inherit; font-size: .76rem;
+  padding: 3px 8px; cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.bestweek b { color: var(--buy); }
+.bestweek:hover { border-color: var(--buy); color: var(--text); }
+.bestweek:focus-visible { outline: 2px solid var(--link); outline-offset: 1px; }
+.heatnote { font-size: .68rem; color: var(--text-faint); }
+
 
 /* Ten years at a glance: one block per year, its colour the verdict. */
 .yearstrip { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
@@ -425,6 +492,18 @@ table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight:
 table.rank tbody tr { cursor: pointer; }
 table.rank tbody tr.picked > td { background: var(--surface-2); }
 table.rank tbody tr.picked > td:first-child { box-shadow: inset 3px 0 0 var(--link); }
+
+/* The same verdict colours the year table uses, so the two read as one scheme —
+   the counts and the rate at full strength, the excursion columns muted so a
+   column you scan for context cannot outshout the one you scan for the answer. */
+table.rank td.hit { color: var(--buy); }
+table.rank td.miss { color: var(--sell); }
+table.rank td.soft-hit { color: var(--buy-soft); }
+table.rank td.soft-miss { color: var(--sell-soft); }
+
+/* Under the ranking floor, and the greying outranks all of it on specificity —
+   deliberately. A name with two judged years should not be the greenest row on
+   the screen. */
 table.rank tbody tr.thin > td { color: var(--text-faint); }
 table.rank tbody tr.thin > td b { font-weight: 400; }
 

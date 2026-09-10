@@ -115,7 +115,7 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     assert axis == len(weekly["starts"]) > 0
     for series in weekly["series"]:
         assert len(series["close"]) == len(series["high"]) == len(series["low"]) == axis
-    assert weekly["reference"]["hit"], "the rules the payload is read by ship with it"
+    assert weekly["reference"]["result"], "the rules the payload is read by ship with it"
 
     csv = pd.read_csv(site / "data" / "signals.csv")
     assert set(csv["ticker"]) == set(TICKERS)

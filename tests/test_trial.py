@@ -1,7 +1,9 @@
 """The Repeat test's counting rules — run against the JavaScript that ships.
 
-`public/assets/trial.js` decides what a hit, a miss, a still-open year and a
-skipped one mean, and that is the whole substance of the Repeat test. It runs in
+`public/assets/trial.js` decides what a year that closed past the target, a
+miss, a still-open year and a skipped one mean, and that is the whole substance of the Repeat test. The
+verdict is the *exit* — where the window closed — and touching the target on the
+way is reported beside it rather than being it. It runs in
 the browser because every control re-runs it and Pages has no server, but that
 is not a reason for it to be the one part of the pipeline nothing checks.
 
@@ -46,6 +48,23 @@ def run_trial(data: dict, ticker: str, **opts) -> dict:
       const series = payload.series.find(s => s.ticker === {json.dumps(ticker)});
       const at = trial.index(payload);
       process.stdout.write(JSON.stringify(trial.run(payload, series, opt, at)));
+    """
+    done = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+def run_economics(data: dict, ticker: str, spread: dict, **opts) -> dict:
+    """Run `SpreadTrial.run` then `SpreadTrial.economics` over its rows."""
+    options = {"dir": "up", "week": 37, "hold": 8, "target": 8, "years": 30, **opts}
+    deal = {"dir": options["dir"], "long": 0, "short": 8, "debit": 40, "contracts": 1, **spread}
+    script = f"""
+      const trial = require({json.dumps(str(TRIAL_JS))});
+      const payload = {json.dumps(data)};
+      const series = payload.series.find(s => s.ticker === {json.dumps(ticker)});
+      const at = trial.index(payload);
+      const result = trial.run(payload, series, {json.dumps(options)}, at);
+      process.stdout.write(JSON.stringify(trial.economics(result, {json.dumps(deal)})));
     """
     done = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=60)
     assert done.returncode == 0, done.stderr
@@ -146,7 +165,8 @@ def test_the_last_week_of_the_window_is_the_buy_week_plus_hold_minus_one():
     closes[107] = 200.0                    # week 8 of a hold of 8
     closes[108] = 100.0
     data = payload({"AAA": closes})
-    assert row_for(data, "AAA", 100, hold=8)["hit_in"] == 8
+    eight = row_for(data, "AAA", 100, hold=8)
+    assert eight["hit_in"] == 8 and eight["state"] == "hit", "and it is the week it exits on"
     assert row_for(data, "AAA", 100, hold=7)["state"] == "miss", "week 8 is outside a hold of 7"
 
 
@@ -156,16 +176,18 @@ def test_a_window_that_runs_past_the_last_week_is_open_not_a_miss():
     assert row["state"] == "open"
     assert row["ran"] == 2, "two weeks of axis were left"
     assert "exit" not in row, "an unfinished window has no exit price"
+    assert row["open_pct"] == pytest.approx(0.0), "but it says where it stands so far"
 
 
 # ---- an unfinished window is never a hit either ----------------------------
 
 def test_an_unfinished_window_that_already_touched_is_still_not_counted():
-    """The bias this rule exists to stop is one-directional.
+    """A window with no exit yet cannot be judged on its exit.
 
-    A window that has not finished can produce a touch but never a miss, so
-    letting one into the rate can only ever raise it — and the newest year would
-    hold the headline up on its own.
+    And the bias is one-directional: letting an unfinished window in on the
+    strength of a touch can only ever raise the rate, so the newest year would
+    hold the headline up on its own. A name can be past the target in week three
+    and back under it by week eight, which is exactly what the exit test is for.
     """
     closes = flat(300)
     closes[298] = 200.0                    # far past the target, in an unfinished window
@@ -176,6 +198,7 @@ def test_an_unfinished_window_that_already_touched_is_still_not_counted():
 
     assert row["state"] == "open", "an unfinished window is open whatever it touched"
     assert row["touched"] is True, "but it still says the target was reached"
+    assert "closed_past" not in row, "there is no exit to have closed past anything"
     assert result["touched_open"] == 1, "and it is counted as one, so the page can say so"
     assert row["year"] not in [r["year"] for r in result["rows"] if r["state"] == "hit"]
 
@@ -191,30 +214,82 @@ def test_the_rate_denominator_is_the_finished_windows_only():
     assert result["rate"] == pytest.approx(result["hit"] / result["decided"] * 100)
 
 
-# ---- touched vs finished ---------------------------------------------------
+# ---- the verdict is the exit -----------------------------------------------
 
-def test_touched_reads_the_high_and_finished_reads_the_close():
+def test_the_verdict_is_the_exit_not_the_best_price_in_the_window():
+    """The whole point of the test: eight weeks at +1% means +1% at week eight.
+
+    A window that went through the target and gave it back is a miss, and a
+    window that crawled there and stayed closed past it — however unexciting
+    the path was.
+    """
+    spike = flat(300)
+    spike[102] = 130.0                     # +30% mid-window, all of it given back
+    ends = flat(300)
+    ends[107] = 101.5                      # never far ahead, but closes past +1%
+    data = payload({"SPIKE": spike, "ENDS": ends})
+
+    hot = row_for(data, "SPIKE", 100, hold=8, target=1)
+    assert hot["touched"] is True, "it went straight through +1% in week three"
+    assert hot["state"] == "miss" and hot["closed_past"] is False
+    assert hot["exit_pct"] == pytest.approx(0.0), "and closed the window back at the entry"
+
+    slow = row_for(data, "ENDS", 100, hold=8, target=1)
+    assert slow["state"] == "hit" and slow["closed_past"] is True
+    assert slow["exit_pct"] == pytest.approx(1.5)
+
+
+def test_a_window_that_touched_and_closed_back_under_is_a_miss():
     closes = flat(300)
     # A close under +8% whose high clears it: the difference between the two.
     closes[101] = 100.0 * 1.07
     data = payload({"AAA": closes})
     row = row_for(data, "AAA", 100, hold=4, target=8)
-    assert row["touched"] is True and row["state"] == "hit"
-    assert row["finished"] is False, "the window closed under the target"
+    assert row["touched"] is True, "the high went through the target"
+    assert row["state"] == "miss" and row["closed_past"] is False, "the window closed under it"
     assert row["exit"] == pytest.approx(100.0), "the exit is the last week, not the best one"
 
 
-def test_a_close_past_the_target_is_both_touched_and_finished():
+def test_a_close_past_the_target_is_both_touched_and_closed_past():
     closes = flat(300)
     closes[103] = 120.0
     data = payload({"AAA": closes})
     row = row_for(data, "AAA", 100, hold=4, target=8)
-    assert row["touched"] is True and row["finished"] is True
+    assert row["touched"] is True and row["closed_past"] is True
+    assert row["state"] == "hit"
 
 
-def test_a_downside_target_reads_the_low():
+def test_the_rate_is_the_closed_past_rate_and_touches_are_counted_beside_it():
+    """A flat series with a 2% wick touches +1% every year and closes past none."""
+    data = payload({"AAA": flat(52 * 8)})
+    _, week = at(data, 100)
+    result = run_trial(data, "AAA", week=week, hold=8, target=1)
+
+    assert result["decided"] >= 3, "this fixture is meant to judge several years"
+    assert result["hit"] == 0 and result["miss"] == result["decided"]
+    assert result["rate"] == 0.0, "the headline rate is how often it closed past"
+    assert result["touched"] == result["decided"] and result["touch_rate"] == 100.0
+
+
+def test_a_downside_target_is_below_the_entry_and_touched_off_the_low():
     closes = flat(300)
-    closes[101] = 100.0 * 0.90             # −10%, past a −8% target
+    closes[101] = 100.0 * 0.90             # a dip to −10%, recovered before the exit
+    data = payload({"AAA": closes})
+    year, week = at(data, 100)
+
+    down = next(r for r in run_trial(data, "AAA", week=week, hold=4, target=8,
+                                     dir="down")["rows"] if r["year"] == year)
+
+    assert down["target"] == pytest.approx(92.0), "a downside target sits below the entry"
+    assert down["touched"] is True, "the low went through it"
+    assert down["state"] == "miss", "but the window closed back at the entry"
+    assert down["best_pct"] < 0, "toward a downside target is a fall"
+    assert down["worst_pct"] > 0, "and against it is a rise"
+
+
+def test_a_downside_target_finishes_when_the_exit_close_is_under_it():
+    closes = flat(300)
+    closes[103] = 100.0 * 0.90             # the exit week of a hold of four
     data = payload({"AAA": closes})
     year, week = at(data, 100)
 
@@ -223,11 +298,51 @@ def test_a_downside_target_reads_the_low():
     up = next(r for r in run_trial(data, "AAA", week=week, hold=4, target=8,
                                    dir="up")["rows"] if r["year"] == year)
 
-    assert down["target"] == pytest.approx(92.0), "a downside target sits below the entry"
-    assert down["state"] == "hit"
-    assert down["best_pct"] < 0, "toward a downside target is a fall"
-    assert down["worst_pct"] > 0, "and against it is a rise"
+    assert down["state"] == "hit" and down["closed_past"] is True
     assert up["state"] == "miss", "the same weeks never reach +8% the other way"
+
+
+# ---- an in-the-money target: zero, or negative -----------------------------
+
+def test_a_zero_target_asks_only_that_the_window_did_not_lose_ground():
+    held_flat = flat(300)
+    slipped = flat(300)
+    slipped[107] = 99.0
+    data = payload({"FLAT": held_flat, "DOWN": slipped})
+
+    held = row_for(data, "FLAT", 100, hold=8, target=0)
+    assert held["target"] == pytest.approx(100.0), "the target is the entry itself"
+    assert held["state"] == "hit", "finishing exactly flat clears a zero target"
+
+    lost = row_for(data, "DOWN", 100, hold=8, target=0)
+    assert lost["state"] == "miss" and lost["exit_pct"] == pytest.approx(-1.0)
+
+
+def test_a_negative_target_puts_the_level_behind_the_entry():
+    """The in-the-money question: how far can it fall and the trade still pay?"""
+    mild = flat(300)
+    mild[107] = 98.0                       # −2%, inside a −3% target
+    steep = flat(300)
+    steep[107] = 96.0                      # −4%, through it
+    data = payload({"MILD": mild, "STEEP": steep})
+
+    ok = row_for(data, "MILD", 100, hold=8, target=-3)
+    assert ok["target"] == pytest.approx(97.0), "a −3% target sits below the entry"
+    assert ok["state"] == "hit" and ok["closed_past"] is True
+
+    assert row_for(data, "STEEP", 100, hold=8, target=-3)["state"] == "miss"
+
+
+def test_a_negative_downside_target_puts_the_level_above_the_entry():
+    closes = flat(300)
+    closes[107] = 102.0                    # +2%, still under a "no worse than +3%" line
+    data = payload({"AAA": closes})
+    year, week = at(data, 100)
+    row = next(r for r in run_trial(data, "AAA", week=week, hold=8, target=-3,
+                                    dir="down")["rows"] if r["year"] == year)
+
+    assert row["target"] == pytest.approx(103.0), "the sign flips going down"
+    assert row["state"] == "hit", "it closed under the line"
 
 
 def test_the_week_it_was_touched_in_is_one_based_from_the_buy_week():
@@ -330,7 +445,7 @@ def test_no_judged_years_leaves_the_rates_null_rather_than_zero():
     _, week = at(data, 298)
     result = run_trial(data, "AAA", week=week, hold=8, years=1)
     assert result["decided"] == 0
-    assert result["rate"] is None and result["finish_rate"] is None
+    assert result["rate"] is None and result["touch_rate"] is None
     assert result["median_best"] is None
 
 
@@ -343,7 +458,164 @@ def test_an_empty_payload_still_produces_a_whole_result():
     empty = {"weeks": [], "starts": [], "count": 1,
              "series": [{"ticker": "AAA", "close": [], "high": [], "low": []}]}
     result = run_trial(empty, "AAA")
-    for key in ("rows", "hit", "miss", "open", "skipped", "touched_open", "finished",
-                "decided", "rate", "finish_rate", "median_best", "median_worst", "asked"):
+    for key in ("rows", "hit", "miss", "open", "skipped", "touched", "touched_open",
+                "decided", "rate", "touch_rate", "median_best", "median_worst",
+                "median_exit", "asked"):
         assert key in result, key
     assert result["rows"] == [] and result["decided"] == 0 and result["rate"] is None
+
+
+# ---- the money: what a debit vertical cost and paid -------------------------
+#
+# The debit is an assumption (this repo holds no option history), but everything
+# downstream of it is exact: a vertical held to expiry is intrinsic value and
+# nothing else. These pin that arithmetic.
+
+def test_a_spread_that_expires_past_the_short_strike_pays_the_full_width():
+    closes = flat(300)
+    closes[107] = 200.0                    # miles above a +8% short strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 1},
+                         week=week, hold=8)
+    row = next(r for r in econ["rows"] if r["exit"] == 200.0)
+
+    assert row["long"] == pytest.approx(100.0), "a 0% long strike is at the money"
+    assert row["short"] == pytest.approx(108.0)
+    assert row["width"] == pytest.approx(8.0)
+    assert row["paid"] == pytest.approx(320.0), "40% of an $8 width, times 100 shares"
+    assert row["received"] == pytest.approx(800.0), "capped at the width, not the 100% move"
+    assert row["net"] == pytest.approx(480.0)
+    assert row["roi"] == pytest.approx(150.0)
+    assert row["maxed"] is True
+
+
+def test_a_spread_that_expires_under_the_long_strike_is_a_total_loss():
+    data = payload({"AAA": flat(300)})     # flat: the exit sits exactly at the long strike
+    econ = run_economics(data, "AAA", {"long": 2, "short": 8, "debit": 40, "contracts": 1},
+                         hold=8)
+    row = econ["rows"][0]
+
+    assert row["worth"] == pytest.approx(0.0), "the exit never reached the long strike"
+    assert row["received"] == pytest.approx(0.0)
+    assert row["net"] == pytest.approx(-row["paid"]), "the debit is the whole of the risk"
+    assert row["worthless"] is True
+    assert econ["worthless"] == econ["years"] and econ["won"] == 0
+
+
+def test_a_spread_that_expires_between_the_strikes_pays_the_part_it_reached():
+    closes = flat(300)
+    closes[107] = 104.0                    # halfway between a 0% and an +8% strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 1},
+                         week=week, hold=8)
+    row = next(r for r in econ["rows"] if r["exit"] == 104.0)
+
+    assert row["worth"] == pytest.approx(4.0), "half the width"
+    assert row["received"] == pytest.approx(400.0)
+    assert row["net"] == pytest.approx(80.0), "a $4 payout against a $3.20 debit"
+    assert row["maxed"] is False and row["worthless"] is False
+
+
+def test_contracts_multiply_every_cash_figure_and_leave_the_return_alone():
+    closes = flat(300)
+    closes[107] = 200.0
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    one = run_economics(data, "AAA", {"contracts": 1}, week=week, hold=8)
+    five = run_economics(data, "AAA", {"contracts": 5}, week=week, hold=8)
+
+    assert five["paid"] == pytest.approx(one["paid"] * 5)
+    assert five["received"] == pytest.approx(one["received"] * 5)
+    assert five["net"] == pytest.approx(one["net"] * 5)
+    assert five["roi"] == pytest.approx(one["roi"]), "a return per dollar is size-independent"
+
+
+def test_a_put_spread_is_written_with_the_same_two_positive_numbers():
+    """Going down, the strikes flip below the entry and the payoff reads the other way."""
+    closes = flat(300)
+    closes[107] = 88.0                     # −12%, past a −8% short strike
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40},
+                         week=week, hold=8, dir="down")
+    row = next(r for r in econ["rows"] if r["exit"] == 88.0)
+
+    assert row["long"] == pytest.approx(100.0) and row["short"] == pytest.approx(92.0)
+    assert row["width"] == pytest.approx(8.0)
+    assert row["worth"] == pytest.approx(8.0), "a put spread pays as the name falls"
+    assert row["maxed"] is True
+
+
+def test_the_strikes_are_a_percentage_of_each_years_own_entry():
+    """The same reason the target is a distance: $250 meant something else in 2016."""
+    closes = flat(300)
+    closes[99] = 50.0                      # a much cheaper entry for this one year
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    row = next(r for r in run_economics(data, "AAA", {"long": 0, "short": 10, "debit": 50},
+                                        week=week, hold=8)["rows"] if r["entry"] == 50.0)
+
+    assert row["long"] == pytest.approx(50.0) and row["short"] == pytest.approx(55.0)
+    assert row["width"] == pytest.approx(5.0), "a 10% width is $5 here and $10 on a $100 name"
+
+
+def test_the_breakeven_is_the_debit_that_would_have_washed_the_whole_run():
+    closes = flat(300)
+    closes[107] = 200.0                    # one year takes the full width
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    deal = {"long": 0, "short": 8}
+    econ = run_economics(data, "AAA", dict(deal, debit=40), week=week, hold=8)
+
+    # One year in five takes the full width and the rest expire worthless, so
+    # 40% of width is far too much to pay — the breakeven says how much is not.
+    assert econ["net"] < 0 and 0 < econ["breakeven"] < 40
+    washed = run_economics(data, "AAA", dict(deal, debit=econ["breakeven"]), week=week, hold=8)
+    assert washed["net"] == pytest.approx(0.0, abs=1e-6), "paying it exactly washes"
+    assert run_economics(data, "AAA", dict(deal, debit=econ["breakeven"] - 5),
+                         week=week, hold=8)["net"] > 0, "paying less than it made money"
+    assert run_economics(data, "AAA", dict(deal, debit=econ["breakeven"] + 5),
+                         week=week, hold=8)["net"] < 0, "and paying more lost it"
+
+
+def test_a_short_strike_at_or_inside_the_long_one_is_refused_with_a_reason():
+    data = payload({"AAA": flat(300)})
+    for bad in ({"long": 8, "short": 8}, {"long": 10, "short": 4}):
+        econ = run_economics(data, "AAA", bad, hold=8)
+        assert econ["rows"] == [] and econ["years"] == 0
+        assert "beyond" in econ["why"], econ["why"]
+
+
+def test_only_settled_years_reach_the_money_table():
+    """An open window has no exit, so there is nothing to settle a vertical against."""
+    closes = flat(300)
+    data = payload({"AAA": closes})
+    _, week = at(data, 298)
+    result = run_trial(data, "AAA", week=week, hold=8)
+    econ = run_economics(data, "AAA", {}, week=week, hold=8)
+
+    assert result["open"] >= 1, "this fixture is meant to leave a window running"
+    assert econ["years"] == result["decided"]
+    assert ({r["year"] for r in econ["rows"]}
+            == {r["year"] for r in result["rows"] if r.get("settled")})
+
+
+def test_the_totals_are_the_rows_added_up():
+    closes = flat(300)
+    closes[107] = 130.0
+    closes[159] = 90.0
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40, "contracts": 3},
+                         week=week, hold=8)
+
+    assert econ["years"] == len(econ["rows"]) > 1
+    assert econ["paid"] == pytest.approx(sum(r["paid"] for r in econ["rows"]))
+    assert econ["received"] == pytest.approx(sum(r["received"] for r in econ["rows"]))
+    assert econ["net"] == pytest.approx(econ["received"] - econ["paid"])
+    assert econ["roi"] == pytest.approx(econ["net"] / econ["paid"] * 100)
+    assert econ["won"] + econ["lost"] + econ["flat"] == econ["years"]
+    assert econ["best"]["net"] >= econ["worst"]["net"]
+    assert econ["lots"] == 3

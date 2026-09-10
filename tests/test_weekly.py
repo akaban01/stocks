@@ -148,7 +148,7 @@ def test_a_name_with_too_little_history_is_left_out():
 def test_no_usable_names_still_makes_a_payload():
     payload = _payload({"NEW": _frame("2025-08-01", "2025-09-19")})
     assert payload["series"] == [] and payload["weeks"] == [] and payload["count"] == 0
-    assert payload["reference"]["hit"]
+    assert payload["reference"]["result"]
 
 
 def test_years_trims_from_the_newest_end():
@@ -161,7 +161,7 @@ def test_years_trims_from_the_newest_end():
 
 def test_the_payload_carries_the_rules_it_is_read_by():
     payload = _payload({"AAA": _frame("2023-01-02", "2025-09-19")})
-    for key in ("entry", "window", "hit", "finish", "incomplete", "ranking", "prices"):
+    for key in ("entry", "window", "result", "touch", "incomplete", "ranking", "prices"):
         assert payload["reference"][key].strip()
     # Both floors ship with the data, so the page gates on the backend's numbers
     # rather than on a copy of them.
