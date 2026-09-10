@@ -36,6 +36,17 @@ The first week of a series is kept even when it is partial: unlike a monthly
 sessions produced them, and an entry never reads its own week's close anyway
 (see ``reference.entry`` in the payload).
 
+One thing these bars are *not* is a strike-accurate history. The download is
+dividend-adjusted (``data.py`` passes ``auto_adjust=True``), which is what a
+percentage target wants — a target is then a target in today's money — but
+option strikes are never adjusted, so a window spanning an ex-dividend date
+travels a little further on this series than the real price did against the real
+strike. It is the dividends paid inside the window, ~0.3% over eight weeks on a
+2% yielder: immaterial next to a typical spread width, and the whole answer in a
+year that finished a cent from one. Shipped as ``reference.strikes`` and printed
+under the money tables rather than silently corrected, because correcting it
+would mean a second, unadjusted download for one caveat's worth of drift.
+
 This is a second view of the download ``charts.json`` already carries, not a
 second download — same frames, different reduction, written to its own file so
 the Charts tab does not pay for it.
@@ -94,6 +105,14 @@ REFERENCE = {
     "prices": "Split- and dividend-adjusted closes, so a target is a target in today's money. "
               "Nothing here prices an option: the target is a level the *stock* has to finish "
               "past, and finishing past it is necessary for a spread to pay, not sufficient.",
+    "strikes": "That adjustment is right for a percentage target and wrong for a strike. Option "
+               "strikes are never dividend-adjusted, so back-adjusting the history leaves the "
+               "series inside a window climbing faster than the price those strikes would have "
+               "been struck against — by roughly the dividends paid while the trade was on, "
+               "about 0.3% over eight weeks on a 2% yielder. Small against a typical width, and "
+               "decisive in exactly the years that finished within a rounding error of a strike, "
+               "where the payout is all or nothing. Read the money tables as tilted very "
+               "slightly in favour of an upside spread and against a downside one.",
 }
 
 

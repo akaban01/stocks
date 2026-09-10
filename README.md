@@ -342,8 +342,10 @@ apart, because they are the two numbers this tab exists to tell you apart. That 
 the one the headline, the year strip and the ranking are all counted on. Whether
 the target was ever *touched* is reported next to it, in its own column and its
 own tile, because it is worth knowing the profit was there to take: a year that
-touched and then closed back under reads **green in Touched and red at the exit**,
-and counts as a miss.
+touched and then closed back under reads **red at the exit and blue in Touched**,
+and counts as a miss. Touched has a colour of its own — not the verdict's green —
+for exactly that reason: two different claims sharing one green is the confusion
+the column was added to remove.
 
 Six controls, and the answer redraws as you turn any of them:
 
@@ -363,7 +365,11 @@ which is most of what tells a pattern from a coincidence. A week under the
 3-judged-year floor is faded and can never be crowned: ISO week 53 falls in about
 one year in six and would otherwise win the title on three lucky years. And the
 headline it reports is *the best of 53 tries*, which is a high bar to clear by
-luck and a low one to clear by chance — the strip says so under itself.
+luck and a low one to clear by chance — the strip says so under itself, and says
+it with numbers: alongside the winner it prints the runner-up and the middle of
+the rankable weeks, so the crown is visibly sitting on a distribution. A week
+twenty points clear of the field and a week two points clear are the same crown
+and very different evidence, and there is a one-click button here to adopt it.
 
 **The target is a distance, not a level.** $250 meant something very different in
 2016, so each year's target price is computed from that year's own entry, and
@@ -438,9 +444,21 @@ width, that would have left the run exactly square: under it this run made money
 over it it did not. It is the one figure here that does not depend on your
 assumption, which makes it the one you can take to a live quote.
 
-Not in any of it: commission, slippage, assignment, early exercise, dividends, or
-the fact that a real chain has strikes at $2.50 intervals rather than wherever a
-percentage of the entry happens to land.
+Not in any of it: commission, slippage, assignment, early exercise, or the fact
+that a real chain has strikes at $2.50 intervals rather than wherever a percentage
+of the entry happens to land.
+
+Dividends *are* in it, and in the one direction worth naming. The closes are
+dividend-adjusted, which is right for a percentage target — a target is then a
+target in today's money — and wrong for a strike, because option strikes are never
+adjusted. A window spanning an ex-dividend date therefore travels a little further
+on this series than the real price did against the real strike: roughly the
+dividends paid while the trade was on, about 0.3% over eight weeks on a 2% yielder.
+Immaterial next to a typical width, and the whole of the answer in a year that
+finished a cent from one, where the payout is all or nothing. It is printed under
+the money tables rather than silently corrected, because correcting it would mean
+a second, unadjusted download for one caveat's worth of drift. The LEAPS **Spreads**
+tab is not affected — it prices real strikes off a live chain at today's price.
 
 ### What it refuses to do
 

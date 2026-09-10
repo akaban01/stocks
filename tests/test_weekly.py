@@ -1,8 +1,13 @@
+import re
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from spread_scanner import weekly as wk
+
+APP_JS = Path(__file__).resolve().parents[1] / "public" / "assets" / "app.js"
 
 
 def _frame(start, end, daily=0.0, seed=0, spread=0.01):
@@ -161,13 +166,39 @@ def test_years_trims_from_the_newest_end():
 
 def test_the_payload_carries_the_rules_it_is_read_by():
     payload = _payload({"AAA": _frame("2023-01-02", "2025-09-19")})
-    for key in ("entry", "window", "result", "touch", "incomplete", "ranking", "prices"):
+    for key in ("entry", "window", "result", "touch", "incomplete", "ranking", "prices",
+                "strikes"):
         assert payload["reference"][key].strip()
     # Both floors ship with the data, so the page gates on the backend's numbers
     # rather than on a copy of them.
     assert payload["min_weeks"] == wk.MIN_WEEKS
     assert payload["min_years"] == wk.MIN_YEARS
     assert payload["period"] == "10y"
+
+
+def test_every_rule_the_page_prints_is_one_the_payload_carries():
+    """The page names the reference keys it prints; this checks they exist.
+
+    A rename on one side and not the other is silent by construction — the tab
+    prints the bullets it finds and, until now, said nothing at all about the
+    ones it did not — so a key dropped here takes a definition off the screen
+    without anything going red. ``hit`` and ``finish`` became ``result`` and
+    ``touch`` one release ago and the whole suite stayed green.
+
+    The frontend now warns the reader when a rule is missing at runtime. This is
+    the other half: the same mismatch, caught before it ships.
+    """
+    source = APP_JS.read_text(encoding="utf-8")
+    named: list[str] = []
+    for const in ("RP_RULES", "SP_RULES"):
+        block = re.search(rf"var {const} = \[(.*?)\];", source, re.S)
+        assert block, f"{const} is not declared in app.js any more — has it been renamed?"
+        named += re.findall(r'"([a-z_]+)"', block.group(1))
+
+    assert named, "no reference keys found in app.js"
+    assert not [k for k in named if k not in wk.REFERENCE], (
+        f"app.js prints reference keys the payload does not carry: "
+        f"{sorted(set(named) - set(wk.REFERENCE))}")
 
 
 # ---- what the frontend actually walks --------------------------------------

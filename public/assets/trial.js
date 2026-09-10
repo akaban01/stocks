@@ -208,6 +208,18 @@
       out.why = "the short strike has to sit beyond the long one";
       return out;
     }
+    // And the debit has to be a real share of the width. Both ends are excluded
+    // on their own terms: at 0 the structure is free and every ROI is infinite,
+    // at 100 you have paid the whole of what it can ever be worth, and below 0
+    // you are being paid to open a debit spread. Guarded here and not only at
+    // the control, because the control is not the only way in — a stale or
+    // hand-edited `repeat-spread` in localStorage reaches this function without
+    // passing one, and an unset `debit` would otherwise price every year at NaN
+    // and report it as an outcome.
+    if (!(opt.debit > 0 && opt.debit < 100)) {
+      out.why = "the debit has to be more than nothing and less than the whole width";
+      return out;
+    }
 
     var grossWidth = 0, grossValue = 0;
     for (var i = 0; i < result.rows.length; i++) {
