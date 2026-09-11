@@ -1,6 +1,6 @@
 {
   "schema_version": "2.6.0",
-  "generated_at": "2026-09-10T23:16:26Z",
+  "generated_at": "2026-09-11T23:23:05Z",
   "universe": 30,
   "history_years": 5,
   "horizon_days": 10,
@@ -10,12 +10,12 @@
       "vol_room": 0.5,
       "squeeze": 0.21
     },
-    "as_of": "2026-09-10",
+    "as_of": "2026-09-11",
     "source": "auto-calibrated",
     "in_sample": true
   },
   "ok": true,
-  "bars": 35512,
+  "bars": 35542,
   "coverage_pct": 65.9,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
@@ -23,16 +23,16 @@
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7241,
+      "bars": 7252,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.8,
-      "coverage_pct": 55.1,
+      "coverage_pct": 55.2,
       "expansion": 1.14,
-      "broke_band_pct": 44.9
+      "broke_band_pct": 44.8
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 14268,
+      "bars": 14280,
       "avg_abs_move_pct": 5.5,
       "median_abs_move_pct": 4.0,
       "coverage_pct": 62.6,
@@ -41,9 +41,9 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 14003,
+      "bars": 14010,
       "avg_abs_move_pct": 5.9,
-      "median_abs_move_pct": 4.3,
+      "median_abs_move_pct": 4.2,
       "coverage_pct": 74.7,
       "expansion": 0.72,
       "broke_band_pct": 25.3
@@ -52,16 +52,16 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2878,
+      "bars": 2882,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.9,
-      "coverage_pct": 58.0,
+      "coverage_pct": 58.1,
       "expansion": 1.06,
-      "broke_band_pct": 42.0
+      "broke_band_pct": 41.9
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 32634,
+      "bars": 32660,
       "avg_abs_move_pct": 5.6,
       "median_abs_move_pct": 4.1,
       "coverage_pct": 66.6,
