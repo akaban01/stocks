@@ -10,5 +10,5 @@
 # and the test workflow is what says yes.
 yfinance>=1.7,<2.0
 pandas>=3.0.5,<4.0      # pct_change(fill_method=None) — see seasonality.py
-numpy>=2.5.2,<3.0
+numpy>=2.5.3,<3.0
 PyYAML>=6.0.3,<7.0
