@@ -1,6 +1,6 @@
 {
   "schema_version": "2.6.0",
-  "generated_at": "2026-09-14T23:55:00Z",
+  "generated_at": "2026-09-15T19:50:45Z",
   "universe": 30,
   "history_years": 5,
   "horizon_days": 10,
@@ -10,40 +10,40 @@
       "vol_room": 0.5,
       "squeeze": 0.21
     },
-    "as_of": "2026-09-14",
+    "as_of": "2026-09-15",
     "source": "auto-calibrated",
     "in_sample": true
   },
   "ok": true,
-  "bars": 35514,
-  "coverage_pct": 65.9,
+  "bars": 34687,
+  "coverage_pct": 65.8,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
-  "score_move_corr": -0.04,
+  "score_move_corr": -0.05,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7259,
+      "bars": 7084,
       "avg_abs_move_pct": 5.3,
-      "median_abs_move_pct": 3.8,
-      "coverage_pct": 55.3,
+      "median_abs_move_pct": 3.7,
+      "coverage_pct": 55.1,
       "expansion": 1.13,
-      "broke_band_pct": 44.7
+      "broke_band_pct": 44.9
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 14266,
-      "avg_abs_move_pct": 5.5,
+      "bars": 13906,
+      "avg_abs_move_pct": 5.6,
       "median_abs_move_pct": 4.0,
-      "coverage_pct": 62.6,
+      "coverage_pct": 62.5,
       "expansion": 0.94,
-      "broke_band_pct": 37.4
+      "broke_band_pct": 37.5
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 13989,
+      "bars": 13697,
       "avg_abs_move_pct": 5.9,
-      "median_abs_move_pct": 4.3,
+      "median_abs_move_pct": 4.2,
       "coverage_pct": 74.7,
       "expansion": 0.72,
       "broke_band_pct": 25.3
@@ -52,17 +52,17 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2872,
+      "bars": 2794,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.9,
-      "coverage_pct": 58.3,
+      "coverage_pct": 58.0,
       "expansion": 1.06,
-      "broke_band_pct": 41.7
+      "broke_band_pct": 42.0
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 32642,
-      "avg_abs_move_pct": 5.6,
+      "bars": 31893,
+      "avg_abs_move_pct": 5.7,
       "median_abs_move_pct": 4.1,
       "coverage_pct": 66.5,
       "expansion": 0.88,
@@ -71,8 +71,8 @@
   },
   "verdict": {
     "holds": true,
-    "edge_pts": 19.5,
-    "text": "Coiled bars broke their own ±1σ band 45% of the time against 25% for calm bars (+19 pts) — the squeeze thesis holds."
+    "edge_pts": 19.6,
+    "text": "Coiled bars broke their own ±1σ band 45% of the time against 25% for calm bars (+20 pts) — the squeeze thesis holds."
   },
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
   "caveat": "Overlapping forward windows make these observations autocorrelated, so read the percentages as descriptive rather than as independent-sample statistics. The universe is also whatever passes the screen *today*, measured backwards: names that would have dragged these numbers down are the ones no longer in it. And when the score being tested comes from calibrated weights, those weights were fitted on this same history — the honest out-of-sample separation is the one on the calibration panel, which holds a test split back. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results."

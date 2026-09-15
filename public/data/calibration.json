@@ -1,7 +1,7 @@
 {
   "schema_version": "2.6.0",
-  "generated_at": "2026-09-14T23:54:44Z",
-  "as_of": "2026-09-14",
+  "generated_at": "2026-09-15T19:50:26Z",
+  "as_of": "2026-09-15",
   "history_years": 5,
   "universe": 30,
   "ok": true,
@@ -11,15 +11,15 @@
     "squeeze": 0.21
   },
   "lift": {
-    "compression": 0.1142,
-    "vol_room": 0.1982,
-    "squeeze": 0.0823
+    "compression": 0.1135,
+    "vol_room": 0.1989,
+    "squeeze": 0.0847
   },
   "bars": {
-    "total": 35514,
-    "train": 24864,
-    "test": 10650,
-    "cutoff": "2025-03-31"
+    "total": 34687,
+    "train": 24307,
+    "test": 10380,
+    "cutoff": "2025-04-14"
   },
   "separation": {
     "heuristic": {
@@ -28,9 +28,9 @@
         "vol_room": 0.2,
         "squeeze": 0.45
       },
-      "high_break_pct": 39.0,
-      "low_break_pct": 28.4,
-      "separation_pts": 10.6
+      "high_break_pct": 39.2,
+      "low_break_pct": 28.9,
+      "separation_pts": 10.3
     },
     "calibrated": {
       "weights": {
@@ -39,8 +39,8 @@
         "squeeze": 0.21
       },
       "high_break_pct": 44.1,
-      "low_break_pct": 25.7,
-      "separation_pts": 18.4
+      "low_break_pct": 26.4,
+      "separation_pts": 17.7
     }
   },
   "verdict": {
