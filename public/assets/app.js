@@ -1221,9 +1221,13 @@
                  : '<span class="faint">—</span>';
   }
 
+  // Sentinel data-ticker for the pooled row's cells, so a click handler can
+  // tell "every name" apart from an actual ticker without guessing at names.
+  var SEASON_ALL = "__ALL__";
+
   // Callers pass a series that has a seasonality block: seasonHeat filters on it
   // and the pooled row is only built when the payload carries one.
-  function heatRow(name, seas, scale, minYears, cls) {
+  function heatRow(name, tickerId, seas, scale, minYears, cls) {
     var cells = seas.months.map(function (m) {
       if (m.avg_pct === null) return '<td class="r faint">—</td>';
       var weak = thinMonth(m, minYears);
@@ -1235,9 +1239,10 @@
       var tip = MONTH_NAMES[m.month - 1] + ": average " + (m.avg_pct >= 0 ? "+" : "") +
         num(m.avg_pct, 2) + "%, median " + (m.median_pct >= 0 ? "+" : "") + num(m.median_pct, 2) +
         "%, up " + num(m.win_rate_pct, 0) + "% of the time, " + behind +
-        (weak ? " — too few to rank" : "");
-      return '<td class="r' + (weak ? " faint" : "") + '" title="' + esc(tip) + '" style="' +
-        (weak ? "" : heatStyle(m.avg_pct, scale)) + '">' +
+        (weak ? " — too few to rank" : "") + " — click for every year.";
+      return '<td class="r seasoncell' + (weak ? " faint" : "") + '" tabindex="0" role="button" ' +
+        'aria-pressed="false" data-ticker="' + esc(tickerId) + '" data-month="' + m.month +
+        '" title="' + esc(tip) + '" style="' + (weak ? "" : heatStyle(m.avg_pct, scale)) + '">' +
         (m.avg_pct >= 0 ? "+" : "") + num(m.avg_pct, 1) + "</td>";
     }).join("");
     var span = seas.years.start + "–" + seas.years.end + ", " + seas.observations +
@@ -1274,19 +1279,70 @@
       "<th>Best</th><th>Worst</th>";
 
     var body = (d.seasonality
-      ? heatRow("All " + d.seasonality.tickers + " names", d.seasonality, scale, minYears, "pool")
+      ? heatRow("All " + d.seasonality.tickers + " names", SEASON_ALL, d.seasonality, scale, minYears, "pool")
       : "") + rows.map(function (s) {
-        return heatRow(s.ticker, s.seasonality, scale, minYears, "");
+        return heatRow(s.ticker, s.ticker, s.seasonality, scale, minYears, "");
       }).join("");
 
     return '<h2>Every name, month by month</h2>' +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Average return in each calendar month, ' +
       'in percent. Hover a cell for the median, the hit rate and how many years stand behind it; ' +
-      'click a month to rank the names by it. Greyed cells rest on fewer than ' + minYears +
+      'click a cell to see every year behind it, for that name or every name; click a month header ' +
+      "to rank the names by it. Greyed cells rest on fewer than " + minYears +
       " years — for the pooled row, fewer than that for the typical name — and are never named " +
       "best or worst.</p>" +
       '<div class="tablewrap"><table class="scan heat"><thead><tr>' + head +
-      "</tr></thead><tbody>" + body + "</tbody></table></div>";
+      "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+      '<div id="seasondetail" hidden></div>';
+  }
+
+  // The panel a click on a heat cell opens: every year behind that cell, for
+  // the clicked name or (data-ticker === SEASON_ALL) pooled across every name.
+  // A <select> lets the same panel flip between one name and all of them
+  // without re-clicking the grid — the month stays fixed, only the name view
+  // changes.
+  function seasonDetail(d, ticker, month) {
+    var isAll = ticker === SEASON_ALL;
+    var seas = isAll ? d.seasonality
+      : ((d.series || []).filter(function (s) { return s.ticker === ticker; })[0] || {}).seasonality;
+    var row = monthRow(seas, month);
+    if (!row) return "";
+
+    var named = (d.series || []).filter(function (s) {
+      return monthRow(s.seasonality, month);
+    }).map(function (s) { return s.ticker; }).sort();
+    var options = '<option value="' + SEASON_ALL + '"' + (isAll ? " selected" : "") + '>All names</option>' +
+      named.map(function (t) {
+        return '<option value="' + esc(t) + '"' + (t === ticker ? " selected" : "") + '>' + esc(t) + "</option>";
+      }).join("");
+
+    var behind = row.ticker_years
+      ? row.n + " name-months, " + row.ticker_years.median + " years for the typical name"
+      : row.n + " observation" + (row.n === 1 ? "" : "s") + " over " + row.years +
+        " year" + (row.years === 1 ? "" : "s");
+    var stat = (row.avg_pct >= 0 ? "+" : "") + num(row.avg_pct, 2) + "% average, " +
+      (row.median_pct >= 0 ? "+" : "") + num(row.median_pct, 2) + "% median, up " +
+      num(row.win_rate_pct, 0) + "% of the time — " + behind + ".";
+
+    function pctCell(v) {
+      return '<td class="r ' + (v >= 0 ? "up" : "down") + '">' + (v >= 0 ? "+" : "") + num(v, 2) + "</td>";
+    }
+    var byYear = row.by_year || [];
+    var head = isAll ? "<tr><th>Year</th><th>Name</th><th class=\"r\">Return %</th></tr>"
+                     : "<tr><th>Year</th><th class=\"r\">Return %</th></tr>";
+    var body = byYear.length ? byYear.map(function (e) {
+      return "<tr><td class=\"r faint\">" + e.year + "</td>" +
+        (isAll ? "<td>" + esc(e.ticker) + "</td>" : "") + pctCell(e.pct) + "</tr>";
+    }).join("") : '<tr><td colspan="' + (isAll ? 3 : 2) + '" class="empty">No years yet.</td></tr>';
+
+    return '<div class="panelcard seasondetail">' +
+      "<h3>" + esc(MONTH_NAMES[month - 1]) + " — " +
+      esc(isAll ? "All " + d.seasonality.tickers + " names" : ticker) + "</h3>" +
+      '<p class="faint" style="font-size:.8rem;margin:-4px 0 8px">' + esc(stat) + "</p>" +
+      '<label class="faint" style="font-size:.8rem;display:block;margin-bottom:8px">Show ' +
+      '<select class="seasondetail-pick">' + options + "</select></label>" +
+      '<div class="tablewrap"><table class="scan"><thead>' + head + "</thead><tbody>" +
+      body + "</tbody></table></div></div>";
   }
 
   function monthYears(row) {
@@ -1395,6 +1451,37 @@
       var again = $('#seasonbody table.heat th[data-key="' + k + '"]');
       if (again) again.focus();
     });
+
+    // A click on a month cell opens the year-by-year panel below the table —
+    // one name or every name, picked from the <select> the panel carries.
+    var detail = $("#seasondetail", host);
+    var openCell = null;
+    function showDetail(ticker, month) {
+      detail.innerHTML = seasonDetail(d, ticker, month);
+      detail.hidden = false;
+      var pick = $(".seasondetail-pick", detail);
+      if (pick) pick.addEventListener("change", function () { showDetail(this.value, month); });
+    }
+    function toggleCell(cell) {
+      var pressed = host.querySelectorAll('td.seasoncell[aria-pressed="true"]');
+      for (var i = 0; i < pressed.length; i++) pressed[i].setAttribute("aria-pressed", "false");
+      if (cell === openCell) {
+        openCell = null;
+        detail.hidden = true;
+        detail.innerHTML = "";
+        return;
+      }
+      cell.setAttribute("aria-pressed", "true");
+      openCell = cell;
+      showDetail(cell.dataset.ticker, +cell.dataset.month);
+    }
+    var seasonCells = host.querySelectorAll("td.seasoncell");
+    for (var c = 0; c < seasonCells.length; c++) {
+      seasonCells[c].addEventListener("click", function () { toggleCell(this); });
+      seasonCells[c].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCell(this); }
+      });
+    }
   }
 
   function showChartView(view) {

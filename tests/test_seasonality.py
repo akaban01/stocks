@@ -107,7 +107,15 @@ def test_every_month_is_present_even_with_no_data():
     assert [r["name"] for r in rows][:3] == ["Jan", "Feb", "Mar"]
     assert rows[10] == {"month": 11, "name": "Nov", "n": 0, "years": 0, "avg_pct": None,
                         "median_pct": None, "win_rate_pct": None,
-                        "best_pct": None, "worst_pct": None}
+                        "best_pct": None, "worst_pct": None, "by_year": []}
+
+
+def test_month_row_carries_a_year_by_year_breakdown():
+    s = se.summarize(se.monthly_returns(_seasonal(years=8, up_month=4)))
+    april = s["months"][3]
+    assert [r["year"] for r in april["by_year"]] == sorted(r["year"] for r in april["by_year"])
+    assert len(april["by_year"]) == 8
+    assert all(r["pct"] > 0 for r in april["by_year"])   # April was planted strong every year
 
 
 def test_thin_months_are_reported_but_never_ranked():
@@ -156,6 +164,17 @@ def test_pooled_ranking_does_not_lean_on_one_long_history():
     p = se.pooled(rets)
     assert p["months"][0]["ticker_years"]["median"] == 3
     assert p["best_month"] == 4 and p["worst_month"] == 9
+
+
+def test_pooled_by_year_is_labelled_per_ticker():
+    rets = {t: se.monthly_returns(_seasonal(seed=i)) for i, t in enumerate("ABC")}
+    p = se.pooled(rets)
+    jan = p["months"][0]
+    assert len(jan["by_year"]) == 24                  # 3 tickers x 8 years
+    assert {"A", "B", "C"} == {e["ticker"] for e in jan["by_year"]}
+    # Sorted by year then ticker, so a name's whole run isn't clumped together.
+    years = [e["year"] for e in jan["by_year"]]
+    assert years == sorted(years)
 
 
 def test_pooled_ignores_tickers_with_no_usable_history():
