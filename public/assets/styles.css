@@ -415,6 +415,17 @@ table.heat tbody td { padding: 6px 8px; }
 table.heat tbody tr:hover { background: transparent; }
 table.heat tbody tr.pool { background: var(--surface-2); }
 table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight: 600; }
+table.heat td.seasoncell { cursor: pointer; }
+table.heat td.seasoncell:hover { outline: 1px solid var(--line); outline-offset: -1px; }
+table.heat td.seasoncell:focus-visible { outline: 2px solid var(--link); outline-offset: -1px; }
+table.heat td.seasoncell[aria-pressed="true"] { outline: 2px solid var(--link); outline-offset: -1px; }
+.seasondetail { margin-top: 10px; }
+.seasondetail select {
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: var(--radius-sm); padding: 4px 7px; font: inherit; font-size: .85rem;
+}
+.seasondetail table.scan td.up { color: var(--up); font-weight: 600; }
+.seasondetail table.scan td.down { color: var(--down); font-weight: 600; }
 
 /* --------------------------------------------------------- repeat test */
 

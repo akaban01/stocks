@@ -89,7 +89,9 @@ def _month_row(month: int, vals: pd.Series) -> dict:
     if not n:
         return {"month": month, "name": MONTH_NAMES[month - 1], "n": 0, "years": 0,
                 "avg_pct": None, "median_pct": None, "win_rate_pct": None,
-                "best_pct": None, "worst_pct": None}
+                "best_pct": None, "worst_pct": None, "by_year": []}
+    by_year = sorted(({"year": int(idx.year), "pct": round(float(v), 2)}
+                      for idx, v in vals.items()), key=lambda r: r["year"])
     return {
         "month": month,
         "name": MONTH_NAMES[month - 1],
@@ -100,6 +102,7 @@ def _month_row(month: int, vals: pd.Series) -> dict:
         "win_rate_pct": round(float((vals > 0).mean() * 100.0), 1),
         "best_pct": round(float(vals.max()), 2),
         "worst_pct": round(float(vals.min()), 2),
+        "by_year": by_year,
     }
 
 
@@ -165,13 +168,22 @@ def pooled(returns_by_ticker: dict[str, pd.Series]) -> dict | None:
     if summary is None:
         return None
 
+    named = [(t, r) for t, r in returns_by_ticker.items() if r is not None and not r.empty]
     for row in summary["months"]:
-        counts = sorted(len(set(r[r.index.month == row["month"]].index.year))
-                        for r in parts if bool((r.index.month == row["month"]).any()))
+        matches = [(t, r[r.index.month == row["month"]]) for t, r in named]
+        matches = [(t, m) for t, m in matches if not m.empty]
+        counts = sorted(len(set(m.index.year)) for _, m in matches)
         row["tickers"] = len(counts)
         # median_low keeps it an integer and rounds toward the shorter history.
         row["ticker_years"] = ({"min": counts[0], "median": int(statistics.median_low(counts))}
                                if counts else None)
+        # The concatenated series behind ``summary`` loses which name each
+        # observation came from — rebuild by_year here, labelled, so a click on
+        # the pooled row can name names instead of just years.
+        row["by_year"] = sorted(
+            ({"ticker": t, "year": int(idx.year), "pct": round(float(v), 2)}
+             for t, m in matches for idx, v in m.items()),
+            key=lambda e: (e["year"], e["ticker"]))
 
     summary["best_month"], summary["worst_month"] = _extremes(
         summary["months"], years_of=lambda r: (r["ticker_years"] or {}).get("median", 0))
