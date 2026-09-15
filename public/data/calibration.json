@@ -1,6 +1,6 @@
 {
-  "schema_version": "2.6.0",
-  "generated_at": "2026-09-15T19:50:26Z",
+  "schema_version": "2.7.0",
+  "generated_at": "2026-09-15T23:33:29Z",
   "as_of": "2026-09-15",
   "history_years": 5,
   "universe": 30,
@@ -11,13 +11,13 @@
     "squeeze": 0.21
   },
   "lift": {
-    "compression": 0.1135,
-    "vol_room": 0.1989,
-    "squeeze": 0.0847
+    "compression": 0.114,
+    "vol_room": 0.1987,
+    "squeeze": 0.0856
   },
   "bars": {
-    "total": 34687,
-    "train": 24307,
+    "total": 34659,
+    "train": 24279,
     "test": 10380,
     "cutoff": "2025-04-14"
   },
@@ -39,8 +39,8 @@
         "squeeze": 0.21
       },
       "high_break_pct": 44.1,
-      "low_break_pct": 26.4,
-      "separation_pts": 17.7
+      "low_break_pct": 26.5,
+      "separation_pts": 17.6
     }
   },
   "verdict": {
