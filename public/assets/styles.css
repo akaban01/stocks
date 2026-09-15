@@ -447,7 +447,7 @@ table.heat tbody tr.pool td { border-bottom: 1px solid var(--line); font-weight:
    thumb's travel is inset by half its own width anyway, so a gradient on the
    track would not line up with the weeks any better than this does. Alignment
    here is a hint; the button underneath is the fact. */
-.heat { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
+.heatstack { display: flex; flex-direction: column; gap: 5px; margin-top: 5px; }
 .heatbar {
   display: flex; gap: 1px; height: 14px; border-radius: 3px; overflow: hidden;
   background: var(--surface-2);
