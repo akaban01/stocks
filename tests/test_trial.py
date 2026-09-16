@@ -624,6 +624,75 @@ def test_only_settled_years_reach_the_money_table():
             == {r["year"] for r in result["rows"] if r.get("settled")})
 
 
+# ---- the money: a single leg, uncapped -------------------------------------
+#
+# `structure: "single"` is one option alone, held to expiry with nothing sold
+# against it — the same arithmetic as a spread except there is no short strike
+# to cap the payout, and no width to price the debit against, so the debit is
+# a share of the entry price instead.
+
+def test_a_single_leg_pays_the_full_move_uncapped():
+    closes = flat(300)
+    closes[107] = 200.0                    # a 100% move — miles past any spread's cap
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    econ = run_economics(data, "AAA",
+                         {"structure": "single", "long": 0, "debit": 5, "contracts": 1},
+                         week=week, hold=8)
+    row = next(r for r in econ["rows"] if r["exit"] == 200.0)
+
+    assert row["long"] == pytest.approx(100.0), "a 0% long strike is at the money"
+    assert row["short"] is None and row["width"] is None, "a single leg has neither"
+    assert row["worth"] == pytest.approx(100.0), "the whole move, nothing capped it"
+    assert row["debit"] == pytest.approx(5.0), "5% of the $100 entry, not of a width"
+    assert row["paid"] == pytest.approx(500.0)
+    assert row["received"] == pytest.approx(10000.0)
+    assert row["maxed"] is False, "there is no cap for it to have reached"
+
+
+def test_a_single_leg_ignores_the_short_strike_entirely():
+    """No width to check a short strike against, so none of the spread's guard applies."""
+    data = payload({"AAA": flat(300)})
+    econ = run_economics(data, "AAA",
+                         {"structure": "single", "long": 10, "short": 4, "debit": 5},
+                         hold=8)
+    assert econ["why"] is None and econ["years"] > 0
+
+
+def test_a_single_legs_debit_is_a_share_of_the_entry_price():
+    closes = flat(300)
+    closes[99] = 50.0                      # a much cheaper entry for this one year
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    row = next(r for r in run_economics(data, "AAA",
+                                        {"structure": "single", "long": 0, "debit": 10},
+                                        week=week, hold=8)["rows"] if r["entry"] == 50.0)
+    assert row["debit"] == pytest.approx(5.0), "10% of a $50 entry, not the $100-entry years'"
+
+
+def test_a_single_legs_breakeven_is_a_share_of_entry_not_width():
+    closes = flat(300)
+    closes[107] = 150.0                    # one year moves, the rest expire worthless
+    data = payload({"AAA": closes})
+    _, week = at(data, 100)
+    deal = {"structure": "single", "long": 0}
+    econ = run_economics(data, "AAA", dict(deal, debit=40), week=week, hold=8)
+
+    assert 0 < econ["breakeven"] < 40
+    washed = run_economics(data, "AAA", dict(deal, debit=econ["breakeven"]), week=week, hold=8)
+    assert washed["net"] == pytest.approx(0.0, abs=1e-6), "paying it exactly washes"
+
+
+def test_no_structure_field_at_all_still_prices_as_a_spread():
+    """A `repeat-spread` blob saved before this structure existed has no such field."""
+    data = payload({"AAA": flat(300)})
+    closes = data["series"][0]["close"]
+    closes[107] = 200.0
+    econ = run_economics(data, "AAA", {"long": 0, "short": 8, "debit": 40}, hold=8)
+    row = econ["rows"][0]
+    assert row["short"] is not None and row["width"] == pytest.approx(8.0)
+
+
 def test_the_totals_are_the_rows_added_up():
     closes = flat(300)
     closes[107] = 130.0

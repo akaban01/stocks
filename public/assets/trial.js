@@ -194,46 +194,67 @@
      $250 meant something very different in 2016. `long` is the strike you buy
      (0 = at the money) and `short` the one you sell, both measured *toward* the
      trade's direction, so a put spread is written with the same two positive
-     numbers as a call spread. */
+     numbers as a call spread.
+
+     `opt.structure` is `"single"` for one leg alone rather than a vertical —
+     the same long strike, held to expiry with nothing sold against it, so
+     nothing caps the payout. `short` is ignored for it. A single leg has no
+     width to price the debit against, so it is a share of the *entry price*
+     instead — the ordinary way an option's premium gets talked about — and
+     that share is what `breakeven` reports back. Anything other than
+     `"single"` is a spread, which is also the default: a `repeat-spread` blob
+     saved before this structure existed carries no field for it at all. */
   function economics(result, opt) {
     var up = opt.dir !== "down";
+    var single = opt.structure === "single";
     var lots = Math.max(1, Math.round(opt.contracts || 1));
     var out = { rows: [], paid: 0, received: 0, net: 0, won: 0, lost: 0, flat: 0,
                 maxed: 0, worthless: 0, years: 0, roi: null, breakeven: null,
                 best: null, worst: null, lots: lots, why: null };
 
     // The short strike has to sit beyond the long one, or there is no spread —
-    // refused with a reason rather than divided by zero.
-    if (!(opt.short > opt.long)) {
+    // refused with a reason rather than divided by zero. A single leg has no
+    // short strike to check.
+    if (!single && !(opt.short > opt.long)) {
       out.why = "the short strike has to sit beyond the long one";
       return out;
     }
-    // And the debit has to be a real share of the width. Both ends are excluded
-    // on their own terms: at 0 the structure is free and every ROI is infinite,
-    // at 100 you have paid the whole of what it can ever be worth, and below 0
-    // you are being paid to open a debit spread. Guarded here and not only at
-    // the control, because the control is not the only way in — a stale or
+    // And the debit has to be a real share of what it is priced against — the
+    // width for a spread, the entry price for a single leg. Both ends are
+    // excluded on their own terms: at 0 the structure is free and every ROI is
+    // infinite, at 100 you have paid the whole of what a vertical can ever be
+    // worth (or, for a single leg, the whole of the stock's own price), and
+    // below 0 you are being paid to open it. Guarded here and not only at the
+    // control, because the control is not the only way in — a stale or
     // hand-edited `repeat-spread` in localStorage reaches this function without
     // passing one, and an unset `debit` would otherwise price every year at NaN
     // and report it as an outcome.
     if (!(opt.debit > 0 && opt.debit < 100)) {
-      out.why = "the debit has to be more than nothing and less than the whole width";
+      out.why = "the debit has to be more than nothing and less than the whole "
+        + (single ? "stock price" : "width");
       return out;
     }
 
-    var grossWidth = 0, grossValue = 0;
+    var grossBasis = 0, grossValue = 0;
     for (var i = 0; i < result.rows.length; i++) {
       var r = result.rows[i];
       if (!r.settled) continue;              // no exit, nothing to settle against
 
       var kLong = r.entry * (up ? 1 + opt.long / 100 : 1 - opt.long / 100);
-      var kShort = r.entry * (up ? 1 + opt.short / 100 : 1 - opt.short / 100);
-      var width = Math.abs(kShort - kLong);
-      var debit = width * opt.debit / 100;
-      // Worth at expiry, and the whole of it: a vertical is intrinsic value by
-      // then. Capped at the width because the short strike is what caps it.
-      var worth = up ? Math.min(Math.max(r.exit - kLong, 0), width)
-                     : Math.min(Math.max(kLong - r.exit, 0), width);
+      var kShort = single ? null : r.entry * (up ? 1 + opt.short / 100 : 1 - opt.short / 100);
+      var width = single ? null : Math.abs(kShort - kLong);
+      // What the debit is a share of: the width for a spread, the entry price
+      // — the stock's own price that week — for a single leg.
+      var basis = single ? r.entry : width;
+      var debit = basis * opt.debit / 100;
+      // Worth at expiry, and the whole of it: held to expiry an option is
+      // intrinsic value and nothing else. A spread is capped at the width,
+      // because the short strike is what caps it; a single leg is not capped
+      // at all.
+      var worth = single
+        ? (up ? Math.max(r.exit - kLong, 0) : Math.max(kLong - r.exit, 0))
+        : (up ? Math.min(Math.max(r.exit - kLong, 0), width)
+              : Math.min(Math.max(kLong - r.exit, 0), width));
 
       // 100 shares to a contract — the US equity option multiplier, and the
       // reason a $0.40 debit is $40 of real money.
@@ -243,13 +264,13 @@
                   long: kLong, short: kShort, width: width, debit: debit, worth: worth,
                   paid: paid, received: back, net: back - paid,
                   roi: paid ? ((back - paid) / paid) * 100 : null,
-                  maxed: worth >= width - 1e-9, worthless: worth <= 1e-9 };
+                  maxed: !single && worth >= width - 1e-9, worthless: worth <= 1e-9 };
       out.rows.push(row);
 
       out.paid += paid;
       out.received += back;
       out.years++;
-      grossWidth += width;
+      grossBasis += basis;
       grossValue += worth;
       if (row.net > 1e-9) out.won++;
       else if (row.net < -1e-9) out.lost++;
@@ -262,11 +283,11 @@
 
     out.net = out.received - out.paid;
     out.roi = out.paid ? (out.net / out.paid) * 100 : null;
-    // The debit, as a share of width, that would have made the whole run wash:
-    // total paid equals total received when d = 100 × Σworth / Σwidth. It is the
-    // number to take to a live quote — under it this run made money, over it it
-    // did not, and it needs no view on what the spread cost in 2018.
-    out.breakeven = grossWidth ? (grossValue / grossWidth) * 100 : null;
+    // The debit, as a share of its basis, that would have made the whole run
+    // wash: total paid equals total received when d = 100 × Σworth / Σbasis.
+    // It is the number to take to a live quote — under it this run made money,
+    // over it it did not, and it needs no view on what the option cost in 2018.
+    out.breakeven = grossBasis ? (grossValue / grossBasis) * 100 : null;
     return out;
   }
 
