@@ -437,6 +437,10 @@ table.heat td.seasoncell[aria-pressed="true"] { outline: 2px solid var(--link); 
   padding: 14px 16px; margin-bottom: 18px; align-items: end;
 }
 .ctl { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+/* `.ctl`'s own `display: flex` ties `[hidden]`'s specificity, and an author
+   rule wins that tie over the UA default regardless of order — so a control
+   this page hides (the short strike, structure-dependent) stayed laid out. */
+.ctl[hidden] { display: none; }
 .ctl.wide { grid-column: span 2; }
 @media (max-width: 560px) { .ctl.wide { grid-column: span 1; } }
 .ctl > span {

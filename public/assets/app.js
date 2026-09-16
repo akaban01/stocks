@@ -1525,8 +1525,9 @@
   // The optional money section. `dir` is not in here: a debit spread is a call
   // spread going up and a put spread going down, and that is the same question
   // the direction chip already answers — two controls for one fact would let
-  // them disagree.
-  var sp = { on: false, long: 0, short: 8, debit: 40, contracts: 1 };
+  // them disagree. `structure` is "spread" for a vertical or "single" for one
+  // leg alone, held to expiry with nothing sold against it.
+  var sp = { on: false, structure: "spread", long: 0, short: 8, debit: 40, contracts: 1 };
   var spSort = { key: "net", dir: -1 };
 
   /* One range per numeric control, declared once. Two paths write into `sp` —
@@ -1558,9 +1559,12 @@
   }
 
   function spDeal() {
-    return { dir: rp.dir, long: sp.long, short: sp.short, debit: sp.debit,
-             contracts: sp.contracts };
+    return { dir: rp.dir, structure: sp.structure, long: sp.long, short: sp.short,
+             debit: sp.debit, contracts: sp.contracts };
   }
+
+  // Whether the current structure is one leg alone rather than a vertical.
+  function spSingle() { return sp.structure === "single"; }
 
   function rpStore() {
     try { localStorage.setItem("repeat", JSON.stringify(rp)); } catch (e) { /* private mode */ }
@@ -2092,16 +2096,17 @@
     if (!econ.rows.length) {
       return '<p class="empty">No year here has a finished window to settle a spread against.</p>';
     }
+    var single = spSingle();
     var lots = econ.lots > 1 ? " ×" + econ.lots : "";
     var body = econ.rows.map(function (r) {
       // The two ends a vertical can reach are named where they happen: "max"
       // and "expired worthless" read as outcomes where a bare number reads as
-      // arithmetic.
+      // arithmetic. A single leg has no cap, so it is never "max".
       var note = r.maxed ? ' <span class="tag buy">max</span>'
         : r.worthless ? ' <span class="tag sell">worthless</span>' : "";
       return '<tr><td class="t">' + r.year + "</td>" +
         '<td class="r">' + money(r.entry) + "</td>" +
-        '<td class="r">' + money(r.long) + " / " + money(r.short) + "</td>" +
+        '<td class="r">' + money(r.long) + (single ? "" : " / " + money(r.short)) + "</td>" +
         '<td class="r out">−' + cash(r.paid) + "</td>" +
         '<td class="r">' + money(r.exit) + " (" + signed(r.exit_pct) + ")</td>" +
         '<td class="r ' + (r.maxed ? "maxed" : r.worthless ? "zero" : "") + '">+' +
@@ -2122,7 +2127,8 @@
       '<td class="r">' + signed(econ.roi, 0) + "</td></tr></tfoot>";
 
     return '<div class="tablewrap"><table class="scan money"><thead><tr>' +
-      '<th>Year</th><th class="r">Entry</th><th class="r">Long / short</th>' +
+      '<th>Year</th><th class="r">Entry</th><th class="r">' +
+      (single ? "Strike" : "Long / short") + "</th>" +
       '<th class="r">Cash out</th><th class="r">Stock at expiry</th>' +
       '<th class="r">Cash in</th><th class="r">Net</th><th class="r">Return</th>' +
       "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>";
@@ -2142,7 +2148,7 @@
 
   function spAllRows(d) {
     var key = [rp.dir, rp.week, rp.hold, rp.target, rp.years,
-               sp.long, sp.short, sp.debit, sp.contracts].join("|");
+               sp.structure, sp.long, sp.short, sp.debit, sp.contracts].join("|");
     if (spAllCache.key === key) return spAllCache.rows;
 
     var floor = d.min_years || 3;
@@ -2217,14 +2223,15 @@
       '<td class="r faint" title="' + esc("no total: each name breaks even at its own debit") +
         '">—</td></tr></tfoot>';
 
+    var basis = spSingle() ? "entry price" : "width";
     return "<h3>The same structure, every name</h3>" +
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Every name bought on the same ' +
       "rule and priced on the same assumption — so this column of nets is one assumption " +
       "repeated " + rows.length + " times, not " + rows.length + " pieces of evidence. " +
       "<b>Breakeven</b> is the " +
-      "debit, as a share of width, that would have left that name exactly square: under it the " +
-      "run made money, over it it did not, and it is the one column here that needs no view on " +
-      "what the spread cost. Click a row to bring that name up above.</p>" +
+      "debit, as a share of " + basis + ", that would have left that name exactly square: " +
+      "under it the run made money, over it it did not, and it is the one column here that " +
+      "needs no view on what it cost. Click a row to bring that name up above.</p>" +
       '<div class="tablewrap"><table class="scan money rank"><thead><tr>' +
       th("ticker", "Name") + th("years", "Years", "r") + th("won", "Won", "r") +
       th("paid", "Cash out", "r") + th("received", "Cash in", "r") + th("net", "Net", "r") +
@@ -2237,9 +2244,14 @@
       return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
         "</div></div>";
     }
+    var single = spSingle();
     var verdict = econ.net > 0 ? "cheap" : econ.net < 0 ? "rich" : "fair";
-    var structure = (rp.dir === "up" ? "call" : "put") + " debit spread, " + num(sp.long, 1) +
-      "% / " + num(sp.short, 1) + "%, held " + rp.hold + " weeks";
+    var side = rp.dir === "up" ? "call" : "put";
+    var structure = single
+      ? side + ", " + num(sp.long, 1) + "% strike, held " + rp.hold + " weeks"
+      : side + " debit spread, " + num(sp.long, 1) + "% / " + num(sp.short, 1) + "%, held " +
+        rp.hold + " weeks";
+    var basis = single ? "entry price" : "width";
     return '<div class="rulebar">' +
       tile(verdict,
            "Net over " + econ.years + " year" + (econ.years === 1 ? "" : "s") + " — " +
@@ -2250,18 +2262,18 @@
            + "would not have been the same every year.") +
       tile("fair", "Return on the money risked — " + signed(econ.roi, 0),
            "Net divided by everything paid in. Not annualised, and not a portfolio return: the "
-           + "cash is only at risk for " + rp.hold + " weeks of each year, and a debit vertical "
-           + "can lose all of it.") +
+           + "cash is only at risk for " + rp.hold + " weeks of each year, and " +
+           (single ? "a single leg" : "a debit vertical") + " can lose all of it.") +
       tile(econ.breakeven === null ? "fair" : sp.debit <= econ.breakeven ? "cheap" : "rich",
-           "Breakeven debit — " + num(econ.breakeven, 0) + "% of width",
+           "Breakeven debit — " + num(econ.breakeven, 0) + "% of " + basis,
            "Pay less than this and the run made money, more and it did not. This is the one "
            + "number here that does not rest on your assumption, so it is the one to take to a "
            + "live quote. You have set " + num(sp.debit, 0) + "%.") +
       tile("fair", "Won " + econ.won + " of " + econ.years +
-           (econ.maxed ? " · " + econ.maxed + " at max" : ""),
-           econ.worthless + " expired worthless, which for a debit vertical means the whole "
-           + "premium gone. A win rate is not an edge until the sizes are in it — that is what "
-           + "the net on the left is for.") +
+           (!single && econ.maxed ? " · " + econ.maxed + " at max" : ""),
+           econ.worthless + " expired worthless, which means the whole premium gone. A win "
+           + "rate is not an edge until the sizes are in it — that is what the net on the left "
+           + "is for.") +
       "</div>";
   }
 
@@ -2292,9 +2304,11 @@
 
     var econ = SpreadTrial.economics(rpTrial(d, series), spDeal());
     if (econ.why) {
-      host.innerHTML = '<p class="empty">' + esc(econ.why) +
-        " — the strike you sell is what caps the payout, so it has to sit further out than the " +
-        "one you buy.</p>";
+      var hint = econ.why.indexOf("short strike") >= 0
+        ? " — the strike you sell is what caps the payout, so it has to sit further out than " +
+          "the one you buy."
+        : "";
+      host.innerHTML = '<p class="empty">' + esc(econ.why) + hint + "</p>";
       return;
     }
 
@@ -2423,6 +2437,25 @@
     return Math.min(hi, Math.max(lo, v));
   }
 
+  // What the structure choice changes on the page besides the arithmetic: the
+  // short strike only means something for a vertical, and the debit is a share
+  // of a different number for each. Called on every structure change and once
+  // at wire-up, so a restored "single" from localStorage renders as one too.
+  function spApplyStructure() {
+    var single = spSingle();
+    var chips = document.querySelectorAll("#sp-structure button");
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].setAttribute("aria-pressed", chips[i].dataset.structure === sp.structure
+        ? "true" : "false");
+    }
+    var shortCtl = $("#sp-short-ctl");
+    if (shortCtl) shortCtl.hidden = single;
+    var label = $("#sp-debit-label");
+    if (label) {
+      label.textContent = single ? "Premium paid, % of entry price" : "Debit paid, % of width";
+    }
+  }
+
   // The money controls. Separate from wireRepeat's, because they redraw only
   // the money section — re-running the whole tab to change a contract count
   // would rebuild thirty names' worth of tables for nothing.
@@ -2447,6 +2480,16 @@
       if (sp.on) $("#spreadcontrols").scrollIntoView({ block: "nearest", behavior: "smooth" });
     });
 
+    var structures = document.querySelectorAll("#sp-structure button");
+    for (var s = 0; s < structures.length; s++) {
+      structures[s].addEventListener("click", function () {
+        sp.structure = this.dataset.structure;
+        spApplyStructure();
+        spStore();
+        spDraw();
+      });
+    }
+
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem("repeat-spread") || "null"); } catch (e) {
       saved = null;
@@ -2455,10 +2498,15 @@
       // Through the same clamp the controls use. What comes back here is
       // whatever was in localStorage the last time any version of this page
       // wrote it — or whatever someone typed into devtools — so it is input,
-      // not state, and it is treated as input.
+      // not state, and it is treated as input. `structure` has no numeric
+      // range to clamp through; anything other than "single" reads as the
+      // "spread" default, which is also what a blob saved before this
+      // structure existed carries.
       for (var key in sp) {
         if (!has(saved[key])) continue;
-        sp[key] = key === "on" ? !!saved[key] : spClamp(key, saved[key]);
+        sp[key] = key === "on" ? !!saved[key]
+          : key === "structure" ? (saved[key] === "single" ? "single" : "spread")
+          : spClamp(key, saved[key]);
       }
     }
     $("#sp-on").checked = !!sp.on;
@@ -2467,6 +2515,7 @@
     $("#sp-debit").value = sp.debit;
     $("#sp-contracts").value = sp.contracts;
     $("#spreadsection").hidden = !sp.on;
+    spApplyStructure();
   }
 
   function renderRepeat() {
