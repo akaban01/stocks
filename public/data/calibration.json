@@ -1,25 +1,25 @@
 {
   "schema_version": "2.7.0",
-  "generated_at": "2026-09-15T23:33:29Z",
-  "as_of": "2026-09-15",
+  "generated_at": "2026-09-16T23:41:28Z",
+  "as_of": "2026-09-16",
   "history_years": 5,
   "universe": 30,
   "ok": true,
   "weights": {
-    "compression": 0.29,
+    "compression": 0.3,
     "vol_room": 0.5,
-    "squeeze": 0.21
+    "squeeze": 0.2
   },
   "lift": {
-    "compression": 0.114,
-    "vol_room": 0.1987,
-    "squeeze": 0.0856
+    "compression": 0.1212,
+    "vol_room": 0.2064,
+    "squeeze": 0.08
   },
   "bars": {
-    "total": 34659,
-    "train": 24279,
-    "test": 10380,
-    "cutoff": "2025-04-14"
+    "total": 35516,
+    "train": 24866,
+    "test": 10650,
+    "cutoff": "2025-04-02"
   },
   "separation": {
     "heuristic": {
@@ -28,19 +28,19 @@
         "vol_room": 0.2,
         "squeeze": 0.45
       },
-      "high_break_pct": 39.2,
-      "low_break_pct": 28.9,
-      "separation_pts": 10.3
+      "high_break_pct": 37.9,
+      "low_break_pct": 28.1,
+      "separation_pts": 9.8
     },
     "calibrated": {
       "weights": {
-        "compression": 0.29,
+        "compression": 0.3,
         "vol_room": 0.5,
-        "squeeze": 0.21
+        "squeeze": 0.2
       },
-      "high_break_pct": 44.1,
-      "low_break_pct": 26.5,
-      "separation_pts": 17.6
+      "high_break_pct": 44.4,
+      "low_break_pct": 25.4,
+      "separation_pts": 19.1
     }
   },
   "verdict": {

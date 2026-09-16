@@ -1,39 +1,39 @@
 {
   "schema_version": "2.7.0",
-  "generated_at": "2026-09-15T23:33:48Z",
+  "generated_at": "2026-09-16T23:41:41Z",
   "universe": 30,
   "history_years": 5,
   "horizon_days": 10,
   "weights": {
     "values": {
-      "compression": 0.29,
+      "compression": 0.3,
       "vol_room": 0.5,
-      "squeeze": 0.21
+      "squeeze": 0.2
     },
-    "as_of": "2026-09-15",
+    "as_of": "2026-09-16",
     "source": "auto-calibrated",
     "in_sample": true
   },
   "ok": true,
-  "bars": 34659,
-  "coverage_pct": 65.8,
+  "bars": 35516,
+  "coverage_pct": 65.6,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
-  "score_move_corr": -0.05,
+  "score_move_corr": -0.04,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7076,
-      "avg_abs_move_pct": 5.3,
-      "median_abs_move_pct": 3.7,
-      "coverage_pct": 55.1,
-      "expansion": 1.13,
-      "broke_band_pct": 44.9
+      "bars": 7532,
+      "avg_abs_move_pct": 5.2,
+      "median_abs_move_pct": 3.8,
+      "coverage_pct": 54.6,
+      "expansion": 1.15,
+      "broke_band_pct": 45.4
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 13892,
-      "avg_abs_move_pct": 5.6,
+      "bars": 14310,
+      "avg_abs_move_pct": 5.4,
       "median_abs_move_pct": 4.0,
       "coverage_pct": 62.5,
       "expansion": 0.94,
@@ -41,37 +41,37 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 13691,
-      "avg_abs_move_pct": 5.9,
+      "bars": 13674,
+      "avg_abs_move_pct": 5.8,
       "median_abs_move_pct": 4.2,
-      "coverage_pct": 74.7,
+      "coverage_pct": 74.8,
       "expansion": 0.72,
-      "broke_band_pct": 25.3
+      "broke_band_pct": 25.2
     }
   },
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2785,
+      "bars": 2868,
       "avg_abs_move_pct": 5.3,
-      "median_abs_move_pct": 3.9,
-      "coverage_pct": 57.9,
+      "median_abs_move_pct": 3.8,
+      "coverage_pct": 58.2,
       "expansion": 1.06,
-      "broke_band_pct": 42.1
+      "broke_band_pct": 41.8
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 31874,
-      "avg_abs_move_pct": 5.7,
-      "median_abs_move_pct": 4.1,
-      "coverage_pct": 66.5,
-      "expansion": 0.88,
-      "broke_band_pct": 33.5
+      "bars": 32648,
+      "avg_abs_move_pct": 5.6,
+      "median_abs_move_pct": 4.0,
+      "coverage_pct": 66.2,
+      "expansion": 0.89,
+      "broke_band_pct": 33.8
     }
   },
   "verdict": {
     "holds": true,
-    "edge_pts": 19.6,
+    "edge_pts": 20.2,
     "text": "Coiled bars broke their own ±1σ band 45% of the time against 25% for calm bars (+20 pts) — the squeeze thesis holds."
   },
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
