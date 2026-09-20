@@ -26,7 +26,7 @@
   <div class="notice" id="screen-warning" hidden></div>
 
   <!-- Each tab names the panel it controls and each panel names its tab, so a
-       screen reader announces the pair rather than six unlabelled regions.
+       screen reader announces the pair rather than a row of unlabelled regions.
        Arrow keys move between them (see showTab in app.js). -->
   <nav class="tabs" role="tablist" aria-label="Views">
     <button id="tab-playbook" data-tab="playbook" role="tab" aria-selected="true" aria-controls="panel-playbook">What to do</button>
@@ -34,6 +34,7 @@
     <button id="tab-scanner" data-tab="scanner" role="tab" aria-selected="false" aria-controls="panel-scanner">Scanner</button>
     <button id="tab-charts" data-tab="charts" role="tab" aria-selected="false" aria-controls="panel-charts">Charts</button>
     <button id="tab-repeat" data-tab="repeat" role="tab" aria-selected="false" aria-controls="panel-repeat">Repeat test</button>
+    <button id="tab-backtest" data-tab="backtest" role="tab" aria-selected="false" aria-controls="panel-backtest">Backtest</button>
     <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="panel-validation">Does it work?</button>
     <button id="tab-reference" data-tab="reference" role="tab" aria-selected="false" aria-controls="panel-reference">Reference</button>
   </nav>
@@ -215,11 +216,63 @@
       </div>
     </section>
 
+    <!-- ------------------------------------------------------- backtest -->
+    <section id="panel-backtest" class="panel" data-tab="backtest" role="tabpanel" aria-labelledby="tab-backtest" hidden>
+      <div class="lede">
+        A <b>rule</b>, run over every name and every week of the same history the Repeat test
+        walks. Pick what would have made you buy — a squeeze, a new high, a close under the
+        average — say how long you would hold it and how far it has to move, and this finds
+        <b>every time that rule ever fired</b> and counts what the next weeks did.
+        <br>The rule is decided on the week's own close and the weeks before it, never on
+        anything after, and the trade is entered at that close. The verdict is the <b>exit</b>,
+        as on the Repeat test: where the trade closed, not the best price it saw on the way.
+        <br><b>The rate on its own means nothing</b> — these names rose over this decade, so
+        almost any rule looks good. What this leads with is the <b>edge</b>: the same names,
+        hold and target entered on <i>every</i> week, subtracted from the rule's own record.
+        A rule that beats that gap picked the weeks; a rule that does not was just holding the
+        market.
+      </div>
+
+      <div class="controls" id="btcontrols">
+        <label class="ctl wide"><span>Rule</span><select id="bt-rule"></select></label>
+        <label class="ctl" id="bt-look-ctl"><span id="bt-look-label">Lookback, weeks</span>
+          <input id="bt-look" type="number" min="2" max="52" step="1" value="8"></label>
+        <div class="ctl">
+          <span>Direction</span>
+          <div class="filters" role="group" aria-label="Target direction" id="bt-dir">
+            <button class="chip buy" data-dir="up" aria-pressed="true">Up ↑</button>
+            <button class="chip sell" data-dir="down" aria-pressed="false">Down ↓</button>
+          </div>
+        </div>
+        <label class="ctl"><span>Hold, weeks</span>
+          <input id="bt-hold" type="number" min="1" max="52" step="1" value="8"></label>
+        <label class="ctl"><span>Target move by exit, %</span>
+          <input id="bt-target" type="number" min="-95" max="300" step="0.5" value="8"></label>
+        <label class="ctl"><span>History, years</span>
+          <input id="bt-years" type="number" min="1" max="25" step="1" value="10"></label>
+        <label class="ctl"><span>Name, for the trade list</span>
+          <select id="bt-ticker"></select></label>
+        <div class="ctl wide">
+          <label class="toggle">
+            <input id="bt-overlap" type="checkbox">
+            <span>Count every firing, even inside a running trade</span>
+          </label>
+          <span class="heatnote" id="bt-overlap-note">Off, one position at a time — what you
+            could actually have held.</span>
+        </div>
+      </div>
+
+      <div id="backtestbody"><p class="loading">Loading the weekly history…</p></div>
+    </section>
+
     <!-- ----------------------------------------------------- validation -->
     <section id="panel-validation" class="panel" data-tab="validation" role="tabpanel" aria-labelledby="tab-validation" hidden>
       <div id="validation-body">
         <h2 style="margin-top:0">Does the Setup Score work?</h2>
-        <div id="backtest"><p class="loading">Loading backtest…</p></div>
+        <!-- Not id="backtest": the fragment "#backtest" now names the Backtest
+             tab, and a matching element id would make the browser scroll here
+             instead of showing it. Same reason as #playbook below. -->
+        <div id="score-backtest"><p class="loading">Loading backtest…</p></div>
         <h2>How the weights were set</h2>
         <div id="calibration"><p class="loading">Loading calibration…</p></div>
       </div>
@@ -274,6 +327,9 @@
 <!-- The Repeat test's counting rules, ahead of app.js because it reads them off
      the global. Its own file so tests/test_trial.py can run it under node. -->
 <script src="assets/trial.js"></script>
+<!-- The Backtest tab's rules, same arrangement and for the same reason: its own
+     file so tests/test_backtest_js.py can run it under node. -->
+<script src="assets/backtest.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
