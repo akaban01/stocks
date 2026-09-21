@@ -515,6 +515,14 @@ baseline was holding the market, whatever its hit rate says.
 
 Any two of them can be combined — see *Two rules at once* below.
 
+**Every percentage is what the position made, not what the price did.** Going
+down, the sign turns over with the direction: a short whose name rose 18% reads
+−18%, and one whose name fell 13% reads +13%. It sounds obvious written down,
+and it was wrong here for a while — the tab printed the raw price move for both
+directions, so a *winning* short read as a loss and a losing one read as a gain.
+The Repeat test shares the convention, so a number means the same thing on both
+tabs.
+
 **Two rules at once.** *And also* adds a second rule, ANDed with the first: the
 week has to satisfy both. "The squeeze, but only while the name is above its
 20-week average" is the question people ask straight after the first one, and
@@ -587,10 +595,22 @@ zero, by construction. With one-trade-at-a-time on, "every week" becomes every
 and the gap that shows up is the **noise floor** on those settings. That is the
 bar a real rule has to clear, and it is printed rather than left to be guessed.
 
-### Optional: the best strategy for each name
+### The four views
+
+The tab asks four different questions of one set of dials, so the dials sit at
+the top and the answers are **views** under them — the same arrangement as the
+Charts tab, and for the same reason: they were stacked as opt-in sections and
+the page became a very long scroll. The chosen view rides in the fragment
+beside the name, so `#backtest#NVDA#sweep` is a link to exactly what you were
+looking at. Only the view on screen is computed; the search is 300 runs per
+name and does not run while you are reading something else.
+
+### Best per name
 
 Search every rule at every lookback, hold and direction — 300 combinations per
-name — and crown the winner for each. On its own that would be the most
+name — and crown the winner for each.
+
+On its own that would be the most
 dishonest thing on this page: search hard enough against ten years of one stock
 and something always wins, and the winner is usually noise wearing a rule's name.
 
@@ -600,32 +620,51 @@ gets reported is what that same setting went on to do on the rest — a stretch 
 search never saw. It is the same train/holdout split `calibrate.py` fits the
 Setup Score's weights on, for the same reason.
 
-Three numbers come out, and the order is the point:
+#### What "best" is measured against
+
+This is the part that is easy to get wrong, and the first version of this view
+did. Everywhere else on the tab a rule is measured against **every week in the
+same direction** — that is what answers "did the rule pick the weeks", and it
+is right there. But a search ranks *across* directions, and that yardstick is
+not comparable between them: a short is only ever measured against shorting
+blindly, and on a name that rose eightfold that bar is on the floor. A short
+that merely lost *less* than a blind short scored +30 points and got crowned,
+and the tab reported the loss as an edge.
+
+So the search ranks on a yardstick that is the same for both directions:
+**simply holding the name for the same number of weeks**, which is the
+alternative anyone actually had. Against that, a losing short cannot win. And a
+combination has to have *made money* on the searched half to be crowned at all,
+because beating a bad alternative is not the same as being worth taking.
+
+Four numbers come out, and the order is the point:
 
 | | |
 |---|---|
-| **Found** | the best edge the search turned up. This is what a tool without a holdout would show you, and it means almost nothing |
+| **Found** | the best edge the search turned up, against simply holding. This is what a tool without a holdout would show you, and it means almost nothing |
 | **Out** | what that same setting did afterwards. **This is the finding** |
+| **Returned** | what the pick itself made out of sample, with nothing subtracted — the money, as opposed to the comparison |
 | **Best available** | the best edge the holdout actually contained — what you would have picked knowing the answer. The gap between it and *Out* is the part the search missed |
 
 And above all of them, the number that settles it: **how many of the picks held
-up**. If choosing a strategy per name were a real thing to do, the picks would
-beat their own baselines out of sample far more often than a coin would.
+up** — which now takes both halves, since a pick has to have made money *and*
+beaten holding the name. Either alone is cheap.
 
-> ⚠️ **On the data as it stands, they do not.** Roughly half to three-fifths of
-> the picks hold up, the median edge falls from around +17 points in-sample to
-> about +1 out of it, and the holdout demonstrably *contained* bigger edges that
-> the search could not identify in advance. That is what overfitting looks like
-> when you measure it, and the tab reports it in those words rather than printing
-> the crown alone. Read the table as a ranking of **hypotheses to go and test
-> properly**, never as a list of trades.
+> ⚠️ **What it says about this data.** Around 60% of the picks hold up, and the
+> median edge over simply holding falls from about +6 points in-sample to about
+> +2 out of it — while the holdout demonstrably *contained* edges near +20 that
+> the search could not identify in advance. So the search is not finding
+> nothing; it is finding something worth roughly two points over buying the
+> thing and waiting, which is not what a per-name "best strategy" list looks
+> like it is offering. Read the table as a ranking of **hypotheses to go and
+> test properly**, never as a list of trades.
 
 A combination needs 10 finished trades on **both** halves before it can be
 ranked: one that traded plenty while it was being searched and twice in the
 holdout has not been tested, it has been guessed at. Click any row to put that
 name and its settings into the controls above.
 
-### Optional: price it as an option
+### Price it as an option
 
 Everything above is percentages of the stock and rests on nothing but the
 closes. This section is the other half — **what it would have cost and what it

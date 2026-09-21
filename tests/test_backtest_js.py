@@ -327,6 +327,13 @@ def test_a_gap_inside_the_trade_window_skips_the_trade_with_a_reason():
 
 
 def test_going_down_flips_the_target_and_the_excursions():
+    """Every percentage is what the *position* made, not what the price did.
+
+    A short whose name fell 20% is +20%, because that is the trade that was
+    taken. Reporting the price move instead makes a winning bearish row read
+    as a loss and a losing one as a gain — and it let a search rank a short on
+    a name that tripled above the strategies that actually made money.
+    """
     closes = flat(60)
     closes[44] = 80.0
     data = payload({"AAA": closes})
@@ -334,9 +341,9 @@ def test_going_down_flips_the_target_and_the_excursions():
                            overlap=True), 40)
     assert row["target"] == pytest.approx(92.0)
     assert row["closed_past"] is True
-    assert row["exit_pct"] == pytest.approx(-20.0)
-    assert row["best_pct"] < 0         # "best" is the furthest toward the target
-    assert row["worst_pct"] > 0
+    assert row["exit_pct"] == pytest.approx(20.0), "the price fell 20%, so the short made 20%"
+    assert row["best_pct"] > 0          # "best" is the furthest toward the target
+    assert row["worst_pct"] < 0         # and the worst is the move against it
 
 
 def test_a_target_may_sit_at_or_behind_the_entry():
@@ -854,6 +861,25 @@ def test_the_pair_describes_itself():
 
 # ---- searching for the best strategy, and holding out a slice to check it --
 
+def search_data() -> dict:
+    """Two names that rise, dipping hard every eight weeks and recovering.
+
+    Buying the dip pays and chasing the high does not, so the search has a
+    real winner to find rather than a sawtooth where every entry loses. That
+    matters now that a combination has to have *made money* to be crowned:
+    a fixture where nothing is profitable leaves nothing to rank.
+    """
+    def name(step: float, dip: float) -> list[float]:
+        out = []
+        for i in range(400):
+            price = 100 * (step ** i)
+            if i % 8 == 0:
+                price *= dip
+            out.append(round(price, 2))
+        return out
+    return payload({"AAA": name(1.004, 0.90), "BBB": name(1.003, 0.92)})
+
+
 def search_best(data: dict, ticker: str, axes: dict | None = None, **opts) -> dict:
     options = {**DEFAULTS, **opts}
     return node(f"""
@@ -917,7 +943,7 @@ def test_the_holdout_never_chooses_the_pick():
     it; the pick comes from the training slice alone, or the holdout has been
     spent and the number it reports means nothing.
     """
-    data = grid_data()
+    data = search_data()
     axes = {"rules": ["high", "low"], "looks": [4, 8], "holds": [2, 4], "dirs": ["up"]}
     got = search_best(data, "AAA", axes, target=2)
     assert got["pick"] and got["hindsight"]
@@ -929,32 +955,36 @@ def test_the_holdout_never_chooses_the_pick():
       process.stdout.write(JSON.stringify(out.cells));
     """)
     usable = [c for c in cells
-              if c["train"]["edge"] is not None and c["test"]["edge"] is not None
-              and not c["train"]["thin"] and not c["test"]["thin"]]
-    best_train = max(usable, key=lambda c: c["train"]["edge"])
-    best_test = max(usable, key=lambda c: c["test"]["edge"])
-    assert got["pick"]["train"]["edge"] == best_train["train"]["edge"]
-    assert got["hindsight"]["test"]["edge"] == best_test["test"]["edge"]
+              if c["train"]["ret"] is not None and c["test"]["ret"] is not None
+              and not c["train"]["thin"] and not c["test"]["thin"]
+              and c["train"]["exit"] > 0]
+    best_train = max(usable, key=lambda c: c["train"]["ret"])
+    best_test = max(usable, key=lambda c: c["test"]["ret"])
+    assert got["pick"]["train"]["ret"] == best_train["train"]["ret"]
+    assert got["hindsight"]["test"]["ret"] == best_test["test"]["ret"]
 
 
 def test_hindsight_is_reported_beside_the_pick_and_is_never_worse():
-    data = grid_data()
+    data = search_data()
     got = search_best(data, "AAA", {"rules": ["high", "low"], "looks": [4, 8],
                                     "holds": [2, 4], "dirs": ["up"]}, target=2)
-    assert got["hindsight"]["test"]["edge"] >= got["pick"]["test"]["edge"]
+    assert got["hindsight"]["test"]["ret"] >= got["pick"]["test"]["ret"]
 
 
-def test_held_up_is_the_pick_beating_its_own_baseline_out_of_sample():
-    data = grid_data()
+def test_held_up_takes_both_beating_the_alternative_and_making_money():
+    """Either half alone is cheap: a losing short beats a worse short, and a
+    long on a rising name makes money without beating having simply held it."""
+    data = search_data()
     got = search_best(data, "AAA", {"rules": ["high", "low"], "looks": [4, 8],
                                     "holds": [2, 4], "dirs": ["up"]}, target=2)
-    assert got["held_up"] == (got["pick"]["test"]["edge"] > 0)
+    assert got["held_up"] == (got["pick"]["test"]["ret"] > 0
+                              and got["pick"]["test"]["exit"] > 0)
 
 
 def test_a_combination_thin_on_either_slice_cannot_be_crowned():
     """Plenty of trades while it was searched and two in the holdout is not a
     tested strategy, it is a guessed one."""
-    data = grid_data()
+    data = search_data()
     got = node(f"""
       const payload = {json.dumps(data)};
       const s = payload.series[0];
@@ -964,11 +994,59 @@ def test_a_combination_thin_on_either_slice_cannot_be_crowned():
       const picked = bt.best(payload, s, opt, axes);
       process.stdout.write(JSON.stringify({{
         cells: found.cells.length, ranked: picked.ranked,
-        thin: found.cells.filter(c => c.train.thin || c.test.thin).length,
+        excluded: found.cells.filter(c => c.train.thin || c.test.thin ||
+                                          !(c.train.exit > 0)).length,
         floor: bt.SEARCH_FLOOR
       }}));
     """)
-    assert got["ranked"] == got["cells"] - got["thin"]
+    assert got["ranked"] == got["cells"] - got["excluded"]
+
+
+def test_a_short_that_only_beats_other_shorts_is_not_crowned():
+    """The bug this ranking was rewritten for.
+
+    On a name that rises relentlessly, shorting every week loses badly — so a
+    short that merely loses *less* beats its own direction's baseline by a
+    wide margin. Ranked on that, the search crowned a short on a name that
+    rose eightfold and reported the loss as an edge. The yardstick is now the
+    same for both directions: what simply holding the name returned over the
+    same weeks. Against that, a losing short cannot win.
+    """
+    # Rises relentlessly, but dips 10% every eight weeks — so shorting after a
+    # new high does catch a fall often enough to beat shorting blindly, which
+    # is exactly the shape that made a short on MSFT look like the best
+    # strategy available for it.
+    rising = []
+    for i in range(400):
+        price = 100 * (1.006 ** i)
+        if i % 8 == 0:
+            price *= 0.90
+        rising.append(round(price, 2))
+    data = payload({"AAA": rising})
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const opt = {json.dumps({**DEFAULTS, "target": 2, "overlap": True})};
+      const axes = {json.dumps({"rules": ["high", "low"], "looks": [4, 8],
+                                "holds": [4, 8], "dirs": ["up", "down"]})};
+      const found = bt.search(payload, s, opt, axes);
+      const picked = bt.best(payload, s, opt, axes);
+      const shorts = found.cells.filter(c => c.dir === "down" && c.train.exit !== null);
+      process.stdout.write(JSON.stringify({{
+        pick_dir: picked.pick && picked.pick.dir,
+        // A short on this name loses money outright...
+        shorts_all_lose: shorts.every(c => c.train.exit < 0),
+        // ...while beating the every-week short it is measured against.
+        shorts_beating_own_baseline: shorts.filter(c => c.train.edge > 0).length,
+        // But none of them beats simply having held it.
+        shorts_beating_holding: shorts.filter(c => c.train.ret > 0).length
+      }}));
+    """)
+    assert got["shorts_all_lose"], "the fixture must be a name where shorting loses"
+    assert got["shorts_beating_own_baseline"] > 0, (
+        "and where a short still beats the every-week short — that is the trap")
+    assert got["shorts_beating_holding"] == 0
+    assert got["pick_dir"] != "down", "a money-losing short was crowned again"
 
 
 def test_the_cut_lands_where_the_train_fraction_says():
@@ -990,7 +1068,7 @@ def test_the_two_medians_are_not_the_same_number():
     name, against the middle of the *picks* across names. They had the same
     field name, which is the kind of collision that returns a plausible number
     instead of an error."""
-    data = grid_data()
+    data = search_data()
     axes = {"rules": ["high", "low"], "looks": [4, 8], "holds": [2, 4], "dirs": ["up"]}
     got = node(f"""
       const payload = {json.dumps(data)};
@@ -1002,7 +1080,7 @@ def test_the_two_medians_are_not_the_same_number():
         per_name: one.median_usable_test,
         stale_name_is_gone: one.median_test === undefined,
         across_names: all.median_test,
-        picks: all.names.filter(n => n.pick).map(n => n.pick.test.edge)
+        picks: all.names.filter(n => n.pick).map(n => n.pick.test.ret)
       }}));
     """)
     assert got["stale_name_is_gone"], "best() still carries the colliding field name"
@@ -1015,7 +1093,7 @@ def test_the_two_medians_are_not_the_same_number():
 
 
 def test_every_name_is_searched_and_the_hold_up_count_is_the_verdict():
-    data = grid_data()
+    data = search_data()
     got = node(f"""
       const payload = {json.dumps(data)};
       const out = bt.bestAll(payload, {json.dumps({**DEFAULTS, "target": 2})},
@@ -1023,7 +1101,8 @@ def test_every_name_is_searched_and_the_hold_up_count_is_the_verdict():
       process.stdout.write(JSON.stringify({{
         names: out.names.length, rated: out.rated, held: out.held, pct: out.held_pct,
         tickers: out.names.map(n => n.ticker),
-        recount: out.names.filter(n => n.pick && n.pick.test.edge > 0).length
+        recount: out.names.filter(n => n.pick && n.pick.test.ret > 0
+                                       && n.pick.test.exit > 0).length
       }}));
     """)
     assert got["tickers"] == ["AAA", "BBB"]

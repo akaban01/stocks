@@ -42,6 +42,16 @@
 
   function has(v) { return v !== null && v !== undefined && v !== ""; }
 
+  /* A move, as the *position* felt it — not as the price printed it.
+     Going down, the trade gains when the price falls, so the sign turns over
+     with the direction: a short that watched its name rise 18% is −18%, and a
+     short that watched it fall 13% is +13%. Without this a bearish row reads
+     as its own opposite, and the search below would crown a short on a name
+     that tripled and call the loss an edge.
+     `fav` and `adv` already pick the right extreme for the direction, so the
+     one flip serves the exit, the best and the worst alike. */
+  function ret(pct, up) { return pct === null || pct === undefined ? null : (up ? pct : -pct); }
+
   /* Deliberately its own copy rather than a call into trial.js: this file is
      required on its own under node by the tests, and a load-order dependency
      between two browser globals is a worse trade than four lines. */
@@ -299,8 +309,8 @@
       if (hitAt < 0 && (up ? f >= row.target : f <= row.target)) hitAt = k;
     }
 
-    row.best_pct = fav === null ? null : (fav / row.entry - 1) * 100;
-    row.worst_pct = adv === null ? null : (adv / row.entry - 1) * 100;
+    row.best_pct = fav === null ? null : ret((fav / row.entry - 1) * 100, up);
+    row.worst_pct = adv === null ? null : ret((adv / row.entry - 1) * 100, up);
     row.touched = hitAt >= 0;
     if (row.touched) { row.hit_in = hitAt - i; row.hit_week = payload.starts[hitAt]; }
 
@@ -310,13 +320,13 @@
       // the headline up in one direction only.
       row.state = "open";
       row.ran = stop - i;
-      row.open_pct = (series.close[stop] / row.entry - 1) * 100;
+      row.open_pct = ret((series.close[stop] / row.entry - 1) * 100, up);
       return row;
     }
     row.settled = true;
     row.exit = series.close[end];
     row.exit_week = payload.starts[end];
-    row.exit_pct = (row.exit / row.entry - 1) * 100;
+    row.exit_pct = ret((row.exit / row.entry - 1) * 100, up);
     row.closed_past = up ? row.exit >= row.target : row.exit <= row.target;
     row.state = row.closed_past ? "hit" : "miss";
     return row;
@@ -590,6 +600,17 @@
      stretch the search never saw. `calibrate.py` fits the Setup Score's weights
      the same way, on a train split, for the same reason.
 
+     What "best" means here is the thing to be careful about. A rule can touch
+     its target far more often than average and still lose money on every
+     trade, so ranking on the hit rate crowns strategies nobody would take —
+     on this data it crowned a *short* on a name that rose eightfold, because
+     that name dipped 2% more reliably than a blind short did. So the ranking
+     is the **return**: how many points the median trade beat the median
+     trade of the same name's baseline by. The hit-rate gap is still carried
+     on every cell as `edge`, because it is worth seeing; it just does not get
+     to choose. Every percentage is signed as the position felt it, so a short
+     that made money is positive (see `ret` at the top of this file).
+
      Three numbers come out, and the order matters:
 
        * `train` — the best edge the search found. This is the number a tool
@@ -649,7 +670,9 @@
       test:  { from: cut, until: last }
     };
 
-    // One baseline per direction, hold and slice — never per combination.
+    // One baseline per direction, hold and slice — never per combination. This
+    // is the tab's usual yardstick, and it answers "did the rule pick the
+    // weeks": a long against every long, a short against every short.
     var base = {};
     for (var d = 0; d < dirs.length; d++) {
       for (var h = 0; h < holds.length; h++) {
@@ -659,6 +682,26 @@
             overlap: true, from: slices[k].from, until: slices[k].until
           });
         }
+      }
+    }
+
+    /* And one common yardstick, the same for every direction: simply being
+       long the name for the same number of weeks.
+
+       This is what makes a search across directions mean anything. Measured
+       against its own direction, a short on a name that rose eightfold looks
+       superb — it only has to beat shorting blindly, which lost 17% a go, so
+       returning nothing scores +17. Measured against having just held the
+       thing, which is the alternative anyone actually had, it scores −17. The
+       second number is the one a person means by "best strategy", and it is
+       the only one that can be compared between a long and a short at all. */
+    var held = {};
+    for (var hh2 = 0; hh2 < holds.length; hh2++) {
+      for (var k2 in slices) {
+        held[holds[hh2] + "|" + k2] = run(payload, series, {
+          rule: "every", look: 1, dir: "up", hold: holds[hh2], target: target,
+          overlap: true, from: slices[k2].from, until: slices[k2].until
+        });
       }
     }
 
@@ -679,10 +722,25 @@
                 target: target, overlap: overlap,
                 from: slices[sk].from, until: slices[sk].until
               }, found[sk]);
-              var gap = edge(got, base[dirs[dd] + "|" + holds[hh] + "|" + sk]);
+              var against = base[dirs[dd] + "|" + holds[hh] + "|" + sk];
+              var alt = held[holds[hh] + "|" + sk];
+              var gap = edge(got, against);
               cell[sk] = { trades: got.trades, rate: got.rate, exit: got.median_exit,
-                           base_rate: base[dirs[dd] + "|" + holds[hh] + "|" + sk].rate,
-                           edge: gap.rate, thin: got.trades < SEARCH_FLOOR };
+                           base_rate: against.rate, base_exit: against.median_exit,
+                           held_exit: alt.median_exit,
+                           // Three different claims, and only the last one is
+                           // what "best" should mean. `rate` is how often it
+                           // hit; `edge` is the hit-rate gap against its own
+                           // direction, in points; `ret` is how many points of
+                           // *return* the median trade beat simply holding the
+                           // name by. The search ranks on `ret`: a rule can hit
+                           // its target more often than average and still lose
+                           // money, and a short can beat every other short
+                           // while losing to having done nothing.
+                           edge: gap.rate,
+                           ret: (got.median_exit === null || alt.median_exit === null)
+                                  ? null : got.median_exit - alt.median_exit,
+                           thin: got.trades < SEARCH_FLOOR };
             }
             cells.push(cell);
           }
@@ -713,14 +771,23 @@
     // Only combinations with enough finished trades on *both* slices can be
     // ranked: one that traded plenty while it was being searched and twice in
     // the holdout has not been tested, it has been guessed at.
+    //
+    // And it has to have made money while it was being searched. The baseline
+    // is matched on direction, which is what stops a rising decade flattering
+    // every long — but it also means a short is only ever measured against
+    // shorting blindly, and on a name that rose eightfold that bar is on the
+    // floor. Beating it by thirty points while returning nothing is not a
+    // strategy, so a negative median return cannot be crowned however well it
+    // compares.
     var usable = found.cells.filter(function (c) {
-      return c.train.edge !== null && c.test.edge !== null && !c.train.thin && !c.test.thin;
+      return c.train.ret !== null && c.test.ret !== null &&
+             !c.train.thin && !c.test.thin && c.train.exit > 0;
     });
     out.ranked = usable.length;
     if (!usable.length) return out;
 
-    var byTrain = usable.slice().sort(function (a, b) { return b.train.edge - a.train.edge; });
-    var byTest = usable.slice().sort(function (a, b) { return b.test.edge - a.test.edge; });
+    var byTrain = usable.slice().sort(function (a, b) { return b.train.ret - a.train.ret; });
+    var byTest = usable.slice().sort(function (a, b) { return b.test.ret - a.test.ret; });
     out.pick = byTrain[0];
     out.hindsight = byTest[0];
     // What an ordinary combination did on the holdout. The pick has to beat
@@ -731,10 +798,13 @@
     // edge. One is a spread within a name, the other a middle across names,
     // and a reader who grabbed the wrong one would get a plausible number
     // rather than an error.
-    out.median_usable_test = median(usable.map(function (c) { return c.test.edge; }));
-    // The whole verdict, in one boolean: did the setting the search crowned go
-    // on to beat that name's own baseline on weeks the search never saw?
-    out.held_up = out.pick.test.edge > 0;
+    out.median_usable_test = median(usable.map(function (c) { return c.test.ret; }));
+    // The whole verdict, in one boolean, and it takes both halves: did the
+    // setting the search crowned go on to beat that name's own baseline on
+    // weeks it never saw, *and* actually make money doing it? Either alone
+    // can be had cheaply — a losing short beats a worse short, and a long on
+    // a rising name makes money without beating anything.
+    out.held_up = out.pick.test.ret > 0 && out.pick.test.exit > 0;
     return out;
   }
 
@@ -754,9 +824,13 @@
     return {
       names: names, rated: rated.length, held: held.length,
       held_pct: rated.length ? (held.length / rated.length) * 100 : null,
-      median_train: median(rated.map(function (n) { return n.pick.train.edge; })),
-      median_test: median(rated.map(function (n) { return n.pick.test.edge; })),
-      median_hindsight: median(rated.map(function (n) { return n.hindsight.test.edge; })),
+      median_train: median(rated.map(function (n) { return n.pick.train.ret; })),
+      median_test: median(rated.map(function (n) { return n.pick.test.ret; })),
+      median_hindsight: median(rated.map(function (n) { return n.hindsight.test.ret; })),
+      // What the picks *returned*, next to what they beat. The edge is a gap
+      // between two rates; this is the money, and they are not the same claim.
+      median_return: median(rated.map(function (n) { return n.pick.test.exit; })),
+      median_return_train: median(rated.map(function (n) { return n.pick.train.exit; })),
       tried: rated.length ? rated[0].tried : 0,
       train_from: rated.length ? rated[0].train_from : null,
       train_to: rated.length ? rated[0].train_to : null,

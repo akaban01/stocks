@@ -160,6 +160,20 @@
   var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "repeat", "backtest",
                    "validation", "reference"];
   var CHART_VIEWS = ["prices", "seasonality"];
+  /* The Backtest tab's four views. Same idea as the Charts tab's, and they
+     share the fragment's view segment — the lists must not collide, because a
+     segment is matched against both and the tab it implies is whichever list
+     claimed it. */
+  var BACKTEST_VIEWS = ["rules", "sweep", "search", "money"];
+  var VIEW_TABS = { charts: CHART_VIEWS, backtest: BACKTEST_VIEWS };
+
+  // Which tab a view name belongs to, or "" if it is not a view name at all.
+  function viewTab(lower) {
+    for (var tab in VIEW_TABS) {
+      if (VIEW_TABS[tab].indexOf(lower) !== -1) return tab;
+    }
+    return "";
+  }
   /* The two tabs that are *about* one name, and so carry it in the fragment:
    *
    *     …/#backtest#NVDA   the Backtest tab, on NVDA
@@ -178,6 +192,7 @@
   var TICKER_RE = /^[A-Za-z][A-Za-z0-9.\-]{0,9}$/;
   var curTab = "playbook";
   var curView = "prices";
+  var btView = "rules";
   // Set while the page is putting itself into a state it was *handed* — during
   // boot, and while applying an incoming fragment — so that those moves do not
   // write the fragment back over the one they are reading.
@@ -197,11 +212,14 @@
       // is a reasonable thing to type and NVDA is what the data calls it.
       var lower = seg.toLowerCase();
       if (!out.tab && TAB_NAMES.indexOf(lower) !== -1) out.tab = lower;
-      else if (!out.view && CHART_VIEWS.indexOf(lower) !== -1) out.view = lower;
+      else if (!out.view && viewTab(lower)) out.view = lower;
       else if (!out.ticker && TICKER_RE.test(seg)) out.ticker = seg.toUpperCase();
     }
-    // A bare "#seasonality" can only mean one tab, so read it as that tab.
-    if (out.view && !out.tab) out.tab = "charts";
+    // A bare "#seasonality" or "#sweep" can only mean one tab, so read it as
+    // that tab. A view named alongside the wrong tab is dropped rather than
+    // allowed to move the tab out from under it.
+    if (out.view && !out.tab) out.tab = viewTab(out.view);
+    else if (out.view && viewTab(out.view) !== out.tab) out.view = undefined;
     return out.tab ? out : null;
   }
 
@@ -213,7 +231,14 @@
   function writeHash() {
     if (hashLock) return;
     var name = NAMED_TABS[curTab] ? tabName(curTab) : "";
-    var want = "#" + curTab + (curTab === "charts" ? "#" + curView : name ? "#" + name : "");
+    /* Name first, then view — "#backtest#NVDA#sweep" reads as a name being
+       looked at a particular way, which is the order the sentence goes in.
+       `parseHash` matches each segment on its own, so it accepts either. The
+       default view is left off: an unadorned "#backtest#NVDA" is the link
+       worth having, and the Charts tab has always written its view out. */
+    var view = curTab === "charts" ? "#" + curView
+      : curTab === "backtest" && btView !== "rules" ? "#" + btView : "";
+    var want = "#" + curTab + (name ? "#" + name : "") + view;
     if (location.hash === want) return;
     // replaceState, not pushState: the tab strip moves on arrow keys, and one
     // history entry per keystroke would bury whatever the reader arrived from.
@@ -253,7 +278,10 @@
     var want = parseHash();
     if (want) {
       hashLock = true;
-      if (want.view) showChartView(want.view);
+      // The view belongs to the tab that owns its name; parseHash has already
+      // dropped one that came with the wrong tab.
+      if (want.view && want.tab === "charts") showChartView(want.view);
+      else if (want.view && want.tab === "backtest") showBacktestView(want.view);
       applyName(want.tab, want.ticker);
       showTab(want.tab);
       hashLock = false;
@@ -1545,6 +1573,39 @@
     }
   }
 
+  /* Which of the Backtest tab's four views is on screen.
+
+     Each view is drawn only while it is the one showing — the sweep is forty
+     runs and the search is three hundred per name, and paying for all of them
+     on every keystroke is what the opt-in toggles were avoiding before. The
+     draw functions are still called unconditionally from `btDraw`; they check
+     this and return. */
+  function showBacktestView(view) {
+    if (BACKTEST_VIEWS.indexOf(view) === -1) view = "rules";
+    btView = view;
+    var buttons = document.querySelectorAll("#btviews button");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute("aria-pressed",
+        buttons[i].dataset.btview === view ? "true" : "false");
+    }
+    var panes = document.querySelectorAll('.panel[data-tab="backtest"] > div[data-btview]');
+    for (var j = 0; j < panes.length; j++) panes[j].hidden = panes[j].dataset.btview !== view;
+    try { localStorage.setItem("backtestview", view); } catch (e) { /* private mode */ }
+    // The view that just appeared may never have been drawn, or may be stale
+    // from before a dial moved while it was hidden.
+    btSweepDraw();
+    bsDraw();
+    bmDraw();
+    writeHash();
+  }
+
+  function wireBacktestViews() {
+    var buttons = document.querySelectorAll("#btviews button");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () { showBacktestView(this.dataset.btview); });
+    }
+  }
+
   function showChartView(view) {
     if (CHART_VIEWS.indexOf(view) === -1) view = "prices";
     curView = view;
@@ -2680,7 +2741,7 @@
   // on its own is a fact about the decade, not about the rule.
 
   var bt = { rule: "squeeze", look: 8, also: "every", alsoLook: 20, dir: "up", hold: 8,
-             target: 8, years: 10, overlap: false, ticker: "", sweepOn: false };
+             target: 8, years: 10, overlap: false, ticker: "" };
   var btSort = { key: "edge", dir: -1 };
 
   /* One range per numeric control, for the same reason the money section has
@@ -3227,8 +3288,7 @@
 
   function btSweepDraw() {
     var host = $("#sweepbody");
-    $("#sweepsection").hidden = !bt.sweepOn;
-    if (!bt.sweepOn || !store.weekly) { host.innerHTML = ""; return; }
+    if (btView !== "sweep" || !store.weekly) { host.innerHTML = ""; return; }
     if (!store.weekly.series.length) { host.innerHTML = ""; return; }
     host.innerHTML = btSweepBody(store.weekly);
 
@@ -3243,14 +3303,6 @@
         }
       });
     }
-  }
-
-  function wireSweep() {
-    $("#bt-sweep-on").addEventListener("change", function () {
-      bt.sweepOn = !!this.checked;
-      btStore();
-      btSweepDraw();
-    });
   }
 
   function btDraw() {
@@ -3312,7 +3364,7 @@
    * controls that feed it.
    */
 
-  var bm = { on: false, structure: "spread", long: 0, short: 8, debit: 40, contracts: 1 };
+  var bm = { structure: "spread", long: 0, short: 8, debit: 40, contracts: 1 };
   var bmSort = { key: "net", dir: -1 };
 
   // The same bounds the Repeat test's money controls carry, for the same
@@ -3447,8 +3499,7 @@
      nobody ran, sized by nothing. */
   function bmDraw() {
     var host = $("#bmbody");
-    $("#bmsection").hidden = !bm.on;
-    if (!bm.on || !store.weekly || !btLast) { if (host) host.innerHTML = ""; return; }
+    if (btView !== "money" || !store.weekly || !btLast) { if (host) host.innerHTML = ""; return; }
 
     var one = null;
     for (var i = 0; i < btLast.names.length; i++) {
@@ -3482,11 +3533,6 @@
         bmDraw();
       });
     }
-    $("#bm-on").addEventListener("change", function () {
-      bm.on = !!this.checked;
-      bmStore();
-      bmDraw();
-    });
     onNum("#bm-long", "long");
     onNum("#bm-short", "short");
     onNum("#bm-debit", "debit");
@@ -3507,17 +3553,14 @@
     if (saved) {
       for (var key in bm) {
         if (!has(saved[key])) continue;
-        bm[key] = key === "on" ? !!saved[key]
-          : key === "structure" ? (saved[key] === "single" ? "single" : "spread")
+        bm[key] = key === "structure" ? (saved[key] === "single" ? "single" : "spread")
           : bmClamp(key, saved[key]);
       }
     }
-    $("#bm-on").checked = !!bm.on;
     $("#bm-long").value = bm.long;
     $("#bm-short").value = bm.short;
     $("#bm-debit").value = bm.debit;
     $("#bm-contracts").value = bm.contracts;
-    $("#bmsection").hidden = !bm.on;
     bmApplyStructure();
   }
 
@@ -3535,13 +3578,9 @@
    * not to trust it, in that order.
    */
 
-  var bs = { on: false };
+
   var bsSort = { key: "test", dir: -1 };
   var bsCache = { key: null, data: null, value: null };
-
-  function bsStore() {
-    try { localStorage.setItem("backtest-search", JSON.stringify(bs)); } catch (e) { /* private */ }
-  }
 
   // Keyed on what the search actually reads. The rule, lookback, hold and
   // direction are all swept, so moving those dials does not invalidate it.
@@ -3590,19 +3629,29 @@
            "Held up out of sample — " + all.held + " of " + all.rated +
              (has(pct) ? " (" + num(pct, 0) + "%)" : ""),
            "The settings the search crowned on the older history, then measured on the " +
-           "years it never saw: this many still beat that name's own baseline. " +
+           "years it never saw: this many both <b>made money</b> and <b>beat simply holding " +
+           "the name</b> over the same weeks. Either test alone is cheap — a short that loses " +
+           "less than other shorts passes the first, and any long on a name that rose passes " +
+           "the second. " +
            (works
              ? "Better than a coin by enough to be worth something — but read the decay beside "
                + "it before believing any single row."
              : "<b>That is about what a coin would do.</b> Picking a strategy per name, on this "
                + "much history, mostly finds what already happened rather than what is going to.")) +
-      tile("rich", "What the edge did — " + points(all.median_train, 0) + " → " +
+      tile("rich", "Against simply holding — " + points(all.median_train, 0) + " → " +
              points(all.median_test, 0),
-           "Median edge of the picks while they were being searched, and afterwards. " +
+           "The yardstick is the alternative anyone actually had: buying the name and keeping " +
+           "it for the same number of weeks. This is how many percentage points of return the " +
+           "median pick beat that by, while it was being searched and afterwards. " +
            (has(decay) && decay > 0
              ? "<b>" + esc(points(decay, 0)) + " of it was not there once the holdout started.</b> "
              : "") +
            "That gap is the cost of searching: most of what a search finds is the search.") +
+      tile("fair", "What they returned — " + signed(all.median_return),
+           "The median pick's own return out of sample, before any comparison. A strategy has " +
+           "to clear two different bars and they are not the same one: this number says it made " +
+           "money, the one beside it says it was worth the trouble. A rule can do either without " +
+           "the other.") +
       tile("fair", "Best that was available — " + points(all.median_hindsight, 0),
            "The best edge the holdout actually contained, per name — what you would have " +
            "picked knowing the answer. There <i>were</i> edges out there; the search just " +
@@ -3613,7 +3662,8 @@
            " names. Split at " + esc(all.train_to || "—") + ": searched on " +
            esc(all.train_from || "—") + "–" + esc(all.train_to || "—") + ", reported on " +
            esc(all.test_from || "—") + "–" + esc(all.test_to || "—") + ". A combination needs " +
-           SpreadBacktest.SEARCH_FLOOR + " finished trades on <i>both</i> to be ranked.") +
+           SpreadBacktest.SEARCH_FLOOR + " finished trades on <i>both</i> to be ranked, and " +
+           "has to have made money on the first to be crowned at all.") +
       "</div>";
   }
 
@@ -3623,15 +3673,15 @@
       "finished trades on both halves of the history to be ranked.</p>";
 
     var key = bsSort.key;
+    function field(n, k) {
+      return k === "train" ? n.pick.train.ret
+           : k === "test" ? n.pick.test.ret
+           : k === "returned" ? n.pick.test.exit
+           : k === "hindsight" ? n.hindsight.test.ret : n.pick.test.trades;
+    }
     rows.sort(function (a, b) {
       if (key === "ticker") return a.ticker.localeCompare(b.ticker) * bsSort.dir;
-      var x = key === "train" ? a.pick.train.edge
-            : key === "test" ? a.pick.test.edge
-            : key === "hindsight" ? a.hindsight.test.edge : a.pick.test.trades;
-      var y = key === "train" ? b.pick.train.edge
-            : key === "test" ? b.pick.test.edge
-            : key === "hindsight" ? b.hindsight.test.edge : b.pick.test.trades;
-      return (x - y) * bsSort.dir;
+      return (field(a, key) - field(b, key)) * bsSort.dir;
     });
 
     function th(k, label, cls) {
@@ -3646,10 +3696,12 @@
         '">' +
         '<td class="t">' + esc(n.ticker) + "</td>" +
         "<td>" + bsCombo(p) + "</td>" +
-        '<td class="r soft-hit">' + points(p.train.edge, 0) + "</td>" +
-        '<td class="r ' + (p.test.edge > 0 ? "hit" : "miss") + '"><b>' +
-          points(p.test.edge, 0) + "</b></td>" +
-        '<td class="r faint">' + points(n.hindsight.test.edge, 0) + "</td>" +
+        '<td class="r soft-hit">' + points(p.train.ret, 0) + "</td>" +
+        '<td class="r ' + (p.test.ret > 0 ? "hit" : "miss") + '"><b>' +
+          points(p.test.ret, 0) + "</b></td>" +
+        '<td class="r ' + (p.test.exit > 0 ? "hit" : "miss") + '">' +
+          signed(p.test.exit) + "</td>" +
+        '<td class="r faint">' + points(n.hindsight.test.ret, 0) + "</td>" +
         '<td class="r">' + num(p.test.trades, 0) + "</td>" +
         '<td class="' + (n.held_up ? "hit" : "miss") + '">' +
           (n.held_up ? "held up" : "did not") + "</td></tr>";
@@ -3659,11 +3711,14 @@
       '<p class="dim" style="font-size:.87rem;margin:0 0 10px">The best combination found on ' +
       "the older history, and what it did afterwards. <b>Out</b> is the column that matters — " +
       "<b>found</b> is what the search saw while it was choosing, and it is the number a tool " +
-      "without a holdout would have shown you on its own. Click a row to put that name and its " +
-      "settings into the controls above.</p>" +
+      "without a holdout would have shown you on its own. Both are measured against holding " +
+      "the name for the same weeks, which is what makes a long and a short comparable at all; " +
+      "<b>returned</b> is the pick's own result, with nothing subtracted. " +
+      "Click a row to put that name and its settings into the controls above.</p>" +
       '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
       th("ticker", "Name") + '<th>Pick</th>' + th("train", "Found", "r") +
-      th("test", "Out", "r") + th("hindsight", "Best available", "r") +
+      th("test", "Out", "r") + th("returned", "Returned", "r") +
+      th("hindsight", "Best available", "r") +
       th("trades", "Trades out", "r") + "<th>Verdict</th>" +
       "</tr></thead><tbody>" + body + "</tbody></table></div>" +
       '<p class="faint" style="font-size:.83rem;margin:10px 0 0">A row that held up is not a ' +
@@ -3696,8 +3751,7 @@
 
   function bsDraw() {
     var host = $("#bsbody");
-    $("#bssection").hidden = !bs.on;
-    if (!bs.on || !store.weekly) { if (host) host.innerHTML = ""; return; }
+    if (btView !== "search" || !store.weekly) { if (host) host.innerHTML = ""; return; }
     if (!store.weekly.series.length) { host.innerHTML = ""; return; }
 
     var all = bsRun(store.weekly);
@@ -3729,19 +3783,6 @@
         }
       });
     }
-  }
-
-  function wireSearch() {
-    $("#bs-on").addEventListener("change", function () {
-      bs.on = !!this.checked;
-      bsStore();
-      bsDraw();
-    });
-    var saved = null;
-    try { saved = JSON.parse(localStorage.getItem("backtest-search") || "null"); } catch (e) { saved = null; }
-    if (saved) bs.on = !!saved.on;
-    $("#bs-on").checked = bs.on;
-    $("#bssection").hidden = !bs.on;
   }
 
   function btPick(ticker) {
@@ -3876,7 +3917,7 @@
     if (saved) {
       for (var key in bt) {
         if (!has(saved[key])) continue;
-        bt[key] = (key === "overlap" || key === "sweepOn") ? !!saved[key]
+        bt[key] = key === "overlap" ? !!saved[key]
           : (key === "rule" || key === "also")
             ? (SpreadBacktest.RULES[saved[key]] ? saved[key] : bt[key])
           : key === "dir" ? (saved[key] === "down" ? "down" : "up")
@@ -3892,7 +3933,6 @@
     $("#bt-target").value = bt.target;
     $("#bt-years").value = bt.years;
     $("#bt-overlap").checked = bt.overlap;
-    $("#bt-sweep-on").checked = bt.sweepOn;
     for (var k = 0; k < dirs.length; k++) {
       dirs[k].setAttribute("aria-pressed", dirs[k].dataset.dir === bt.dir ? "true" : "false");
     }
@@ -4060,16 +4100,20 @@
     wireRepeat();
     wireSpread();
     wireBacktest();
-    wireSweep();
     wireMoney();
-    wireSearch();
+    wireBacktestViews();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
-    var savedView = null;
+    var savedView = null, savedBtView = null;
     try { savedView = localStorage.getItem("chartview"); } catch (e) { savedView = null; }
+    try { savedBtView = localStorage.getItem("backtestview"); } catch (e) { savedBtView = null; }
     // Nothing is on screen yet — the showTab below writes both halves at once.
     hashLock = true;
-    showChartView((linked && linked.view) || savedView);
+    // A view in the fragment belongs to whichever tab owns that name, so it is
+    // only allowed to set the view of the tab it came with. Otherwise the last
+    // visit's view stands.
+    showChartView((linked && linked.tab === "charts" && linked.view) || savedView);
+    showBacktestView((linked && linked.tab === "backtest" && linked.view) || savedBtView);
     // And the name the fragment asked for, before anything renders. A cold load
     // does not go through applyHash — that listens for hashchange, and arriving
     // at a URL is not a change — so a deep link into one name was parsed here

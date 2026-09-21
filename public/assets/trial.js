@@ -47,6 +47,15 @@
     return at;
   }
 
+  /* A move, as the *position* felt it rather than as the price printed it.
+     Going down the sign turns over with the direction, so a year that watched
+     its name rise 18% reads −18% for a bearish trial and not +18%. `fav` and
+     `adv` already pick the right extreme for the direction, so one flip serves
+     the exit, the best and the worst alike. The Backtest tab's rules file
+     keeps the identical convention, so a number means the same thing on both
+     tabs. */
+  function ret(pct, up) { return pct === null || pct === undefined ? null : (up ? pct : -pct); }
+
   /* One year of the trial for one name.
      Every branch that cannot reach a verdict says which branch it is. Neither
      "still open" nor "skipped" is a failure, and quietly counting either as one
@@ -88,8 +97,8 @@
       if (hitAt < 0 && (up ? f >= row.target : f <= row.target)) hitAt = k;
     }
 
-    row.best_pct = (fav / row.entry - 1) * 100;
-    row.worst_pct = (adv / row.entry - 1) * 100;
+    row.best_pct = ret((fav / row.entry - 1) * 100, up);
+    row.worst_pct = ret((adv / row.entry - 1) * 100, up);
     row.touched = hitAt >= 0;
     if (row.touched) { row.hit_in = hitAt - i + 1; row.hit_week = payload.starts[hitAt]; }
 
@@ -103,12 +112,12 @@
       // counting it.
       row.state = "open";
       row.ran = stop - i + 1;
-      row.open_pct = (series.close[stop] / row.entry - 1) * 100;
+      row.open_pct = ret((series.close[stop] / row.entry - 1) * 100, up);
       return row;
     }
     row.settled = true;
     row.exit = series.close[end];
-    row.exit_pct = (row.exit / row.entry - 1) * 100;
+    row.exit_pct = ret((row.exit / row.entry - 1) * 100, up);
     // Where the trade *closed*. Eight weeks at +1% asks whether the close of
     // week eight is 1% above the entry — nothing else in the window decides it.
     // `settled` says the window ran out; `closed_past` says it ended on the

@@ -299,8 +299,10 @@ def test_a_downside_target_is_below_the_entry_and_touched_off_the_low():
     assert down["target"] == pytest.approx(92.0), "a downside target sits below the entry"
     assert down["touched"] is True, "the low went through it"
     assert down["state"] == "miss", "but the window closed back at the entry"
-    assert down["best_pct"] < 0, "toward a downside target is a fall"
-    assert down["worst_pct"] > 0, "and against it is a rise"
+    # Signed as the position felt it: a fall is what a downside trade wanted,
+    # so it is the gain, and the rise back against it is the loss.
+    assert down["best_pct"] > 0, "a fall is the gain for a trade that wanted one"
+    assert down["worst_pct"] < 0, "and the rise against it is the loss"
 
 
 def test_a_downside_target_finishes_when_the_exit_close_is_under_it():

@@ -269,52 +269,41 @@
         </div>
       </div>
 
-      <div id="backtestbody"><p class="loading">Loading the weekly history…</p></div>
-
-      <!-- Optional: the same rule at every hold and every lookback. Off by
-           default — it is forty-odd runs of the thing above, and it answers a
-           second question ("is the cell I picked a ridge or a fluke?") rather
-           than the one the controls ask. -->
-      <div class="moneyhead">
-        <label class="toggle">
-          <input id="bt-sweep-on" type="checkbox">
-          <span>Sweep the dials — every hold against every lookback</span>
-        </label>
+      <!-- Four questions, four views, one set of controls above them all.
+           They were stacked as opt-in sections and the tab became a very long
+           scroll; each is a different question about the same dials, which is
+           what a view is for. The controls stay put because every view reads
+           them, and the chosen view rides in the fragment beside the name, so
+           "#backtest#NVDA#sweep" is a link to exactly what you were looking
+           at. Same arrangement as the Charts tab's sub-views. -->
+      <div class="filters" id="btviews" role="group" aria-label="Backtest view">
+        <button class="chip" data-btview="rules" aria-pressed="true">The rule</button>
+        <button class="chip" data-btview="sweep" aria-pressed="false">Sweep the dials</button>
+        <button class="chip" data-btview="search" aria-pressed="false">Best per name</button>
+        <button class="chip" data-btview="money" aria-pressed="false">Price it</button>
       </div>
 
-      <div id="sweepsection" hidden>
+      <div id="backtestbody" data-btview="rules"><p class="loading">Loading the weekly history…</p></div>
+
+      <!-- The same rule at every hold and every lookback: forty-odd runs of the
+           view above, answering "is the cell I picked a ridge or a fluke?"
+           rather than the question the controls ask. -->
+      <div id="sweepsection" data-btview="sweep" hidden>
         <div id="sweepbody"></div>
       </div>
 
-      <!-- Optional: search every combination for the best one per name. Off by
-           default, and deliberately not the tab's headline: it is a data-mining
-           exercise, and the only thing that makes it honest — the holdout — is
-           reported above the crown rather than under it. -->
-      <div class="moneyhead">
-        <label class="toggle">
-          <input id="bs-on" type="checkbox">
-          <span>Find the best strategy for each name</span>
-        </label>
-        <span class="heatnote" id="bs-note">Searches every rule, lookback, hold and
-          direction on the older part of the history, then reports what the winner did
-          on the rest.</span>
-      </div>
-
-      <div id="bssection" hidden>
+      <!-- Every combination, searched for the best one per name. Deliberately
+           not the tab's headline: it is a data-mining exercise, and the only
+           thing that makes it honest — the holdout — is reported above the
+           crown rather than under it. -->
+      <div id="bssection" data-btview="search" hidden>
         <div id="bsbody"><p class="loading">Searching…</p></div>
       </div>
 
-      <!-- Optional: the same trades, priced as an option. The same arrangement
-           and the same caveat as the Repeat test's money section, and the same
-           arithmetic — it calls trial.js rather than keeping a second copy. -->
-      <div class="moneyhead">
-        <label class="toggle">
-          <input id="bm-on" type="checkbox">
-          <span>Price it — real cash in, cash out, net</span>
-        </label>
-      </div>
-
-      <div id="bmsection" hidden>
+      <!-- The same trades, priced as an option. The same caveat as the Repeat
+           test's money section, and the same arithmetic — it calls trial.js
+           rather than keeping a second copy. -->
+      <div id="bmsection" data-btview="money" hidden>
         <div class="notice">
           <b>The debit is yours, not the market's.</b> This repo holds ten years of stock
           bars and no option history, so nothing here can look up what one of these
