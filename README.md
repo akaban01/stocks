@@ -803,13 +803,29 @@ The tab on screen is in the URL, so any view can be linked to or bookmarked:
 ```
 https://<you>.github.io/<repo>/#spreads              the Spreads tab
 https://<you>.github.io/<repo>/#charts#seasonality   Charts, on the month tables
+https://<you>.github.io/<repo>/#backtest#NVDA        the Backtest tab, on NVDA
+https://<you>.github.io/<repo>/#repeat#AAPL          the Repeat test, on AAPL
 ```
 
 The tab names are `playbook` (What to do), `spreads`, `scanner`, `charts`,
 `repeat` (Repeat test), `backtest` (Backtest), `validation` (Does it work?) and
-`reference`; Charts takes a second segment, `#prices` or `#seasonality`. The
-Repeat test's and the Backtest's own settings are remembered per browser rather
-than put in the URL — they are a working state, not a view. Switching tabs rewrites the fragment in place —
+`reference`. Charts takes a second segment, `#prices` or `#seasonality`, and the
+two tabs that are *about one name* — the Repeat test and the Backtest — take
+that name instead (case-insensitively: `#backtest#nvda` works).
+
+**The name is a view; the dials are not.** Hold, target, lookback and the rest
+stay out of the URL and in the browser, because they are working state. Which
+name you are looking at is a different thing: it is what the tables on screen
+are *about*, and "look at NVDA's squeeze" is what a reader actually wants to
+send someone. A name the screen does not have is ignored and the URL corrected,
+so a stale link lands on the tab rather than on nothing.
+
+That is also the whole of the **Scanner → Backtest** cross-link: every ticker in
+the scanner table and on every strategy card is an ordinary anchor to
+`#backtest#<name>`. No click handler, and it works from a middle-click or a
+copied address like any other link.
+
+Switching tabs rewrites the fragment in place —
 `replaceState`, not a history entry, because the tab strip moves on arrow keys
 and one entry per keystroke would bury the page you arrived from. A fragment
 outranks the tab remembered from your last visit; one naming nothing is replaced
