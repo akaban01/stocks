@@ -221,6 +221,27 @@ def test_hv_context_skips_frames_without_closes():
     assert now == {} and hist == {}
 
 
+def test_hv_context_uses_iv_hv_lookback_not_vol_lookback():
+    """The options layer's HV must be decoupled from the Setup Score's own
+    vol_lookback window — otherwise the Premium Score ends up ranking IV
+    against the very number the Setup Score just selected for being low."""
+    raw = {t: _ohlcv(i) for i, t in enumerate(TICKERS)}
+    now_20, _ = run._hv_context(raw, {"vol_lookback": 20, "iv_hv_lookback": 20})
+    now_60, _ = run._hv_context(raw, {"vol_lookback": 20, "iv_hv_lookback": 60})
+    # Changing iv_hv_lookback changes the HV context...
+    assert any(now_20[t] != now_60[t] for t in TICKERS)
+    # ...but changing vol_lookback alone (iv_hv_lookback untouched) does not.
+    now_60_again, _ = run._hv_context(raw, {"vol_lookback": 5, "iv_hv_lookback": 60})
+    assert now_60 == now_60_again
+
+
+def test_hv_context_defaults_iv_hv_lookback_to_60():
+    raw = {t: _ohlcv(i) for i, t in enumerate(TICKERS)}
+    now_default, _ = run._hv_context(raw, {"vol_lookback": 20})
+    now_explicit, _ = run._hv_context(raw, {"vol_lookback": 20, "iv_hv_lookback": 60})
+    assert now_default == now_explicit
+
+
 def _etf_config(tmp_path, tickers):
     cfg = tmp_path / "config.yaml"
     cfg.write_text(

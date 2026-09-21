@@ -86,10 +86,16 @@ the term structure (15%). Premium score is what decides buy vs sell.
 
 > **On IV rank.** Free data sources publish no historical implied volatility, so
 > IV rank and percentile here are ranked against each name's own trailing
-> **realized**-vol distribution. Implied vol forecasts forward realized vol, so
-> that distribution is the honest yardstick — but the proxy reads a little high,
-> because implied carries a persistent premium over realized. The `vrp` and
-> `iv_hv_ratio` fields separate that premium out.
+> **realized**-vol distribution, over `params.iv_hv_lookback` (60 trading days
+> by default). Implied vol forecasts forward realized vol, so that distribution
+> is the honest yardstick — but the proxy reads a little high, because implied
+> carries a persistent premium over realized. The `vrp` and `iv_hv_ratio` fields
+> separate that premium out. This window is deliberately longer than, and
+> independent of, `vol_lookback` (the Setup Score's "room to move" term): the
+> Setup Score selects names for a *low* `vol_lookback`-day HV percentile, so
+> comparing IV against that same short window would score every coiled name as
+> rich for mechanical reasons — the Premium Score would be measuring the
+> selection, not the market.
 
 > **Does the score actually work?** Yes, in the way that matters. The backtest
 > (5y, the live universe — see the **Does it work?** tab, or

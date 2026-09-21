@@ -60,6 +60,12 @@ params:
   atr_length: 14            # ATR lookback
   vol_lookback: 20          # window for the expected-move volatility estimate
   percentile_lookback: 120  # window for bandwidth / HV percentile ranks (~6mo)
+  iv_hv_lookback: 60        # window for the HV the options layer compares IV against.
+                            # Deliberately longer than vol_lookback and independent of
+                            # it: the Setup Score already selects for a low
+                            # vol_lookback-day HV percentile, so ranking IV against
+                            # that same short window would bias the Premium Score
+                            # toward "rich" on exactly the names the scan likes best.
 
 # Where the scan universe comes from.
 universe:

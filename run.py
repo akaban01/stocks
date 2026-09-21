@@ -49,6 +49,7 @@ DEFAULT_PARAMS = {
     "atr_length": 14,
     "vol_lookback": 20,
     "percentile_lookback": 120,
+    "iv_hv_lookback": 60,
 }
 
 
@@ -63,14 +64,24 @@ def load_config(path: str) -> dict:
 def _hv_context(raw: dict, params: dict) -> tuple[dict[str, float], dict[str, list[float]]]:
     """Trailing realized volatility per ticker: today's reading and the last
     year of readings. The options layer ranks implied vol against these, since
-    free data sources publish no implied-vol history."""
+    free data sources publish no implied-vol history.
+
+    Deliberately a *different* window than `vol_lookback` (the Setup Score's
+    "room to move" term): the scanner selects names for having a *low*
+    `vol_lookback`-day HV percentile, so re-using that same short window here
+    would compare IV against the very number the ranking just minimized —
+    every coiled name would show an inflated IV/HV ratio and IV rank for
+    mechanical reasons, biasing the Premium Score toward "rich" on exactly the
+    names the Setup Score likes best. A longer, independent window
+    (`iv_hv_lookback`, default 60 trading days) breaks that coupling."""
     now: dict[str, float] = {}
     hist: dict[str, list[float]] = {}
+    lookback = params.get("iv_hv_lookback", 60)
     for ticker, df in raw.items():
         if df is None or "Close" not in df:
             continue
         try:
-            hv = indicators.historical_volatility(df["Close"].dropna(), params["vol_lookback"]) * 100
+            hv = indicators.historical_volatility(df["Close"].dropna(), lookback) * 100
         except Exception:
             continue
         hv = hv.dropna()
