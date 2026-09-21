@@ -587,6 +587,44 @@ zero, by construction. With one-trade-at-a-time on, "every week" becomes every
 and the gap that shows up is the **noise floor** on those settings. That is the
 bar a real rule has to clear, and it is printed rather than left to be guessed.
 
+### Optional: the best strategy for each name
+
+Search every rule at every lookback, hold and direction — 300 combinations per
+name — and crown the winner for each. On its own that would be the most
+dishonest thing on this page: search hard enough against ten years of one stock
+and something always wins, and the winner is usually noise wearing a rule's name.
+
+So the crown is never the headline. **The history is cut in two.** Every
+combination is searched on the older part, the winner is chosen there, and what
+gets reported is what that same setting went on to do on the rest — a stretch the
+search never saw. It is the same train/holdout split `calibrate.py` fits the
+Setup Score's weights on, for the same reason.
+
+Three numbers come out, and the order is the point:
+
+| | |
+|---|---|
+| **Found** | the best edge the search turned up. This is what a tool without a holdout would show you, and it means almost nothing |
+| **Out** | what that same setting did afterwards. **This is the finding** |
+| **Best available** | the best edge the holdout actually contained — what you would have picked knowing the answer. The gap between it and *Out* is the part the search missed |
+
+And above all of them, the number that settles it: **how many of the picks held
+up**. If choosing a strategy per name were a real thing to do, the picks would
+beat their own baselines out of sample far more often than a coin would.
+
+> ⚠️ **On the data as it stands, they do not.** Roughly half to three-fifths of
+> the picks hold up, the median edge falls from around +17 points in-sample to
+> about +1 out of it, and the holdout demonstrably *contained* bigger edges that
+> the search could not identify in advance. That is what overfitting looks like
+> when you measure it, and the tab reports it in those words rather than printing
+> the crown alone. Read the table as a ranking of **hypotheses to go and test
+> properly**, never as a list of trades.
+
+A combination needs 10 finished trades on **both** halves before it can be
+ranked: one that traded plenty while it was being searched and twice in the
+holdout has not been tested, it has been guessed at. Click any row to put that
+name and its settings into the controls above.
+
 ### Optional: price it as an option
 
 Everything above is percentages of the stock and rests on nothing but the
@@ -965,7 +1003,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 414 network-free tests
+python -m pytest -q          # 422 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 

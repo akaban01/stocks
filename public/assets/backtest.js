@@ -40,6 +40,8 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  function has(v) { return v !== null && v !== undefined && v !== ""; }
+
   /* Deliberately its own copy rather than a call into trial.js: this file is
      required on its own under node by the tests, and a load-order dependency
      between two browser globals is a worse trade than four lines. */
@@ -226,10 +228,16 @@
      windows have to be answerable before either fires, so the warmup is the
      longer of the two — a filter that cannot see far enough back yet does not
      get to pass a week by default. */
-  function signals(payload, series, opt, start) {
+  function signals(payload, series, opt, start, until) {
     var out = [];
     var last = (payload.weeks || []).length - 1;
     if (last < 0 || !series) return out;
+    // `until` bounds where a signal may *open*, not where its trade may run.
+    // A search that holds out the last few years needs that distinction: a
+    // trade opened inside the training window and still running when the window
+    // ends was a trade you were holding, and truncating it would quietly bias
+    // the search toward shorter holds.
+    var stopAt = (until === undefined || until === null) ? last : Math.min(last, until);
 
     var look = Math.max(1, Math.round(opt.look || 1));
     // "every" as the second rule is no filter at all, which is what the control
@@ -240,7 +248,7 @@
     var w = opt.rule === "squeeze" ? widths(series, look) : null;
     var w2 = also === "squeeze" ? widths(series, alsoLook) : null;
 
-    for (var i = Math.max(0, start || 0); i <= last; i++) {
+    for (var i = Math.max(0, start || 0); i <= stopAt; i++) {
       if (!fires(series, i, opt.rule, look, w)) continue;
       if (also && !fires(series, i, also, alsoLook, w2)) continue;
       out.push(i);
@@ -350,14 +358,17 @@
     if (last < 0 || !series) return out;
 
     var look = Math.max(1, Math.round(opt.look || 1));
-    var start = from(payload, opt.years);
+    // `opt.from` / `opt.until` bound the stretch a signal may open in, and
+    // override the years control when present — that is how the search below
+    // asks the same question of two halves of one history.
+    var start = has(opt.from) ? opt.from : from(payload, opt.years);
     var busyUntil = -1;
 
     // `found` is the same name's signals, already located — the sweep hands
     // them in so that eight holding periods share one search. Absent, they are
     // found here. Either way they are the signals for this rule and lookback
     // over this stretch of history, and the hold cannot have moved them.
-    var at = found || signals(payload, series, opt, start);
+    var at = found || signals(payload, series, opt, start, opt.until);
 
     for (var n = 0; n < at.length; n++) {
       var i = at[n];
@@ -565,6 +576,195 @@
              tried: cells.length };
   }
 
+  /* ---- the best strategy for one name ------------------------------------
+
+     Search every rule at every lookback, hold and direction, and crown the one
+     that did best. That is a data-mining exercise, and left there it would be
+     the most dishonest thing on this page: three hundred tries against ten
+     years of one stock will always turn up a winner, and the winner will
+     usually be noise wearing a rule's name.
+
+     So it is not left there. The history is cut in two. Every combination is
+     searched on the **first** part, the winner is chosen there, and the number
+     this reports is what that same setting went on to do on the **rest** — a
+     stretch the search never saw. `calibrate.py` fits the Setup Score's weights
+     the same way, on a train split, for the same reason.
+
+     Three numbers come out, and the order matters:
+
+       * `train` — the best edge the search found. This is the number a tool
+         without a holdout would print, and it means almost nothing.
+       * `test` — what that same setting did afterwards. This is the finding.
+       * `hindsight` — the best edge available on the held-out stretch, which is
+         what you would have picked if you could see it. The gap between it and
+         `test` is the part of the answer the search did not capture, and it is
+         usually most of it.
+
+     A search that works has `test` near `hindsight` and well above zero. A
+     search that is fitting noise has a large `train`, a `test` around nothing,
+     and the page says so rather than printing the crown alone. */
+
+  // Where the history is cut. 0.7 is `calibrate.py`'s default train fraction,
+  // and the same reasoning applies: enough behind to find something, enough
+  // ahead to find out whether it was there.
+  var TRAIN_FRAC = 0.7;
+
+  // A combination needs this many finished trades on a slice before it can be
+  // crowned on it. Three trades at a huge edge is the search finding one good
+  // quarter, not a strategy.
+  var SEARCH_FLOOR = 10;
+
+  var SEARCH_RULES = ["squeeze", "high", "low", "above", "below"];
+  var SEARCH_LOOKS = [4, 8, 13, 26, 39, 52];
+  var SEARCH_HOLDS = [2, 4, 8, 13, 26];
+  var SEARCH_DIRS = ["up", "down"];
+
+  // The position the history is cut at: signals before it are the search's,
+  // signals at or after it are the holdout's. A trade opened before the cut may
+  // still be running after it — that is what holding across a boundary is.
+  function cutAt(payload, frac) {
+    var n = (payload.weeks || []).length;
+    return Math.max(0, Math.min(n - 1, Math.round(n * (frac || TRAIN_FRAC))));
+  }
+
+  /* Every combination, on both slices, for one name.
+
+     The two economies the sweep uses apply again: signals depend on the rule
+     and its lookback, so one search per pair serves every hold and direction
+     below it; and the baseline depends on the direction, hold and slice, never
+     on the rule, so one per triple serves every combination measured against
+     it. Here the baseline is *this name's* own — a strategy for NVDA is worth
+     what it beat on NVDA, not on the screen as a whole. */
+  function search(payload, series, opt, axes) {
+    var rules = (axes && axes.rules) || SEARCH_RULES;
+    var looks = (axes && axes.looks) || SEARCH_LOOKS;
+    var holds = (axes && axes.holds) || SEARCH_HOLDS;
+    var dirs = (axes && axes.dirs) || SEARCH_DIRS;
+    var target = opt.target, overlap = opt.overlap;
+    var cut = cutAt(payload, (axes && axes.frac) || TRAIN_FRAC);
+    var last = (payload.weeks || []).length - 1;
+
+    var slices = {
+      train: { from: 0, until: cut - 1 },
+      test:  { from: cut, until: last }
+    };
+
+    // One baseline per direction, hold and slice — never per combination.
+    var base = {};
+    for (var d = 0; d < dirs.length; d++) {
+      for (var h = 0; h < holds.length; h++) {
+        for (var k in slices) {
+          base[dirs[d] + "|" + holds[h] + "|" + k] = run(payload, series, {
+            rule: "every", look: 1, dir: dirs[d], hold: holds[h], target: target,
+            overlap: true, from: slices[k].from, until: slices[k].until
+          });
+        }
+      }
+    }
+
+    var cells = [];
+    for (var r = 0; r < rules.length; r++) {
+      for (var l = 0; l < looks.length; l++) {
+        var found = {};
+        for (var key in slices) {
+          found[key] = signals(payload, series, { rule: rules[r], look: looks[l] },
+                               slices[key].from, slices[key].until);
+        }
+        for (var hh = 0; hh < holds.length; hh++) {
+          for (var dd = 0; dd < dirs.length; dd++) {
+            var cell = { rule: rules[r], look: looks[l], hold: holds[hh], dir: dirs[dd] };
+            for (var sk in slices) {
+              var got = run(payload, series, {
+                rule: rules[r], look: looks[l], dir: dirs[dd], hold: holds[hh],
+                target: target, overlap: overlap,
+                from: slices[sk].from, until: slices[sk].until
+              }, found[sk]);
+              var gap = edge(got, base[dirs[dd] + "|" + holds[hh] + "|" + sk]);
+              cell[sk] = { trades: got.trades, rate: got.rate, exit: got.median_exit,
+                           base_rate: base[dirs[dd] + "|" + holds[hh] + "|" + sk].rate,
+                           edge: gap.rate, thin: got.trades < SEARCH_FLOOR };
+            }
+            cells.push(cell);
+          }
+        }
+      }
+    }
+    return { cells: cells, cut: cut, tried: cells.length,
+             train_weeks: cut, test_weeks: last - cut + 1,
+             train_from: (payload.starts || [])[0],
+             train_to: (payload.starts || [])[Math.max(0, cut - 1)],
+             test_from: (payload.starts || [])[cut],
+             test_to: (payload.starts || [])[last] };
+  }
+
+  /* The pick, and everything needed to disbelieve it.
+
+     Ranked on the training slice only — `test` is never allowed to choose, or
+     the holdout stops being one and the whole exercise becomes the thing it
+     exists to catch. */
+  function best(payload, series, opt, axes) {
+    var found = search(payload, series, opt, axes);
+    var out = { ticker: (series || {}).ticker || null, tried: found.tried, cut: found.cut,
+                train_from: found.train_from, train_to: found.train_to,
+                test_from: found.test_from, test_to: found.test_to,
+                pick: null, hindsight: null, held_up: false,
+                median_usable_test: null, ranked: 0 };
+
+    // Only combinations with enough finished trades on *both* slices can be
+    // ranked: one that traded plenty while it was being searched and twice in
+    // the holdout has not been tested, it has been guessed at.
+    var usable = found.cells.filter(function (c) {
+      return c.train.edge !== null && c.test.edge !== null && !c.train.thin && !c.test.thin;
+    });
+    out.ranked = usable.length;
+    if (!usable.length) return out;
+
+    var byTrain = usable.slice().sort(function (a, b) { return b.train.edge - a.train.edge; });
+    var byTest = usable.slice().sort(function (a, b) { return b.test.edge - a.test.edge; });
+    out.pick = byTrain[0];
+    out.hindsight = byTest[0];
+    // What an ordinary combination did on the holdout. The pick has to beat
+    // this to have been worth searching for, never mind beating zero.
+    //
+    // Not `median_test`: `bestAll` below has a field by that name meaning
+    // something else entirely — the median across names of the *picks'* test
+    // edge. One is a spread within a name, the other a middle across names,
+    // and a reader who grabbed the wrong one would get a plausible number
+    // rather than an error.
+    out.median_usable_test = median(usable.map(function (c) { return c.test.edge; }));
+    // The whole verdict, in one boolean: did the setting the search crowned go
+    // on to beat that name's own baseline on weeks the search never saw?
+    out.held_up = out.pick.test.edge > 0;
+    return out;
+  }
+
+  /* The same search for every name, and — the number that actually settles it —
+     how many of the picks held up.
+
+     If choosing a strategy per name were a real thing to do, the picks would
+     beat their baselines out of sample far more often than a coin would. If
+     roughly half of them do, the search is an expensive way to generate noise,
+     and the honest thing is to report that in those words. */
+  function bestAll(payload, opt, axes) {
+    var series = (payload || {}).series || [];
+    var names = [];
+    for (var i = 0; i < series.length; i++) names.push(best(payload, series[i], opt, axes));
+    var rated = names.filter(function (n) { return n.pick; });
+    var held = rated.filter(function (n) { return n.held_up; });
+    return {
+      names: names, rated: rated.length, held: held.length,
+      held_pct: rated.length ? (held.length / rated.length) * 100 : null,
+      median_train: median(rated.map(function (n) { return n.pick.train.edge; })),
+      median_test: median(rated.map(function (n) { return n.pick.test.edge; })),
+      median_hindsight: median(rated.map(function (n) { return n.hindsight.test.edge; })),
+      tried: rated.length ? rated[0].tried : 0,
+      train_from: rated.length ? rated[0].train_from : null,
+      train_to: rated.length ? rated[0].train_to : null,
+      test_from: rated.length ? rated[0].test_from : null,
+      test_to: rated.length ? rated[0].test_to : null
+    };
+  }
+
   /* The settings that make the baseline: the same names, direction, hold,
      target and stretch of history, entered on every week there was.
 
@@ -617,5 +817,8 @@
            trade: trade, run: run, all: all, sweep: sweep, sweepAxes: sweepAxes, here: here,
            baselineOf: baselineOf,
            edge: edge, describe: describe, describePair: describePair,
-           SWEEP_HOLDS: SWEEP_HOLDS, SWEEP_LOOKS: SWEEP_LOOKS, SWEEP_FLOOR: SWEEP_FLOOR };
+           search: search, best: best, bestAll: bestAll, cutAt: cutAt,
+           SWEEP_HOLDS: SWEEP_HOLDS, SWEEP_LOOKS: SWEEP_LOOKS, SWEEP_FLOOR: SWEEP_FLOOR,
+           TRAIN_FRAC: TRAIN_FRAC, SEARCH_FLOOR: SEARCH_FLOOR, SEARCH_RULES: SEARCH_RULES,
+           SEARCH_LOOKS: SEARCH_LOOKS, SEARCH_HOLDS: SEARCH_HOLDS, SEARCH_DIRS: SEARCH_DIRS };
 });
