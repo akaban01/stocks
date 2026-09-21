@@ -3537,7 +3537,7 @@
 
   var bs = { on: false };
   var bsSort = { key: "test", dir: -1 };
-  var bsCache = { key: null, value: null };
+  var bsCache = { key: null, data: null, value: null };
 
   function bsStore() {
     try { localStorage.setItem("backtest-search", JSON.stringify(bs)); } catch (e) { /* private */ }
@@ -3545,11 +3545,18 @@
 
   // Keyed on what the search actually reads. The rule, lookback, hold and
   // direction are all swept, so moving those dials does not invalidate it.
+  //
+  // The payload is part of the key. `load` only ever writes store.weekly once,
+  // so today a differing `d` cannot happen — but a key that does not name its
+  // own input is a key you have to go and prove, and the cost of holding the
+  // reference is one word against silently serving numbers from another
+  // dataset if that ever stops being true.
   function bsRun(d) {
     var key = JSON.stringify([bt.target, bt.overlap]);
-    if (bsCache.key !== key) {
-      bsCache = { key: key, value: SpreadBacktest.bestAll(d, { target: bt.target,
-                                                              overlap: bt.overlap }) };
+    if (bsCache.key !== key || bsCache.data !== d) {
+      bsCache = { key: key, data: d,
+                  value: SpreadBacktest.bestAll(d, { target: bt.target,
+                                                     overlap: bt.overlap }) };
     }
     return bsCache.value;
   }

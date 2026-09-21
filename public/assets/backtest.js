@@ -708,7 +708,7 @@
                 train_from: found.train_from, train_to: found.train_to,
                 test_from: found.test_from, test_to: found.test_to,
                 pick: null, hindsight: null, held_up: false,
-                median_test: null, ranked: 0 };
+                median_usable_test: null, ranked: 0 };
 
     // Only combinations with enough finished trades on *both* slices can be
     // ranked: one that traded plenty while it was being searched and twice in
@@ -725,7 +725,13 @@
     out.hindsight = byTest[0];
     // What an ordinary combination did on the holdout. The pick has to beat
     // this to have been worth searching for, never mind beating zero.
-    out.median_test = median(usable.map(function (c) { return c.test.edge; }));
+    //
+    // Not `median_test`: `bestAll` below has a field by that name meaning
+    // something else entirely — the median across names of the *picks'* test
+    // edge. One is a spread within a name, the other a middle across names,
+    // and a reader who grabbed the wrong one would get a plausible number
+    // rather than an error.
+    out.median_usable_test = median(usable.map(function (c) { return c.test.edge; }));
     // The whole verdict, in one boolean: did the setting the search crowned go
     // on to beat that name's own baseline on weeks the search never saw?
     out.held_up = out.pick.test.edge > 0;

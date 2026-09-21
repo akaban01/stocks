@@ -984,6 +984,36 @@ def test_the_cut_lands_where_the_train_fraction_says():
     assert got["half"] == round(got["weeks"] * 0.5)
 
 
+def test_the_two_medians_are_not_the_same_number():
+    """`best` and `bestAll` both report a median over the holdout, and they are
+    different questions: the spread of *every usable combination* within one
+    name, against the middle of the *picks* across names. They had the same
+    field name, which is the kind of collision that returns a plausible number
+    instead of an error."""
+    data = grid_data()
+    axes = {"rules": ["high", "low"], "looks": [4, 8], "holds": [2, 4], "dirs": ["up"]}
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const opt = {json.dumps({**DEFAULTS, "target": 2})};
+      const axes = {json.dumps(axes)};
+      const one = bt.best(payload, payload.series[0], opt, axes);
+      const all = bt.bestAll(payload, opt, axes);
+      process.stdout.write(JSON.stringify({{
+        per_name: one.median_usable_test,
+        stale_name_is_gone: one.median_test === undefined,
+        across_names: all.median_test,
+        picks: all.names.filter(n => n.pick).map(n => n.pick.test.edge)
+      }}));
+    """)
+    assert got["stale_name_is_gone"], "best() still carries the colliding field name"
+    assert got["per_name"] is not None
+    # The across-names number is the median of the picks, and nothing else.
+    picks = sorted(got["picks"])
+    mid = (picks[len(picks) // 2] if len(picks) % 2
+           else (picks[len(picks) // 2 - 1] + picks[len(picks) // 2]) / 2)
+    assert got["across_names"] == mid
+
+
 def test_every_name_is_searched_and_the_hold_up_count_is_the_verdict():
     data = grid_data()
     got = node(f"""
