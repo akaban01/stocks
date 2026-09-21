@@ -44,7 +44,7 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
 | `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
-| `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test walks |
+| `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
 | `public/data/backtest.json` | `backtest.py` | does the score work? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set |
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
@@ -482,6 +482,79 @@ The counting rules live in `spread_scanner/weekly.py` and ship inside
 > to be measured — and nothing here knows about earnings dates, which is where a
 > lot of week-shaped behaviour comes from.
 
+## The Backtest tab — one rule, every name, every week
+
+The Repeat test asks about one week of the calendar. The **Backtest** tab asks
+the other question, the one a rule is actually made of:
+
+> *If I had bought every squeeze — or every new 8-week high, or every close under
+> the 20-week average — and held it eight weeks, how often did that **close**
+> +8% up? And how often did an ordinary week?*
+
+**That second sentence is the tab.** These names rose over the decade the history
+covers, so almost any rule shows a positive record and none of it is the rule's
+doing. Every answer here is printed next to its **baseline** — the same names,
+the same direction, hold and target, entered on *every* week there was — and the
+headline is the gap between the two, in points. A rule that does not clear its
+baseline was holding the market, whatever its hit rate says.
+
+| Rule | Fires when |
+|---|---|
+| **Every week (no rule)** | always — this is the baseline, selectable so you can look at it directly |
+| **Squeeze** | the high-to-low range of the last N weeks, as a share of price, is the narrowest it has been in the trailing year — the scanner's coiled spring, in weekly form |
+| **Breakout** | the close is above every close of the previous N weeks |
+| **Breakdown** | the close is below every close of the previous N weeks |
+| **Above the average** | the close is above the mean of the last N weekly closes |
+| **Below the average** | the close is below that mean — the dip, for anyone who buys them |
+
+Direction, hold, target and how far back to look are the same controls the Repeat
+test has, and the target may be zero or negative there for the same reason. Two
+more are particular to this tab:
+
+* **History, years** — the stretch of the axis the run walks, counted in ISO
+  years back from the newest week. A rule that works over ten years and not over
+  the last three is worth knowing about.
+* **Count every firing** — off by default. A signal that fires while a trade is
+  already running is passed over, because one position is what you could have
+  held, and because five overlapping windows over one good quarter are not five
+  pieces of evidence. Turned on, every firing counts, which is the right reading
+  for a survey and the wrong one for a plan.
+
+**No look-ahead, and the tests say so.** A signal at week *i* is computed from
+week *i* and the weeks before it and nothing after — `tests/test_backtest_js.py`
+runs two histories that are identical up to week 60 and different after it
+through every rule and requires the same signals from both, which is the one
+property a backtest cannot be wrong about. The entry is that week's own close,
+the first price available once the signal existed, so the signal week's high and
+low are history you bought after rather than an excursion you sat through.
+
+**Pick the baseline as your rule** and the tab tells you something it is
+otherwise hard to know: with overlapping windows counted the edge is exactly
+zero, by construction. With one-trade-at-a-time on, "every week" becomes every
+*N*th week — a thinned sample of the very thing it is being compared against —
+and the gap that shows up is the **noise floor** on those settings. That is the
+bar a real rule has to clear, and it is printed rather than left to be guessed.
+
+### What it refuses to do, and what it still cannot see
+
+The rules live in `public/assets/backtest.js`, next to the code that implements
+them, and are printed at the foot of the tab: a trade with no exit yet is *still
+open* and counted in neither column; a gap in the history inside a window is
+*skipped* and said to be skipped; the verdict is the close and **touched** is
+reported beside it, never as it; a name under five finished trades is shown in
+the ranking but never ranked.
+
+> ⚠️ **Survivorship, and why the baseline is the answer to it.** This list is
+> whoever passes the screen *today*, so ten years of it is ten years of the
+> survivors — the names a rule would have lost money on are the ones no longer
+> here to be measured. The baseline carries exactly the same bias, which is why
+> the *gap* between the two is far more honest than either number alone. On top
+> of that: nothing here charges commission, slippage or the spread you would have
+> crossed, nothing knows about earnings dates, a week is the finest grain there
+> is (a stop inside the week is invisible to it), and **a stock finishing past
+> your level is still not the spread paying out** — that is priced on the Spreads
+> tab.
+
 ## A scan is only published if the option feed answered
 
 The US close is 21:00 UTC in winter and 20:00 in summer, so the schedule sits
@@ -639,12 +712,12 @@ alone. To turn it on: **Settings → Pages → Build and deployment → Source =
 Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
 workflow already requests the `pages`/`id-token` permissions it needs.
 
-The page has seven tabs: **What to do** (the strategy cards), **Spreads** (the
+The page has eight tabs: **What to do** (the strategy cards), **Spreads** (the
 ≈13-month table), **Scanner** (the sortable ranked table), **Charts** (price
 history, and a **Seasonality** view — see below), **Repeat test** (the same trade
-placed in the same week every year), **Does it work?** (backtest + calibration)
-and **Reference** (the glossary and strategy playbook, both read from
-`scan.json`).
+placed in the same week every year), **Backtest** (a rule, run over every name
+and every week), **Does it work?** (backtest + calibration) and **Reference**
+(the glossary and strategy playbook, both read from `scan.json`).
 
 ### Linking to a view
 
@@ -656,10 +729,10 @@ https://<you>.github.io/<repo>/#charts#seasonality   Charts, on the month tables
 ```
 
 The tab names are `playbook` (What to do), `spreads`, `scanner`, `charts`,
-`repeat` (Repeat test), `validation` (Does it work?) and `reference`; Charts
-takes a second segment, `#prices` or `#seasonality`. The Repeat test's own
-settings are remembered per browser rather than put in the URL — they are a
-working state, not a view. Switching tabs rewrites the fragment in place —
+`repeat` (Repeat test), `backtest` (Backtest), `validation` (Does it work?) and
+`reference`; Charts takes a second segment, `#prices` or `#seasonality`. The
+Repeat test's and the Backtest's own settings are remembered per browser rather
+than put in the URL — they are a working state, not a view. Switching tabs rewrites the fragment in place —
 `replaceState`, not a history entry, because the tab strip moves on arrow keys
 and one entry per keystroke would bury the page you arrived from. A fragment
 outranks the tab remembered from your last visit; one naming nothing is replaced
@@ -672,13 +745,16 @@ No build step, no dependencies, no external assets:
 ```
 public/index.html          the shell and the tab markup
 public/assets/trial.js     the Repeat test's counting rules and spread maths, on their own
+public/assets/backtest.js  the Backtest tab's rules: when a signal fires, and what happened next
 public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```
 
-`trial.js` is separate because it is the one piece of frontend that is a *rule*
-rather than a rendering: what a hit, a miss, a still-open year and a skipped one
-mean. `tests/test_trial.py` runs that exact file under node, so the rules are
+`trial.js` and `backtest.js` are separate because they are the two pieces of
+frontend that are *rules* rather than renderings: what a hit, a miss, a
+still-open trade and a skipped one mean, and — on the second — what a rule is
+allowed to look at when it decides. `tests/test_trial.py` and
+`tests/test_backtest_js.py` run those exact files under node, so the rules are
 pinned to the code that ships rather than to a Python re-implementation that
 would drift from it. Tests skip themselves where node is missing; GitHub's
 runners all have it.
@@ -792,7 +868,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 290 network-free tests
+python -m pytest -q          # 390 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 
@@ -806,7 +882,11 @@ squeeze-fired detection, holdings parsing, backtest stats, the IV rank / premium
 score / classification helpers, every branch of the strategy decision table
 (including the liquidity and earnings guardrails), the spread arithmetic
 (max profit, max loss, breakevens, credit-to-width, sizing) and the JSON payloads
-— including that `NaN` never reaches a file the browser has to parse.
+— including that `NaN` never reaches a file the browser has to parse. The two
+frontend files that are *rules* rather than rendering are covered the same way,
+by running them under node: `trial.js` (the Repeat test's counting) and
+`backtest.js` (when a signal fires, what it is allowed to look at when it
+decides, and where the trade is entered).
 
 CI lints and runs the suite **before** generating or deploying anything, then
 re-validates the generated `scan.json` before the commit
@@ -844,7 +924,7 @@ spread_scanner/
   report.py                  the JSON payload (and the UI copy that ships with it)
   charts.py                  the price history payload
   seasonality.py             the same closes grouped by calendar month
-  weekly.py                  the same closes as ISO weeks -> the Repeat test
+  weekly.py                  the same closes as ISO weeks -> the Repeat test and Backtest tabs
   backtest.py                the validation payload
   alerts.py                  Slack / Discord webhook (staged, then sent)
   net.py                     retry with backoff, for every network edge
