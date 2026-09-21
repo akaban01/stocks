@@ -263,6 +263,21 @@
       </div>
 
       <div id="backtestbody"><p class="loading">Loading the weekly history…</p></div>
+
+      <!-- Optional: the same rule at every hold and every lookback. Off by
+           default — it is forty-odd runs of the thing above, and it answers a
+           second question ("is the cell I picked a ridge or a fluke?") rather
+           than the one the controls ask. -->
+      <div class="moneyhead">
+        <label class="toggle">
+          <input id="bt-sweep-on" type="checkbox">
+          <span>Sweep the dials — every hold against every lookback</span>
+        </label>
+      </div>
+
+      <div id="sweepsection" hidden>
+        <div id="sweepbody"></div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------- validation -->

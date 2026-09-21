@@ -419,6 +419,21 @@ table.heat td.seasoncell { cursor: pointer; }
 table.heat td.seasoncell:hover { outline: 1px solid var(--line); outline-offset: -1px; }
 table.heat td.seasoncell:focus-visible { outline: 2px solid var(--link); outline-offset: -1px; }
 table.heat td.seasoncell[aria-pressed="true"] { outline: 2px solid var(--link); outline-offset: -1px; }
+/* The Backtest tab's sweep grid. Its own cell class rather than table.heat's
+   `seasoncell`: two tables sharing one cell class is the collision that put the
+   seasonality table out of alignment once already. */
+/* The lookback labels shrink to their own width: left to share the table's
+   slack evenly they sat a third of a screen from the row they label, and a
+   heat grid you have to track across is one you misread. */
+table.sweep thead th:first-child, table.sweep tbody td.t { width: 1%; white-space: nowrap; }
+table.sweep td.sweepcell { cursor: pointer; text-align: right; font-variant-numeric: tabular-nums; }
+table.sweep td.sweepcell:hover { outline: 1px solid var(--line); outline-offset: -1px; }
+table.sweep td.sweepcell:focus-visible { outline: 2px solid var(--link); outline-offset: -1px; }
+table.sweep td.sweepcell[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: -1px; }
+table.sweep td.sweepcell.thin { color: var(--text-faint); }
+table.sweep tbody td.t { color: var(--text-dim); font-weight: 600; }
+table.sweep tbody tr:hover { background: transparent; }
+
 .seasondetail { margin-top: 10px; }
 .seasondetail select {
   background: var(--surface-2); border: 1px solid var(--line); color: var(--text);

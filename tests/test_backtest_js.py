@@ -515,3 +515,242 @@ def test_the_shipped_weekly_history_runs_through_every_rule():
         assert out["hit"] <= out["trades"]
         if out["trades"]:
             assert 0 <= out["rate"] <= 100
+
+
+# ---- the shared width table -----------------------------------------------
+
+def test_the_width_table_agrees_with_computing_each_one_alone():
+    """Two paths to the same number, and the fast one is the one that ships.
+
+    `widths` exists only so the squeeze stops rebuilding every neighbour's
+    range from its own bars 53 times over. The moment it disagrees with
+    `width`, it is not an optimisation, it is a second implementation.
+    """
+    closes = [100.0 + (i % 11) * 3 for i in range(120)]
+    closes[40] = None
+    data = payload({"AAA": closes})
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      for (const look of [2, 4, 13]) {{
+        const table = bt.widths(s, look);
+        for (let i = 0; i < payload.weeks.length; i++) {{
+          const alone = bt.width(s, i, look);
+          if (table[i] !== alone) {{
+            process.stdout.write(JSON.stringify({{ok: false, look, i, table: table[i], alone}}));
+            process.exit(0);
+          }}
+        }}
+      }}
+      process.stdout.write(JSON.stringify({{ok: true}}));
+    """)
+    assert same == {"ok": True}
+
+
+def test_a_precomputed_width_table_does_not_change_which_weeks_fire():
+    closes = [100.0 + (8 if i % 2 else -8) for i in range(120)]
+    for i in range(80, 90):
+        closes[i] = 100.0
+    data = payload({"AAA": closes})
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const w = bt.widths(s, 4);
+      const withTable = [], without = [];
+      for (let i = 0; i < payload.weeks.length; i++) {{
+        if (bt.fires(s, i, "squeeze", 4, w)) withTable.push(i);
+        if (bt.fires(s, i, "squeeze", 4)) without.push(i);
+      }}
+      process.stdout.write(JSON.stringify({{withTable, without}}));
+    """)
+    assert same["withTable"] == same["without"]
+    assert same["withTable"]                      # and it is not vacuously equal
+
+
+def test_signals_is_the_fires_loop():
+    closes = [100.0 + i for i in range(120)]
+    data = payload({"AAA": closes})
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const out = {{}};
+      for (const rule of ["every", "squeeze", "high", "low", "above", "below"]) {{
+        const loop = [];
+        for (let i = 0; i < payload.weeks.length; i++) {{
+          if (bt.fires(s, i, rule, 8)) loop.push(i);
+        }}
+        out[rule] = {{loop, api: bt.signals(payload, s, rule, 8, 0)}};
+      }}
+      process.stdout.write(JSON.stringify(out));
+    """)
+    for rule, got in same.items():
+        assert got["loop"] == got["api"], rule
+
+
+def test_handing_run_its_signals_changes_nothing_about_the_answer():
+    """The sweep shares one search across eight holds; it must not shift a trade."""
+    closes = [100.0 + (i % 17) * 2 for i in range(200)]
+    data = payload({"AAA": closes})
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const opt = {json.dumps({**DEFAULTS, "rule": "high", "look": 6, "hold": 5})};
+      const found = bt.signals(payload, s, opt.rule, opt.look, bt.from(payload, opt.years));
+      process.stdout.write(JSON.stringify({{
+        alone: bt.run(payload, s, opt), shared: bt.run(payload, s, opt, found)
+      }}));
+    """)
+    assert same["alone"] == same["shared"]
+
+
+# ---- the sweep ------------------------------------------------------------
+
+def sweep(data: dict, **opts) -> dict:
+    options = {**DEFAULTS, **opts}
+    return node(f"""
+      const payload = {json.dumps(data)};
+      process.stdout.write(JSON.stringify(bt.sweep(payload, {json.dumps(options)})));
+    """)
+
+
+def grid_data() -> dict:
+    """Two names with enough history for the sweep's axes to mean something."""
+    a = [100.0 + i * 0.5 + (4 if i % 5 == 0 else 0) for i in range(400)]
+    b = [80.0 + (i % 23) * 1.5 for i in range(400)]
+    return payload({"AAA": a, "BBB": b})
+
+
+def cell(result: dict, look: int, hold: int) -> dict:
+    match = [c for c in result["cells"] if c["look"] == look and c["hold"] == hold]
+    assert match, f"no cell at look={look} hold={hold}"
+    return match[0]
+
+
+def test_every_cell_is_the_run_it_claims_to_be():
+    """The grid is a shortcut, not a different calculation.
+
+    Each cell shares its signals along its row and its baseline down its column;
+    if either sharing were wrong, the cell would stop matching the run it stands
+    for — which is what this asks, on the corners and the middle.
+    """
+    data = grid_data()
+    got = sweep(data, rule="high", look=8, hold=4, years=0)
+    checks = [(c["look"], c["hold"]) for c in got["cells"]][::7]
+    for look, hold in checks:
+        direct = node(f"""
+          const payload = {json.dumps(data)};
+          const opt = {json.dumps({**DEFAULTS, "rule": "high", "years": 0})};
+          opt.look = {look}; opt.hold = {hold};
+          const rule = bt.all(payload, opt);
+          const base = bt.all(payload, bt.baselineOf(opt));
+          process.stdout.write(JSON.stringify({{
+            edge: bt.edge(rule, base).rate, trades: rule.trades, base_rate: base.rate
+          }}));
+        """)
+        here = cell(got, look, hold)
+        assert here["trades"] == direct["trades"], (look, hold)
+        assert here["edge"] == direct["edge"], (look, hold)
+        assert here["base_rate"] == direct["base_rate"], (look, hold)
+
+
+def test_the_baseline_belongs_to_the_column_not_the_grid():
+    """One baseline per hold — the subtle way a grid like this lies.
+
+    A column measured against another column's baseline would report an edge
+    that is really the difference between holding four weeks and holding
+    twenty-six, dressed up as the rule's doing.
+    """
+    got = sweep(grid_data(), rule="high", look=8, hold=4, years=0)
+    by_hold = {}
+    for c in got["cells"]:
+        by_hold.setdefault(c["hold"], set()).add(c["base_rate"])
+    for hold, rates in by_hold.items():
+        assert len(rates) == 1, f"hold {hold} was measured against {len(rates)} baselines"
+    # And the columns do not all share one: a longer hold is a different question.
+    assert len({next(iter(r)) for r in by_hold.values()}) > 1
+
+
+def test_the_setting_you_are_on_is_always_a_cell_in_the_grid():
+    got = sweep(grid_data(), rule="high", look=7, hold=3, years=0)
+    assert 7 in got["looks"] and 3 in got["holds"]
+    here = [c for c in got["cells"] if c["here"]]
+    assert len(here) == 1
+    assert (here[0]["look"], here[0]["hold"]) == (7, 3)
+
+
+def test_a_rule_with_no_lookback_sweeps_one_row():
+    got = sweep(grid_data(), rule="every", hold=4, years=0)
+    assert len(got["looks"]) == 1
+    assert len(got["cells"]) == len(got["holds"])
+
+
+def test_a_thin_cell_is_reported_but_never_crowned():
+    # Two years of history and a rare rule: most cells finish far under the floor.
+    got = sweep(grid_data(), rule="squeeze", look=8, hold=4, years=2)
+    thin = [c for c in got["cells"] if c["thin"]]
+    assert thin, "expected some cells under the trade floor on this short history"
+    assert all(c["trades"] < got["floor"] for c in thin)
+    if got["best"]:
+        assert not got["best"]["thin"]
+    assert got["ranked"] == len([c for c in got["cells"]
+                                 if not c["thin"] and c["edge"] is not None])
+
+
+def test_the_crown_is_reported_with_the_field_under_it():
+    """Best, runner-up and the middle of the rankable cells, so the winner is
+    visibly sitting on a distribution rather than arriving alone."""
+    got = sweep(grid_data(), rule="high", look=8, hold=4, years=0)
+    assert got["best"] and got["runner"]
+    assert got["best"]["edge"] >= got["runner"]["edge"]
+    assert got["middle"] is not None
+    assert got["best"]["edge"] >= got["middle"]
+    assert got["tried"] == len(got["cells"])
+
+
+def test_the_axes_can_be_asked_for_without_running_the_sweep():
+    """A cache that has to build the grid to find out whether it needs the grid
+    is not a cache. `sweepAxes` is what the page keys on, so it has to agree
+    with the grid the sweep actually produces."""
+    data = grid_data()
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const opt = {json.dumps({**DEFAULTS, "rule": "high", "look": 7, "hold": 3, "years": 0})};
+      const axes = bt.sweepAxes(opt);
+      const full = bt.sweep(payload, opt);
+      process.stdout.write(JSON.stringify({{axes, looks: full.looks, holds: full.holds}}));
+    """)
+    assert same["axes"]["looks"] == same["looks"]
+    assert same["axes"]["holds"] == same["holds"]
+
+
+def test_the_axes_do_not_move_when_only_the_dials_do():
+    """Which is what makes a cached grid reusable: moving to another cell of the
+    same grid is not a different grid."""
+    data = grid_data()
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const base = {json.dumps({**DEFAULTS, "rule": "high", "years": 0})};
+      const a = bt.sweepAxes(Object.assign({{}}, base, {{look: 8, hold: 4}}));
+      const b = bt.sweepAxes(Object.assign({{}}, base, {{look: 26, hold: 13}}));
+      const c = bt.sweepAxes(Object.assign({{}}, base, {{look: 7, hold: 4}}));
+      process.stdout.write(JSON.stringify({{a, b, c}}));
+    """)
+    assert same["a"] == same["b"], "both pairs are already on the default grid"
+    assert same["c"] != same["a"], "a lookback off the default grid adds a row"
+
+
+def test_the_you_are_here_mark_follows_the_dials_not_the_grid():
+    """The bug this pins: a cached grid keeps whatever cell was outlined when it
+    was built, so after adopting a cell the outline sat on the old one."""
+    data = grid_data()
+    same = node(f"""
+      const payload = {json.dumps(data)};
+      const opt = {json.dumps({**DEFAULTS, "rule": "high", "look": 8, "hold": 4, "years": 0})};
+      const grid = bt.sweep(payload, opt);            // built while on 8 / 4
+      const first = grid.cells.filter(c => c.here).map(c => [c.look, c.hold]);
+      bt.here(grid, Object.assign({{}}, opt, {{look: 26, hold: 13}}));   // dials moved
+      const second = grid.cells.filter(c => c.here).map(c => [c.look, c.hold]);
+      process.stdout.write(JSON.stringify({{first, second}}));
+    """)
+    assert same["first"] == [[8, 4]]
+    assert same["second"] == [[26, 13]], "the outline stayed on the cell the grid was built at"
