@@ -2615,8 +2615,8 @@
   // does is draw the result — and put the baseline next to it, because a rate
   // on its own is a fact about the decade, not about the rule.
 
-  var bt = { rule: "squeeze", look: 8, dir: "up", hold: 8, target: 8, years: 10,
-             overlap: false, ticker: "", sweepOn: false };
+  var bt = { rule: "squeeze", look: 8, also: "every", alsoLook: 20, dir: "up", hold: 8,
+             target: 8, years: 10, overlap: false, ticker: "", sweepOn: false };
   var btSort = { key: "edge", dir: -1 };
 
   /* One range per numeric control, for the same reason the money section has
@@ -2625,12 +2625,13 @@
      passing a control, and a `hold` of zero would divide the history into
      trades with no window. The markup's min/max are the same numbers. */
   var BT_RANGE = {
-    look:   { lo: 2, hi: 52, fallback: 8, whole: true },
-    hold:   { lo: 1, hi: 52, fallback: 8, whole: true },
-    years:  { lo: 1, hi: 25, fallback: 10, whole: true },
+    look:     { lo: 2, hi: 52, fallback: 8, whole: true },
+    alsoLook: { lo: 2, hi: 52, fallback: 20, whole: true },
+    hold:     { lo: 1, hi: 52, fallback: 8, whole: true },
+    years:    { lo: 1, hi: 25, fallback: 10, whole: true },
     // Zero or negative is the in-the-money question — "did it hold up" rather
     // than "did it travel" — exactly as on the Repeat test.
-    target: { lo: -95, hi: 300, fallback: 8 }
+    target:   { lo: -95, hi: 300, fallback: 8 }
   };
 
   function btClamp(key, value) {
@@ -2647,8 +2648,15 @@
   }
 
   function btOpt() {
-    return { rule: bt.rule, look: bt.look, dir: bt.dir, hold: bt.hold,
-             target: bt.target, years: bt.years, overlap: bt.overlap };
+    return { rule: bt.rule, look: bt.look, also: bt.also, alsoLook: bt.alsoLook,
+             dir: bt.dir, hold: bt.hold, target: bt.target, years: bt.years,
+             overlap: bt.overlap };
+  }
+
+  // Whether a second rule is actually filtering anything. "every" is the
+  // control's "— nothing", and it is the same no-op the engine reads it as.
+  function btFiltered() {
+    return !!(bt.also && bt.also !== "every" && SpreadBacktest.RULES[bt.also]);
   }
 
   function btMove() { return bt.dir === "up" ? bt.target : -bt.target; }
@@ -2975,12 +2983,17 @@
       "page. The next scan restores it.</p>";
   }
 
-  // The rule's own sentence, with the lookback filled in, above the answer.
+  /* The rule's own sentence, with the lookback filled in, above the answer.
+     Where there are two, the second is set as a condition on the first rather
+     than as a second claim — which is what an AND is. */
   function btRuleSaid() {
-    var said = SpreadBacktest.describe(bt.rule, bt.look);
-    if (!said) return "";
+    var said = SpreadBacktest.describePair(btOpt());
+    if (!said.rule) return "";
     return '<p class="dim" style="font-size:.87rem;margin:0 0 14px"><b>' +
-      esc((SpreadBacktest.RULES[bt.rule] || {}).label || bt.rule) + ".</b> " + esc(said) +
+      esc(said.label) + (said.alsoLabel ? " + " + esc(said.alsoLabel) : "") + ".</b> " +
+      esc(said.rule) +
+      (said.also ? " <b>And only where</b> " + esc(said.also.charAt(0).toLowerCase() +
+        said.also.slice(1)) : "") +
       " Held " + bt.hold + " week" + (bt.hold === 1 ? "" : "s") + ", counted as a hit at " +
       esc(btGoal() + btSide()) + " on the closing week, over the last " + bt.years +
       " year" + (bt.years === 1 ? "" : "s") + ".</p>";
@@ -3009,8 +3022,11 @@
     // resolving the axes by running the sweep would be doing the very work the
     // cache exists to skip.
     var axes = SpreadBacktest.sweepAxes(opt);
-    var key = JSON.stringify([bt.rule, bt.dir, bt.target, bt.years, bt.overlap,
-                              axes.looks, axes.holds]);
+    // Everything that changes a cell's value but is not one of the two axes —
+    // the second rule very much included, or changing the filter would hand
+    // back the unfiltered grid.
+    var key = JSON.stringify([bt.rule, bt.also, bt.alsoLook, bt.dir, bt.target,
+                              bt.years, bt.overlap, axes.looks, axes.holds]);
     if (btGrid.key !== key) btGrid = { key: key, value: SpreadBacktest.sweep(d, opt) };
     // Always re-marked, hit or miss: the grid outlives the dials, and the cell
     // the controls are on is the one thing about it that moves.
@@ -3111,7 +3127,11 @@
     var sw = btSweep(d);
     var lookless = !(SpreadBacktest.RULES[bt.rule] || {}).look;
     return '<div class="lede">The same rule at every hold' +
-      (lookless ? "" : " against every lookback") + ", each cell measured against " +
+      (lookless ? "" : " against every lookback") +
+      (btFiltered() ? ", with the second rule held fixed at " + bt.alsoLook +
+        " weeks in every cell — the grid sweeps the rule you are testing, not the " +
+        "filter on it" : "") +
+      ", each cell measured against " +
       "<b>its own column's baseline</b> — every week at that same hold, which is the only " +
       "thing a hold of 26 weeks can honestly be compared with. Green is an edge over that, " +
       "red is worse than it. Click a cell to move the controls there.</div>" +
@@ -3222,6 +3242,16 @@
     if (label && r.look) {
       label.textContent = r.look.charAt(0).toUpperCase() + r.look.slice(1) + ", weeks";
     }
+    // The second rule's lookback is its own, and named for what it means to
+    // *that* rule — the whole reason the two are not one control.
+    var also = btFiltered() ? SpreadBacktest.RULES[bt.also] : null;
+    var alsoCtl = $("#bt-alsolook-ctl");
+    if (alsoCtl) alsoCtl.hidden = !(also && also.look);
+    var alsoLabel = $("#bt-alsolook-label");
+    if (alsoLabel && also && also.look) {
+      alsoLabel.textContent = also.look.charAt(0).toUpperCase() + also.look.slice(1) +
+        ", weeks";
+    }
     var note = $("#bt-overlap-note");
     if (note) {
       note.textContent = bt.overlap
@@ -3266,6 +3296,12 @@
     $("#bt-look").addEventListener("input", onChange(function (el) {
       bt.look = btClamp("look", el.value);
     }));
+    $("#bt-also").addEventListener("change", onChange(function (el) {
+      bt.also = SpreadBacktest.RULES[el.value] ? el.value : "every";
+    }));
+    $("#bt-alsolook").addEventListener("input", onChange(function (el) {
+      bt.alsoLook = btClamp("alsoLook", el.value);
+    }));
     $("#bt-hold").addEventListener("input", onChange(function (el) {
       bt.hold = btClamp("hold", el.value);
     }));
@@ -3296,6 +3332,12 @@
     $("#bt-rule").innerHTML = SpreadBacktest.RULE_KEYS.map(function (k) {
       return '<option value="' + esc(k) + '">' + esc(SpreadBacktest.RULES[k].label) + "</option>";
     }).join("");
+    // The second list is the same rules, with "every" reading as the no-op it
+    // is: a filter that passes every week is no filter.
+    $("#bt-also").innerHTML = SpreadBacktest.RULE_KEYS.map(function (k) {
+      return '<option value="' + esc(k) + '">' +
+        (k === "every" ? "— nothing" : esc(SpreadBacktest.RULES[k].label)) + "</option>";
+    }).join("");
 
     // Whatever was set last time, clamped on the way in: localStorage is input,
     // not state, and it is treated as input.
@@ -3305,7 +3347,8 @@
       for (var key in bt) {
         if (!has(saved[key])) continue;
         bt[key] = (key === "overlap" || key === "sweepOn") ? !!saved[key]
-          : key === "rule" ? (SpreadBacktest.RULES[saved[key]] ? saved[key] : bt.rule)
+          : (key === "rule" || key === "also")
+            ? (SpreadBacktest.RULES[saved[key]] ? saved[key] : bt[key])
           : key === "dir" ? (saved[key] === "down" ? "down" : "up")
           : key === "ticker" ? String(saved[key])
           : btClamp(key, saved[key]);
@@ -3313,6 +3356,8 @@
     }
     $("#bt-rule").value = bt.rule;
     $("#bt-look").value = bt.look;
+    $("#bt-also").value = bt.also;
+    $("#bt-alsolook").value = bt.alsoLook;
     $("#bt-hold").value = bt.hold;
     $("#bt-target").value = bt.target;
     $("#bt-years").value = bt.years;

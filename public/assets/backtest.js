@@ -216,14 +216,34 @@
      are. Separating the two is what lets the sweep below ask about eight
      holding periods without finding the same signals eight times, and it is
      also the honest shape of the thing: the rule decides when you would have
-     bought, and everything else decides what that was worth. */
-  function signals(payload, series, rule, look, start) {
+     bought, and everything else decides what that was worth.
+
+     `opt.also` is a second rule, with its own lookback in `opt.alsoLook`, and
+     the week has to satisfy both. It is an AND and nothing cleverer: "the
+     squeeze, but only while the name is above its 20-week average" is the
+     question people actually ask next, and it is one line here because the two
+     rules are already independent of everything downstream of them. Both
+     windows have to be answerable before either fires, so the warmup is the
+     longer of the two — a filter that cannot see far enough back yet does not
+     get to pass a week by default. */
+  function signals(payload, series, opt, start) {
     var out = [];
     var last = (payload.weeks || []).length - 1;
     if (last < 0 || !series) return out;
-    var w = rule === "squeeze" ? widths(series, look) : null;
+
+    var look = Math.max(1, Math.round(opt.look || 1));
+    // "every" as the second rule is no filter at all, which is what the control
+    // reads as "— nothing" and what an absent field has always meant.
+    var also = opt.also && opt.also !== "every" && RULES[opt.also] ? opt.also : null;
+    var alsoLook = Math.max(1, Math.round(opt.alsoLook || look));
+
+    var w = opt.rule === "squeeze" ? widths(series, look) : null;
+    var w2 = also === "squeeze" ? widths(series, alsoLook) : null;
+
     for (var i = Math.max(0, start || 0); i <= last; i++) {
-      if (fires(series, i, rule, look, w)) out.push(i);
+      if (!fires(series, i, opt.rule, look, w)) continue;
+      if (also && !fires(series, i, also, alsoLook, w2)) continue;
+      out.push(i);
     }
     return out;
   }
@@ -337,7 +357,7 @@
     // them in so that eight holding periods share one search. Absent, they are
     // found here. Either way they are the signals for this rule and lookback
     // over this stretch of history, and the hold cannot have moved them.
-    var at = found || signals(payload, series, opt.rule, look, start);
+    var at = found || signals(payload, series, opt, start);
 
     for (var n = 0; n < at.length; n++) {
       var i = at[n];
@@ -510,11 +530,18 @@
       // One signal search per lookback, shared by every hold in the row.
       var found = [];
       for (var n = 0; n < series.length; n++) {
-        found.push(signals(payload, series[n], opt.rule, looks[l], start));
+        // The grid sweeps the *primary* rule's lookback. A second rule keeps
+        // the lookback you set for it, in every cell — said on the page,
+        // because a grid that quietly swept both axes of a two-rule signal
+        // would be a different question in every row.
+        found.push(signals(payload, series[n], { rule: opt.rule, look: looks[l],
+                                                 also: opt.also, alsoLook: opt.alsoLook },
+                           start));
       }
       for (var k = 0; k < holds.length; k++) {
-        var cell = all(payload, { rule: opt.rule, look: looks[l], dir: opt.dir,
-                                  hold: holds[k], target: opt.target, years: opt.years,
+        var cell = all(payload, { rule: opt.rule, look: looks[l], also: opt.also,
+                                  alsoLook: opt.alsoLook, dir: opt.dir, hold: holds[k],
+                                  target: opt.target, years: opt.years,
                                   overlap: opt.overlap }, found);
         var gap = edge(cell, base[holds[k]]);
         cells.push({ look: looks[l], hold: holds[k], trades: cell.trades,
@@ -571,10 +598,24 @@
     return r.what.replace(/\{n\}/g, String(look));
   }
 
+  // Both rules' sentences, when there are two. Returned as a pair rather than
+  // one string because the page sets them in different type — the rule is the
+  // claim, the filter is a condition on it — and joining them here would decide
+  // that for it.
+  function describePair(opt) {
+    var also = opt.also && opt.also !== "every" && RULES[opt.also] ? opt.also : null;
+    return {
+      rule: describe(opt.rule, Math.round(opt.look)),
+      also: also ? describe(also, Math.round(opt.alsoLook || opt.look)) : "",
+      label: (RULES[opt.rule] || {}).label || opt.rule,
+      alsoLabel: also ? RULES[also].label : ""
+    };
+  }
+
   return { RULES: RULES, RULE_KEYS: RULE_KEYS, NOTES: NOTES, median: median, width: width,
            widths: widths, fires: fires, signals: signals, warmup: warmup, from: from,
            trade: trade, run: run, all: all, sweep: sweep, sweepAxes: sweepAxes, here: here,
            baselineOf: baselineOf,
-           edge: edge, describe: describe,
+           edge: edge, describe: describe, describePair: describePair,
            SWEEP_HOLDS: SWEEP_HOLDS, SWEEP_LOOKS: SWEEP_LOOKS, SWEEP_FLOOR: SWEEP_FLOOR };
 });

@@ -237,6 +237,13 @@
         <label class="ctl wide"><span>Rule</span><select id="bt-rule"></select></label>
         <label class="ctl" id="bt-look-ctl"><span id="bt-look-label">Lookback, weeks</span>
           <input id="bt-look" type="number" min="2" max="52" step="1" value="8"></label>
+        <!-- A second rule, ANDed with the first. Its own lookback, because the
+             same number means a range window to one rule and a moving average
+             to the other. -->
+        <label class="ctl wide"><span>And also</span><select id="bt-also"></select></label>
+        <label class="ctl" id="bt-alsolook-ctl" hidden>
+          <span id="bt-alsolook-label">Lookback, weeks</span>
+          <input id="bt-alsolook" type="number" min="2" max="52" step="1" value="20"></label>
         <div class="ctl">
           <span>Direction</span>
           <div class="filters" role="group" aria-label="Target direction" id="bt-dir">
