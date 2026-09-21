@@ -285,6 +285,53 @@
       <div id="sweepsection" hidden>
         <div id="sweepbody"></div>
       </div>
+
+      <!-- Optional: the same trades, priced as an option. The same arrangement
+           and the same caveat as the Repeat test's money section, and the same
+           arithmetic — it calls trial.js rather than keeping a second copy. -->
+      <div class="moneyhead">
+        <label class="toggle">
+          <input id="bm-on" type="checkbox">
+          <span>Price it — real cash in, cash out, net</span>
+        </label>
+      </div>
+
+      <div id="bmsection" hidden>
+        <div class="notice">
+          <b>The debit is yours, not the market's.</b> This repo holds ten years of stock
+          bars and no option history, so nothing here can look up what one of these
+          really cost on the week it opened — you set it below and it is held constant
+          across every trade. In life it is not: the debit climbs with implied volatility,
+          and implied volatility climbs when the market is frightened. That bites harder
+          here than on the Repeat test, because a rule like the squeeze <i>selects</i> for
+          a volatility regime, so its trades are not a random sample of what options cost.
+          Everything after that one number is exact. The <b>breakeven debit</b> in the
+          totals is the number to take to a live quote.
+        </div>
+
+        <div class="controls" id="bmstructure">
+          <div class="ctl">
+            <span>Structure</span>
+            <div class="filters" role="group" aria-label="Option structure" id="bm-structure">
+              <button class="chip" data-structure="spread" aria-pressed="true">Debit spread</button>
+              <button class="chip" data-structure="single" aria-pressed="false">Single option</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="controls" id="bmcontrols">
+          <label class="ctl"><span>Long strike, % from entry</span>
+            <input id="bm-long" type="number" min="-50" max="100" step="0.5" value="0"></label>
+          <label class="ctl" id="bm-short-ctl"><span>Short strike, % from entry</span>
+            <input id="bm-short" type="number" min="-50" max="200" step="0.5" value="8"></label>
+          <label class="ctl"><span id="bm-debit-label">Debit paid, % of width</span>
+            <input id="bm-debit" type="number" min="1" max="99" step="1" value="40"></label>
+          <label class="ctl"><span>Contracts</span>
+            <input id="bm-contracts" type="number" min="1" max="1000" step="1" value="1"></label>
+        </div>
+
+        <div id="bmbody"></div>
+      </div>
     </section>
 
     <!-- ----------------------------------------------------- validation -->

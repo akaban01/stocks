@@ -71,6 +71,22 @@ def run_economics(data: dict, ticker: str, spread: dict, **opts) -> dict:
     return json.loads(done.stdout)
 
 
+def node_economics(rows: list[dict], deal: dict) -> dict:
+    """`SpreadTrial.economics` over rows handed straight in.
+
+    The tab builds its rows by running a trial; this hands them over directly,
+    which is what a second caller with differently-shaped rows does.
+    """
+    script = f"""
+      const trial = require({json.dumps(str(TRIAL_JS))});
+      const result = {{rows: {json.dumps(rows)}}};
+      process.stdout.write(JSON.stringify(trial.economics(result, {json.dumps(deal)})));
+    """
+    done = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
 # ---- building payloads by hand --------------------------------------------
 
 def payload(bars: dict[str, list], first_week: tuple[int, int] = (2016, 1)) -> dict:
@@ -710,3 +726,38 @@ def test_the_totals_are_the_rows_added_up():
     assert econ["won"] + econ["lost"] + econ["flat"] == econ["years"]
     assert econ["best"]["net"] >= econ["worst"]["net"]
     assert econ["lots"] == 3
+
+
+# ---- priced from somewhere other than the Repeat test ---------------------
+
+def test_economics_prices_any_row_with_an_entry_and_an_exit():
+    """The Backtest tab reuses this rather than keeping a second copy.
+
+    Its rows are not years — they are trades a rule took, labelled by the week
+    they opened — but they carry the same four fields the arithmetic reads. A
+    second implementation of option payoff maths, drifting quietly from this
+    one, is the failure this file exists to avoid, so the reuse is pinned here.
+    """
+    rows = [
+        {"settled": True, "start": "2019-03-04", "entry": 100.0, "exit": 112.0,
+         "exit_pct": 12.0},
+        {"settled": True, "start": "2021-07-05", "entry": 50.0, "exit": 48.0,
+         "exit_pct": -4.0},
+        {"settled": False, "start": "2026-09-14", "entry": 80.0},   # still open
+    ]
+    got = node_economics(rows, {"dir": "up", "long": 0, "short": 8, "debit": 40,
+                                "contracts": 1})
+    assert got["years"] == 2, "the open row must not be priced"
+    assert [r["when"] for r in got["rows"]] == ["2019-03-04", "2021-07-05"]
+    # +12% on a 0/8 call spread expires at the full width; −4% expires worthless.
+    assert got["rows"][0]["maxed"] is True
+    assert got["rows"][1]["worthless"] is True
+    assert got["won"] == 1 and got["lost"] == 1
+
+
+def test_a_repeat_test_row_still_labels_itself_by_its_year():
+    rows = [{"settled": True, "year": 2019, "entry": 100.0, "exit": 112.0, "exit_pct": 12.0}]
+    got = node_economics(rows, {"dir": "up", "long": 0, "short": 8, "debit": 40,
+                                "contracts": 1})
+    assert got["rows"][0]["year"] == 2019
+    assert got["rows"][0]["when"] == 2019

@@ -3016,6 +3016,11 @@
   // the grid, so it stays put instead of flickering through a recompute.
   var btGrid = { key: null, value: null };
 
+  // The last run this tab drew, kept so the money section below can price the
+  // very trades on screen rather than running the rule a second time and
+  // hoping the two agree.
+  var btLast = null;
+
   function btSweep(d) {
     var opt = btOpt();
     // The shape is asked for first, and the grid is only built on a miss —
@@ -3193,6 +3198,7 @@
       return;
     }
     var res = SpreadBacktest.all(d, btOpt());
+    btLast = res;
     var base = btBaseline(d);
     var gap = SpreadBacktest.edge(res, base);
 
@@ -3222,6 +3228,232 @@
     // cached on the axes, so adopting a cell does not recompute the grid it
     // came from.
     btSweepDraw();
+    // And the money section prices the run that was just drawn.
+    bmDraw();
+  }
+
+  /* ------------------------------------------- pricing the Backtest's trades
+   *
+   * Everything above this is percentages of the stock and rests on nothing but
+   * the closes. This is the other half of the question — what it would have
+   * cost and what it would have paid, in dollars — and it is opened
+   * deliberately, because it needs one number this repo does not hold.
+   *
+   * The arithmetic is `SpreadTrial.economics`, the same function the Repeat
+   * test's money section uses. It reads `settled`, `entry`, `exit` and
+   * `exit_pct` off a row and nothing else, and the rows here carry exactly
+   * those — so this tab borrows the option maths rather than keeping a second
+   * copy of it that would drift. What lives here is only the rendering, and the
+   * controls that feed it.
+   */
+
+  var bm = { on: false, structure: "spread", long: 0, short: 8, debit: 40, contracts: 1 };
+  var bmSort = { key: "net", dir: -1 };
+
+  // The same bounds the Repeat test's money controls carry, for the same
+  // reason: localStorage is input, not state, and a hand-edited blob reaches
+  // the arithmetic without passing a control.
+  var BM_RANGE = {
+    long:      { lo: -50, hi: 100, fallback: 0 },
+    short:     { lo: -50, hi: 200, fallback: 8 },
+    debit:     { lo: 1, hi: 99, fallback: 40 },
+    contracts: { lo: 1, hi: 1000, fallback: 1, whole: true }
+  };
+
+  function bmClamp(key, value) {
+    var r = BM_RANGE[key];
+    if (!r) return value;
+    var v = Number(value);
+    if (value === "" || value === null || isNaN(v)) v = r.fallback;
+    v = Math.min(r.hi, Math.max(r.lo, v));
+    return r.whole ? Math.round(v) : v;
+  }
+
+  function bmSingle() { return bm.structure === "single"; }
+
+  function bmDeal() {
+    // `dir` comes off the Backtest tab's own direction chip: a debit spread is
+    // a call spread going up and a put spread going down, which is the same
+    // fact that chip already carries. Two controls for one fact would let them
+    // disagree.
+    return { dir: bt.dir, structure: bm.structure, long: bm.long, short: bm.short,
+             debit: bm.debit, contracts: bm.contracts };
+  }
+
+  function bmStore() {
+    try { localStorage.setItem("backtest-money", JSON.stringify(bm)); } catch (e) { /* private */ }
+  }
+
+  // ---- rendering
+
+  function bmTiles(econ) {
+    function tile(cls, k, v) {
+      return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
+        "</div></div>";
+    }
+    var lots = econ.lots === 1 ? "one contract" : num(econ.lots, 0) + " contracts";
+    var won = econ.years ? num((econ.won / econ.years) * 100, 0) + "%" : "—";
+    return '<div class="rulebar">' +
+      tile(econ.net > 0 ? "cheap" : econ.net < 0 ? "rich" : "fair",
+           "Net — " + cash(econ.net),
+           num(econ.years, 0) + " finished trade" + (econ.years === 1 ? "" : "s") + " at " +
+           lots + " each: " + cash(econ.paid) + " paid in, " + cash(econ.received) +
+           " back. Every one of them is in the table below.") +
+      tile("fair", "Return on what you staked — " + (has(econ.roi) ? signed(econ.roi, 0) : "—"),
+           "The net over the total debit. It is not an annual figure and it is not " +
+           "compounded — the trades overlap or they do not depending on the setting above, " +
+           "so there is no one account this could have been run in.") +
+      // The sentence under this one has to agree with the number above it. A
+      // generic warning that a debit structure usually loses, printed beside a
+      // 7-of-7 record, reads as a page not looking at its own output.
+      tile("fair", "Won " + econ.won + " of " + num(econ.years, 0) + " — " + won,
+           (econ.maxed ? num(econ.maxed, 0) + " reached the full width; " : "") +
+           num(econ.worthless, 0) + " expired worthless. " +
+           (econ.years && econ.won / econ.years >= 0.5
+             ? "Winning this often is not the structure being safe — it is " + esc(bt.ticker) +
+               " over this stretch, on " + num(econ.years, 0) + " trade" +
+               (econ.years === 1 ? "" : "s") + ". The net and the breakeven are what to read."
+             : "A debit structure loses its whole cost more often than it wins, which is why " +
+               "the net matters and the hit rate does not.")) +
+      tile(has(econ.breakeven) && econ.breakeven >= bm.debit ? "cheap" : "rich",
+           "Breakeven debit — " + (has(econ.breakeven) ? num(econ.breakeven, 1) + "%" : "—"),
+           "The debit, as a share of " + (bmSingle() ? "the entry price" : "the width") +
+           ", that would have made this whole run wash. Under it these trades made money, " +
+           "over it they did not — and unlike everything else here it needs no view on what " +
+           "the option actually cost. This is the number to take to a live quote.") +
+      "</div>";
+  }
+
+  // The trades themselves, newest first and capped: a rule that fires every
+  // week over ten years is a thousand rows nobody reads.
+  var BM_MAX_ROWS = 40;
+
+  function bmTable(econ) {
+    if (!econ.rows.length) return "";
+    var shown = econ.rows.slice().reverse().slice(0, BM_MAX_ROWS);
+    var body = shown.map(function (r) {
+      var net = r.net > 1e-9 ? "up" : r.net < -1e-9 ? "down" : "";
+      return "<tr><td class=\"t\">" + esc(String(r.when)) + "</td>" +
+        '<td class="r">' + money(r.entry) + "</td>" +
+        '<td class="r">' + money(r.long) + "</td>" +
+        '<td class="r">' + (r.short === null ? "—" : money(r.short)) + "</td>" +
+        '<td class="r">' + money(r.exit) + "</td>" +
+        '<td class="r' + (r.maxed ? " maxed" : r.worthless ? " zero" : "") + '">' +
+          money(r.worth) + "</td>" +
+        '<td class="r out">' + cash(r.paid) + "</td>" +
+        '<td class="r">' + cash(r.received) + "</td>" +
+        '<td class="r net ' + net + '">' + cash(r.net) + "</td></tr>";
+    }).join("");
+    var more = econ.rows.length > BM_MAX_ROWS
+      ? '<p class="faint" style="font-size:.83rem;margin:8px 0 0">The ' + BM_MAX_ROWS +
+        " most recent of " + econ.rows.length + " — the totals above are over all of them.</p>"
+      : "";
+    var foot = "<tfoot><tr><td class=\"t\">" + num(econ.years, 0) + " trades</td>" +
+      "<td></td><td></td><td></td><td></td><td></td>" +
+      '<td class="r out">' + cash(econ.paid) + "</td>" +
+      '<td class="r">' + cash(econ.received) + "</td>" +
+      '<td class="r net ' + (econ.net > 0 ? "up" : econ.net < 0 ? "down" : "") + '">' +
+        cash(econ.net) + "</td></tr></tfoot>";
+    return '<div class="tablewrap"><table class="scan money"><thead><tr>' +
+      "<th>Opened</th><th class=\"r\">Entry</th><th class=\"r\">Long</th>" +
+      '<th class="r">Short</th><th class="r">Exit</th><th class="r">Worth</th>' +
+      '<th class="r">Paid</th><th class="r">Back</th><th class="r">Net</th>' +
+      "</tr></thead><tbody>" + body + "</tbody>" + foot + "</table></div>" + more;
+  }
+
+  function bmApplyStructure() {
+    var single = bmSingle();
+    var chips = document.querySelectorAll("#bm-structure button");
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].setAttribute("aria-pressed",
+        chips[i].dataset.structure === bm.structure ? "true" : "false");
+    }
+    var shortCtl = $("#bm-short-ctl");
+    if (shortCtl) shortCtl.hidden = single;
+    var label = $("#bm-debit-label");
+    if (label) {
+      label.textContent = single ? "Premium paid, % of entry price" : "Debit paid, % of width";
+    }
+  }
+
+  /* The trades this prices are the ones on screen: the same rule, the same
+     name, the same settings. Deliberately the picked name rather than every
+     name pooled — a dollar total across twenty-nine names is a portfolio
+     nobody ran, sized by nothing. */
+  function bmDraw() {
+    var host = $("#bmbody");
+    $("#bmsection").hidden = !bm.on;
+    if (!bm.on || !store.weekly || !btLast) { if (host) host.innerHTML = ""; return; }
+
+    var one = null;
+    for (var i = 0; i < btLast.names.length; i++) {
+      if (btLast.names[i].ticker === bt.ticker) { one = btLast.names[i]; break; }
+    }
+    if (!one || !one.trades) {
+      host.innerHTML = '<p class="empty">' + esc(bt.ticker) +
+        " has no finished trade on these settings, so there is nothing to price.</p>";
+      return;
+    }
+
+    var econ = SpreadTrial.economics(one, bmDeal());
+    if (econ.why) {
+      host.innerHTML = '<div class="notice">Nothing to price — ' + esc(econ.why) + ".</div>";
+      return;
+    }
+    host.innerHTML = "<h2>" + esc(bt.ticker) + " — priced as " +
+      (bmSingle() ? "a single option" : "a debit spread") + "</h2>" +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">Every finished trade the ' +
+      "rule took on " + esc(bt.ticker) + ", each priced off its own entry — strikes are " +
+      "percentages of it, for the same reason the target is. Pick another name in the " +
+      "ranking above to price that one instead.</p>" +
+      bmTiles(econ) + bmTable(econ);
+  }
+
+  function wireMoney() {
+    function onNum(id, key) {
+      $(id).addEventListener("input", function () {
+        bm[key] = bmClamp(key, this.value);
+        bmStore();
+        bmDraw();
+      });
+    }
+    $("#bm-on").addEventListener("change", function () {
+      bm.on = !!this.checked;
+      bmStore();
+      bmDraw();
+    });
+    onNum("#bm-long", "long");
+    onNum("#bm-short", "short");
+    onNum("#bm-debit", "debit");
+    onNum("#bm-contracts", "contracts");
+
+    var structures = document.querySelectorAll("#bm-structure button");
+    for (var s = 0; s < structures.length; s++) {
+      structures[s].addEventListener("click", function () {
+        bm.structure = this.dataset.structure === "single" ? "single" : "spread";
+        bmStore();
+        bmApplyStructure();
+        bmDraw();
+      });
+    }
+
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("backtest-money") || "null"); } catch (e) { saved = null; }
+    if (saved) {
+      for (var key in bm) {
+        if (!has(saved[key])) continue;
+        bm[key] = key === "on" ? !!saved[key]
+          : key === "structure" ? (saved[key] === "single" ? "single" : "spread")
+          : bmClamp(key, saved[key]);
+      }
+    }
+    $("#bm-on").checked = !!bm.on;
+    $("#bm-long").value = bm.long;
+    $("#bm-short").value = bm.short;
+    $("#bm-debit").value = bm.debit;
+    $("#bm-contracts").value = bm.contracts;
+    $("#bmsection").hidden = !bm.on;
+    bmApplyStructure();
   }
 
   function btPick(ticker) {
@@ -3531,6 +3763,7 @@
     wireSpread();
     wireBacktest();
     wireSweep();
+    wireMoney();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;
