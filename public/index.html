@@ -286,6 +286,24 @@
         <div id="sweepbody"></div>
       </div>
 
+      <!-- Optional: search every combination for the best one per name. Off by
+           default, and deliberately not the tab's headline: it is a data-mining
+           exercise, and the only thing that makes it honest — the holdout — is
+           reported above the crown rather than under it. -->
+      <div class="moneyhead">
+        <label class="toggle">
+          <input id="bs-on" type="checkbox">
+          <span>Find the best strategy for each name</span>
+        </label>
+        <span class="heatnote" id="bs-note">Searches every rule, lookback, hold and
+          direction on the older part of the history, then reports what the winner did
+          on the rest.</span>
+      </div>
+
+      <div id="bssection" hidden>
+        <div id="bsbody"><p class="loading">Searching…</p></div>
+      </div>
+
       <!-- Optional: the same trades, priced as an option. The same arrangement
            and the same caveat as the Repeat test's money section, and the same
            arithmetic — it calls trial.js rather than keeping a second copy. -->

@@ -850,3 +850,154 @@ def test_the_pair_describes_itself():
     assert "20" in said["pair"]["also"]
     assert said["pair"]["alsoLabel"]
     assert said["alone"]["also"] == "" and said["alone"]["alsoLabel"] == ""
+
+
+# ---- searching for the best strategy, and holding out a slice to check it --
+
+def search_best(data: dict, ticker: str, axes: dict | None = None, **opts) -> dict:
+    options = {**DEFAULTS, **opts}
+    return node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series.find(x => x.ticker === {json.dumps(ticker)});
+      process.stdout.write(JSON.stringify(
+        bt.best(payload, s, {json.dumps(options)}, {json.dumps(axes)})));
+    """)
+
+
+def test_a_signal_may_open_only_inside_the_window_it_is_asked_for():
+    closes = [100.0 + i for i in range(200)]
+    data = payload({"AAA": closes})
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const opt = {{rule: "high", look: 4}};
+      process.stdout.write(JSON.stringify({{
+        whole: bt.signals(payload, s, opt, 0),
+        early: bt.signals(payload, s, opt, 0, 99),
+        late: bt.signals(payload, s, opt, 100)
+      }}));
+    """)
+    assert got["early"] and max(got["early"]) <= 99
+    assert got["late"] and min(got["late"]) >= 100
+    # Between them they are the whole set, with nothing counted twice.
+    assert got["early"] + got["late"] == got["whole"]
+
+
+def test_a_trade_opened_before_the_cut_may_still_run_past_it():
+    """Truncating it at the boundary would bias the search toward short holds.
+
+    Holding across the end of the training window is what holding *is*; what
+    must not cross the line is where a trade may *open*.
+    """
+    closes = flat(60)
+    closes[54] = 130.0                       # the exit, four weeks past the cut
+    data = payload({"AAA": closes})
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const opt = {json.dumps({**DEFAULTS, "rule": "every", "hold": 4, "target": 8,
+                               "overlap": True})};
+      opt.from = 0; opt.until = 50;
+      const out = bt.run(payload, s, opt);
+      const at50 = out.rows.filter(r => r.at === 50)[0];
+      process.stdout.write(JSON.stringify({{
+        last_open: Math.max(...out.rows.map(r => r.at)),
+        at50_settled: !!at50.settled, at50_exit: at50.exit
+      }}));
+    """)
+    assert got["last_open"] == 50, "a signal opened past the window's end"
+    assert got["at50_settled"] is True
+    assert got["at50_exit"] == 130.0, "the trade was cut short at the boundary"
+
+
+def test_the_holdout_never_chooses_the_pick():
+    """The one property this whole feature rests on.
+
+    A combination that is best on the held-out slice must not be crowned for
+    it; the pick comes from the training slice alone, or the holdout has been
+    spent and the number it reports means nothing.
+    """
+    data = grid_data()
+    axes = {"rules": ["high", "low"], "looks": [4, 8], "holds": [2, 4], "dirs": ["up"]}
+    got = search_best(data, "AAA", axes, target=2)
+    assert got["pick"] and got["hindsight"]
+    cells = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const out = bt.search(payload, s, {json.dumps({**DEFAULTS, "target": 2})},
+                            {json.dumps(axes)});
+      process.stdout.write(JSON.stringify(out.cells));
+    """)
+    usable = [c for c in cells
+              if c["train"]["edge"] is not None and c["test"]["edge"] is not None
+              and not c["train"]["thin"] and not c["test"]["thin"]]
+    best_train = max(usable, key=lambda c: c["train"]["edge"])
+    best_test = max(usable, key=lambda c: c["test"]["edge"])
+    assert got["pick"]["train"]["edge"] == best_train["train"]["edge"]
+    assert got["hindsight"]["test"]["edge"] == best_test["test"]["edge"]
+
+
+def test_hindsight_is_reported_beside_the_pick_and_is_never_worse():
+    data = grid_data()
+    got = search_best(data, "AAA", {"rules": ["high", "low"], "looks": [4, 8],
+                                    "holds": [2, 4], "dirs": ["up"]}, target=2)
+    assert got["hindsight"]["test"]["edge"] >= got["pick"]["test"]["edge"]
+
+
+def test_held_up_is_the_pick_beating_its_own_baseline_out_of_sample():
+    data = grid_data()
+    got = search_best(data, "AAA", {"rules": ["high", "low"], "looks": [4, 8],
+                                    "holds": [2, 4], "dirs": ["up"]}, target=2)
+    assert got["held_up"] == (got["pick"]["test"]["edge"] > 0)
+
+
+def test_a_combination_thin_on_either_slice_cannot_be_crowned():
+    """Plenty of trades while it was searched and two in the holdout is not a
+    tested strategy, it is a guessed one."""
+    data = grid_data()
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series[0];
+      const opt = {json.dumps({**DEFAULTS, "target": 2})};
+      const axes = {json.dumps({"rules": ["high"], "looks": [4], "holds": [2], "dirs": ["up"]})};
+      const found = bt.search(payload, s, opt, axes);
+      const picked = bt.best(payload, s, opt, axes);
+      process.stdout.write(JSON.stringify({{
+        cells: found.cells.length, ranked: picked.ranked,
+        thin: found.cells.filter(c => c.train.thin || c.test.thin).length,
+        floor: bt.SEARCH_FLOOR
+      }}));
+    """)
+    assert got["ranked"] == got["cells"] - got["thin"]
+
+
+def test_the_cut_lands_where_the_train_fraction_says():
+    data = grid_data()
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      process.stdout.write(JSON.stringify({{
+        weeks: payload.weeks.length, cut: bt.cutAt(payload), frac: bt.TRAIN_FRAC,
+        half: bt.cutAt(payload, 0.5)
+      }}));
+    """)
+    assert got["cut"] == round(got["weeks"] * got["frac"])
+    assert got["half"] == round(got["weeks"] * 0.5)
+
+
+def test_every_name_is_searched_and_the_hold_up_count_is_the_verdict():
+    data = grid_data()
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const out = bt.bestAll(payload, {json.dumps({**DEFAULTS, "target": 2})},
+        {json.dumps({"rules": ["high", "low"], "looks": [4, 8], "holds": [2, 4], "dirs": ["up"]})});
+      process.stdout.write(JSON.stringify({{
+        names: out.names.length, rated: out.rated, held: out.held, pct: out.held_pct,
+        tickers: out.names.map(n => n.ticker),
+        recount: out.names.filter(n => n.pick && n.pick.test.edge > 0).length
+      }}));
+    """)
+    assert got["tickers"] == ["AAA", "BBB"]
+    assert got["held"] == got["recount"]
+    assert got["held"] <= got["rated"] <= got["names"]
+    if got["rated"]:
+        assert got["pct"] == (got["held"] / got["rated"]) * 100

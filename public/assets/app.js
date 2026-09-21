@@ -3294,6 +3294,7 @@
     btSweepDraw();
     // And the money section prices the run that was just drawn.
     bmDraw();
+    bsDraw();
   }
 
   /* ------------------------------------------- pricing the Backtest's trades
@@ -3518,6 +3519,222 @@
     $("#bm-contracts").value = bm.contracts;
     $("#bmsection").hidden = !bm.on;
     bmApplyStructure();
+  }
+
+  /* ------------------------------------ the best strategy for each name
+   *
+   * Three hundred combinations per name, and a winner for every one of them.
+   * Left there this would be the most dishonest thing on the page — search
+   * hard enough against ten years of one stock and something always wins.
+   *
+   * So the crown is never the headline. The search runs on the older part of
+   * the history, and what this leads with is what the winner went on to do on
+   * the part it never saw, next to what an *ordinary* combination did on the
+   * same stretch. On the data as it stands that comparison is brutal, and it
+   * is supposed to be: the page's job here is to show you the answer and why
+   * not to trust it, in that order.
+   */
+
+  var bs = { on: false };
+  var bsSort = { key: "test", dir: -1 };
+  var bsCache = { key: null, value: null };
+
+  function bsStore() {
+    try { localStorage.setItem("backtest-search", JSON.stringify(bs)); } catch (e) { /* private */ }
+  }
+
+  // Keyed on what the search actually reads. The rule, lookback, hold and
+  // direction are all swept, so moving those dials does not invalidate it.
+  function bsRun(d) {
+    var key = JSON.stringify([bt.target, bt.overlap]);
+    if (bsCache.key !== key) {
+      bsCache = { key: key, value: SpreadBacktest.bestAll(d, { target: bt.target,
+                                                              overlap: bt.overlap }) };
+    }
+    return bsCache.value;
+  }
+
+  function bsCombo(c) {
+    var r = SpreadBacktest.RULES[c.rule] || {};
+    return esc((r.label || c.rule).split(" — ")[0]) + " " + c.look + "w, held " + c.hold +
+      "w, " + (c.dir === "down" ? "down ↓" : "up ↑");
+  }
+
+  /* The verdict, and it is not the crown.
+   *
+   * A search that works picks settings that go on beating their own baseline
+   * far more often than a coin would. One that is fitting noise picks settings
+   * that hold up about half the time, with a large in-sample edge and nothing
+   * left out of sample — and prints exactly that. */
+  function bsVerdict(all) {
+    function tile(cls, k, v) {
+      return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
+        "</div></div>";
+    }
+    var pct = all.held_pct;
+    // Better than a coin by a margin worth the name. Under that, the search is
+    // an expensive way to generate noise and is told to say so.
+    var works = has(pct) && pct >= 65;
+    var decay = has(all.median_train) && has(all.median_test)
+      ? all.median_train - all.median_test : null;
+
+    return '<div class="rulebar">' +
+      tile(works ? "cheap" : "rich",
+           "Held up out of sample — " + all.held + " of " + all.rated +
+             (has(pct) ? " (" + num(pct, 0) + "%)" : ""),
+           "The settings the search crowned on the older history, then measured on the " +
+           "years it never saw: this many still beat that name's own baseline. " +
+           (works
+             ? "Better than a coin by enough to be worth something — but read the decay beside "
+               + "it before believing any single row."
+             : "<b>That is about what a coin would do.</b> Picking a strategy per name, on this "
+               + "much history, mostly finds what already happened rather than what is going to.")) +
+      tile("rich", "What the edge did — " + points(all.median_train, 0) + " → " +
+             points(all.median_test, 0),
+           "Median edge of the picks while they were being searched, and afterwards. " +
+           (has(decay) && decay > 0
+             ? "<b>" + esc(points(decay, 0)) + " of it was not there once the holdout started.</b> "
+             : "") +
+           "That gap is the cost of searching: most of what a search finds is the search.") +
+      tile("fair", "Best that was available — " + points(all.median_hindsight, 0),
+           "The best edge the holdout actually contained, per name — what you would have " +
+           "picked knowing the answer. There <i>were</i> edges out there; the search just " +
+           "could not tell in advance which. The distance from the middle number to this one " +
+           "is the part it missed.") +
+      tile("fair", "Searched — " + num(all.tried, 0) + " per name",
+           "Every rule at every lookback, hold and direction, on " + esc(all.names.length) +
+           " names. Split at " + esc(all.train_to || "—") + ": searched on " +
+           esc(all.train_from || "—") + "–" + esc(all.train_to || "—") + ", reported on " +
+           esc(all.test_from || "—") + "–" + esc(all.test_to || "—") + ". A combination needs " +
+           SpreadBacktest.SEARCH_FLOOR + " finished trades on <i>both</i> to be ranked.") +
+      "</div>";
+  }
+
+  function bsTable(all) {
+    var rows = all.names.filter(function (n) { return n.pick; });
+    if (!rows.length) return '<p class="empty">No name had a combination with enough ' +
+      "finished trades on both halves of the history to be ranked.</p>";
+
+    var key = bsSort.key;
+    rows.sort(function (a, b) {
+      if (key === "ticker") return a.ticker.localeCompare(b.ticker) * bsSort.dir;
+      var x = key === "train" ? a.pick.train.edge
+            : key === "test" ? a.pick.test.edge
+            : key === "hindsight" ? a.hindsight.test.edge : a.pick.test.trades;
+      var y = key === "train" ? b.pick.train.edge
+            : key === "test" ? b.pick.test.edge
+            : key === "hindsight" ? b.hindsight.test.edge : b.pick.test.trades;
+      return (x - y) * bsSort.dir;
+    });
+
+    function th(k, label, cls) {
+      return sortableTh(k, label, cls || "",
+        bsSort.key === k ? (bsSort.dir === 1 ? "ascending" : "descending") : "none");
+    }
+    var body = rows.map(function (n) {
+      var p = n.pick;
+      return '<tr class="srow" data-ticker="' + esc(n.ticker) + '" data-rule="' + esc(p.rule) +
+        '" data-look="' + p.look + '" data-hold="' + p.hold + '" data-dir="' + esc(p.dir) +
+        '" tabindex="0" title="' + esc("put " + n.ticker + "'s pick into the controls above") +
+        '">' +
+        '<td class="t">' + esc(n.ticker) + "</td>" +
+        "<td>" + bsCombo(p) + "</td>" +
+        '<td class="r soft-hit">' + points(p.train.edge, 0) + "</td>" +
+        '<td class="r ' + (p.test.edge > 0 ? "hit" : "miss") + '"><b>' +
+          points(p.test.edge, 0) + "</b></td>" +
+        '<td class="r faint">' + points(n.hindsight.test.edge, 0) + "</td>" +
+        '<td class="r">' + num(p.test.trades, 0) + "</td>" +
+        '<td class="' + (n.held_up ? "hit" : "miss") + '">' +
+          (n.held_up ? "held up" : "did not") + "</td></tr>";
+    }).join("");
+
+    return "<h2>The pick for each name</h2>" +
+      '<p class="dim" style="font-size:.87rem;margin:0 0 10px">The best combination found on ' +
+      "the older history, and what it did afterwards. <b>Out</b> is the column that matters — " +
+      "<b>found</b> is what the search saw while it was choosing, and it is the number a tool " +
+      "without a holdout would have shown you on its own. Click a row to put that name and its " +
+      "settings into the controls above.</p>" +
+      '<div class="tablewrap"><table class="scan rank"><thead><tr>' +
+      th("ticker", "Name") + '<th>Pick</th>' + th("train", "Found", "r") +
+      th("test", "Out", "r") + th("hindsight", "Best available", "r") +
+      th("trades", "Trades out", "r") + "<th>Verdict</th>" +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>" +
+      '<p class="faint" style="font-size:.83rem;margin:10px 0 0">A row that held up is not a ' +
+      "strategy for that name. It is one combination out of " + num(all.tried, 0) + " that " +
+      "survived one holdout on one stock, and these names move together besides — a good few " +
+      "years for the market floats most of the column at once. Treat the table as a ranking of " +
+      "<i>hypotheses to go and test properly</i>, never as a list of trades.</p>";
+  }
+
+  function bsAdopt(el) {
+    bt.ticker = el.dataset.ticker;
+    bt.rule = SpreadBacktest.RULES[el.dataset.rule] ? el.dataset.rule : bt.rule;
+    bt.look = btClamp("look", el.dataset.look);
+    bt.hold = btClamp("hold", el.dataset.hold);
+    bt.dir = el.dataset.dir === "down" ? "down" : "up";
+    $("#bt-ticker").value = bt.ticker;
+    $("#bt-rule").value = bt.rule;
+    $("#bt-look").value = bt.look;
+    $("#bt-hold").value = bt.hold;
+    var dirs = document.querySelectorAll("#bt-dir button");
+    for (var i = 0; i < dirs.length; i++) {
+      dirs[i].setAttribute("aria-pressed", dirs[i].dataset.dir === bt.dir ? "true" : "false");
+    }
+    btStore();
+    writeHash();
+    btApplyRule();
+    btDraw();
+    $("#btcontrols").scrollIntoView({ block: "nearest" });
+  }
+
+  function bsDraw() {
+    var host = $("#bsbody");
+    $("#bssection").hidden = !bs.on;
+    if (!bs.on || !store.weekly) { if (host) host.innerHTML = ""; return; }
+    if (!store.weekly.series.length) { host.innerHTML = ""; return; }
+
+    var all = bsRun(store.weekly);
+    host.innerHTML =
+      '<div class="lede">Every rule, at every lookback, hold and direction — ' +
+      num(all.tried, 0) + " combinations for each of " + all.names.length + " names — " +
+      "searched on the <b>older</b> part of the history. What is reported is what each " +
+      "winner then did on the <b>rest</b>, which the search never saw. That split is the " +
+      "whole point: a search always finds a winner, and the only question worth asking is " +
+      "whether the winner was still one afterwards. It is the same train/holdout split " +
+      "<code>calibrate.py</code> fits the Setup Score's weights on.</div>" +
+      bsVerdict(all) + bsTable(all);
+
+    wireSort(host.querySelectorAll("table.scan.rank thead th"), function (k) {
+      if (bsSort.key === k) bsSort.dir = -bsSort.dir;
+      else { bsSort.key = k; bsSort.dir = k === "ticker" ? 1 : -1; }
+      bsDraw();
+      var again = host.querySelector('table.scan.rank thead th[data-key="' + k + '"]');
+      if (again) again.focus();
+    });
+
+    var picks = host.querySelectorAll("tr.srow[data-ticker]");
+    for (var p = 0; p < picks.length; p++) {
+      picks[p].addEventListener("click", function () { bsAdopt(this); });
+      picks[p].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          bsAdopt(this);
+        }
+      });
+    }
+  }
+
+  function wireSearch() {
+    $("#bs-on").addEventListener("change", function () {
+      bs.on = !!this.checked;
+      bsStore();
+      bsDraw();
+    });
+    var saved = null;
+    try { saved = JSON.parse(localStorage.getItem("backtest-search") || "null"); } catch (e) { saved = null; }
+    if (saved) bs.on = !!saved.on;
+    $("#bs-on").checked = bs.on;
+    $("#bssection").hidden = !bs.on;
   }
 
   function btPick(ticker) {
@@ -3838,6 +4055,7 @@
     wireBacktest();
     wireSweep();
     wireMoney();
+    wireSearch();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;
