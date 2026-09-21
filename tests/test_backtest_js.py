@@ -579,7 +579,7 @@ def test_signals_is_the_fires_loop():
         for (let i = 0; i < payload.weeks.length; i++) {{
           if (bt.fires(s, i, rule, 8)) loop.push(i);
         }}
-        out[rule] = {{loop, api: bt.signals(payload, s, rule, 8, 0)}};
+        out[rule] = {{loop, api: bt.signals(payload, s, {{rule, look: 8}}, 0)}};
       }}
       process.stdout.write(JSON.stringify(out));
     """)
@@ -595,7 +595,7 @@ def test_handing_run_its_signals_changes_nothing_about_the_answer():
       const payload = {json.dumps(data)};
       const s = payload.series[0];
       const opt = {json.dumps({**DEFAULTS, "rule": "high", "look": 6, "hold": 5})};
-      const found = bt.signals(payload, s, opt.rule, opt.look, bt.from(payload, opt.years));
+      const found = bt.signals(payload, s, opt, bt.from(payload, opt.years));
       process.stdout.write(JSON.stringify({{
         alone: bt.run(payload, s, opt), shared: bt.run(payload, s, opt, found)
       }}));
@@ -754,3 +754,99 @@ def test_the_you_are_here_mark_follows_the_dials_not_the_grid():
     """)
     assert same["first"] == [[8, 4]]
     assert same["second"] == [[26, 13]], "the outline stayed on the cell the grid was built at"
+
+
+# ---- two rules at once ----------------------------------------------------
+
+def signals_for(data: dict, ticker: str, **opts) -> list[int]:
+    options = {**DEFAULTS, **opts}
+    return node(f"""
+      const payload = {json.dumps(data)};
+      const s = payload.series.find(x => x.ticker === {json.dumps(ticker)});
+      process.stdout.write(JSON.stringify(bt.signals(payload, s, {json.dumps(options)}, 0)));
+    """)
+
+
+def test_a_second_rule_is_an_and_not_a_new_rule():
+    """The weeks both rules fire on, and only those."""
+    closes = [100.0 + (i % 9) for i in range(120)]
+    data = payload({"AAA": closes})
+    a = set(signals_for(data, "AAA", rule="high", look=4))
+    b = set(signals_for(data, "AAA", rule="above", look=6))
+    both = set(signals_for(data, "AAA", rule="high", look=4, also="above", alsoLook=6))
+    assert both == a & b
+    assert both != a and both, "the filter has to actually remove something here"
+
+
+def test_the_and_does_not_care_which_rule_is_written_first():
+    closes = [100.0 + (i % 13) * 2 for i in range(200)]
+    data = payload({"AAA": closes})
+    one = signals_for(data, "AAA", rule="high", look=5, also="above", alsoLook=9)
+    two = signals_for(data, "AAA", rule="above", look=9, also="high", alsoLook=5)
+    assert one == two
+
+
+def test_each_rule_keeps_its_own_lookback():
+    """Two windows, two numbers. One shared lookback would be a control that
+    lies: eight weeks means a range window to a squeeze and a moving average to
+    the filter beside it."""
+    closes = [100.0 + (i % 9) for i in range(120)]
+    data = payload({"AAA": closes})
+    short = signals_for(data, "AAA", rule="high", look=4, also="above", alsoLook=4)
+    long_ = signals_for(data, "AAA", rule="high", look=4, also="above", alsoLook=20)
+    assert short != long_
+
+
+def test_no_second_rule_means_no_filter():
+    closes = [100.0 + (i % 9) for i in range(120)]
+    data = payload({"AAA": closes})
+    bare = signals_for(data, "AAA", rule="high", look=4)
+    for absent in [None, "", "every", "no-such-rule"]:
+        assert signals_for(data, "AAA", rule="high", look=4, also=absent) == bare, absent
+
+
+def test_the_warmup_is_the_longer_of_the_two_windows():
+    """A filter that cannot see far enough back yet must not pass a week by
+    default — it has no opinion, and no opinion is not agreement."""
+    closes = [100.0 + i for i in range(200)]
+    data = payload({"AAA": closes})
+    # `high` over 4 weeks can answer from week 4; a 40-week average cannot until
+    # week 39, so nothing may fire before then.
+    filtered = signals_for(data, "AAA", rule="high", look=4, also="above", alsoLook=40)
+    assert min(filtered) >= 39
+    assert min(signals_for(data, "AAA", rule="high", look=4)) == 4
+
+
+def test_a_second_rule_carries_through_the_run_and_the_sweep():
+    """The filter has to reach the trades and every cell of the grid — a filter
+    that only applies to the headline would make the grid a different question
+    from the answer above it."""
+    data = grid_data()
+    got = node(f"""
+      const payload = {json.dumps(data)};
+      const opt = {json.dumps({**DEFAULTS, "rule": "high", "look": 6, "hold": 4,
+                               "also": "above", "alsoLook": 20, "years": 0})};
+      const bare = Object.assign({{}}, opt, {{also: null}});
+      const grid = bt.sweep(payload, opt);
+      const at6 = grid.cells.filter(c => c.look === 6 && c.hold === 4)[0];
+      const direct = bt.all(payload, opt);
+      process.stdout.write(JSON.stringify({{
+        filtered: bt.all(payload, opt).fired, bare: bt.all(payload, bare).fired,
+        cell_trades: at6.trades, direct_trades: direct.trades
+      }}));
+    """)
+    assert got["filtered"] < got["bare"], "the filter removed nothing"
+    assert got["cell_trades"] == got["direct_trades"], "the grid dropped the filter"
+
+
+def test_the_pair_describes_itself():
+    said = node("""
+      process.stdout.write(JSON.stringify({
+        pair: bt.describePair({rule: "squeeze", look: 8, also: "above", alsoLook: 20}),
+        alone: bt.describePair({rule: "squeeze", look: 8, also: "every", alsoLook: 20})
+      }));
+    """)
+    assert "8-week" in said["pair"]["rule"] or "last 8" in said["pair"]["rule"]
+    assert "20" in said["pair"]["also"]
+    assert said["pair"]["alsoLabel"]
+    assert said["alone"]["also"] == "" and said["alone"]["alsoLabel"] == ""

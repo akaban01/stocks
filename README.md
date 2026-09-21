@@ -513,6 +513,18 @@ baseline was holding the market, whatever its hit rate says.
 | **Above the average** | the close is above the mean of the last N weekly closes |
 | **Below the average** | the close is below that mean — the dip, for anyone who buys them |
 
+Any two of them can be combined — see *Two rules at once* below.
+
+**Two rules at once.** *And also* adds a second rule, ANDed with the first: the
+week has to satisfy both. "The squeeze, but only while the name is above its
+20-week average" is the question people ask straight after the first one, and
+it is the one that turns a signal into something resembling a strategy. The
+second rule keeps **its own lookback**, because the same number means a range
+window to a squeeze and a moving average to the filter beside it. Both windows
+have to be answerable before either fires — a filter that cannot see far enough
+back yet does not get to pass a week by default, since having no opinion is not
+agreement.
+
 Direction, hold, target and how far back to look are the same controls the Repeat
 test has, and the target may be zero or negative there for the same reason. Two
 more are particular to this tab:
@@ -540,7 +552,10 @@ One setting is a number; the grid around it is evidence. **Sweep the dials**
 runs the same rule at every hold against every lookback and paints the result,
 so you can see whether the pair you picked sits on a ridge of settings that all
 worked or is the one green cell in a red field — which is most of what tells a
-pattern from a coincidence. Click any cell to move the controls there.
+pattern from a coincidence. Click any cell to move the controls there. With a second rule set, the grid
+sweeps the **rule you are testing** and holds the filter fixed at the lookback
+you gave it — a grid that swept both would be asking a different question in
+every row — and it says so above itself.
 
 Each cell is measured against **its own column's baseline** — every week at that
 same hold. That is the part a grid like this gets wrong quietly: a column
@@ -905,7 +920,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 405 network-free tests
+python -m pytest -q          # 412 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 
