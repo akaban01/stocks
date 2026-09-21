@@ -534,6 +534,37 @@ property a backtest cannot be wrong about. The entry is that week's own close,
 the first price available once the signal existed, so the signal week's high and
 low are history you bought after rather than an excursion you sat through.
 
+### Sweeping the two dials
+
+One setting is a number; the grid around it is evidence. **Sweep the dials**
+runs the same rule at every hold against every lookback and paints the result,
+so you can see whether the pair you picked sits on a ridge of settings that all
+worked or is the one green cell in a red field — which is most of what tells a
+pattern from a coincidence. Click any cell to move the controls there.
+
+Each cell is measured against **its own column's baseline** — every week at that
+same hold. That is the part a grid like this gets wrong quietly: a column
+measured against another column's baseline would report an edge that is really
+the difference between holding four weeks and holding twenty-six, dressed up as
+the rule's doing.
+
+The winner is never printed alone. Beside it go the **runner-up** — a cell well
+clear of the field is a ridge, a cell a fraction clear is the same crown and much
+weaker evidence — and the **middle cell**, what an *ordinary* setting on that grid
+is worth. A grid whose middle is negative and whose best is +6 has one good cell,
+not a rule that works. Cells under 30 finished trades are faded: shown, never
+ranked.
+
+> ⚠️ **Forty-eight cells are not forty-eight independent tries.** Neighbouring
+> cells share most of their trades, and the names move together on top of that.
+> And the winner is the best of forty-eight — a high bar to clear on purpose and
+> a low one to clear by luck, which is exactly why the field is printed under it.
+
+It is off by default, because it is forty-odd runs of the answer above and it
+asks a second question. Turning the two dials it sweeps does **not** recompute
+it: those cells were all computed already, so adopting one moves the controls and
+leaves the grid where it is.
+
 **Pick the baseline as your rule** and the tab tells you something it is
 otherwise hard to know: with overlapping windows counted the edge is exactly
 zero, by construction. With one-trade-at-a-time on, "every week" becomes every
@@ -751,7 +782,7 @@ No build step, no dependencies, no external assets:
 ```
 public/index.html          the shell and the tab markup
 public/assets/trial.js     the Repeat test's counting rules and spread maths, on their own
-public/assets/backtest.js  the Backtest tab's rules: when a signal fires, and what happened next
+public/assets/backtest.js  the Backtest tab's rules: when a signal fires, what happened next, and the sweep
 public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```
@@ -874,7 +905,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 390 network-free tests
+python -m pytest -q          # 405 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 

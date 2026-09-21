@@ -144,8 +144,13 @@
 
      A hole anywhere in the window the rule needs is a refusal, not a shrug: a
      squeeze computed across a gap is a squeeze measured over more calendar time
-     than it claims, and the one thing worse than no signal is a wrong one. */
-  function fires(series, i, rule, look) {
+     than it claims, and the one thing worse than no signal is a wrong one.
+
+     `w` is an optional array of precomputed widths for this series and this
+     lookback — see `widths` below. It changes nothing about the answer; it is
+     how the squeeze stops being quadratic when a caller asks the same question
+     of every week. Left out, each width is computed on the spot. */
+  function fires(series, i, rule, look, w) {
     if (!ok(series, i)) return false;
     if (rule === "every") return true;
 
@@ -175,13 +180,52 @@
     // Squeeze: this week's range, against every reading of the same measure over
     // the trailing year. Scaled by the close, because a $4 range on a $40 stock
     // and on a $400 one are not the same range.
-    var here = width(series, i, look);
-    if (here === null) return false;
+    var here = w ? w[i] : width(series, i, look);
+    if (here === null || here === undefined) return false;
     for (var y = i - 51; y < i; y++) {
-      var was = width(series, y, look);
-      if (was !== null && was <= here) return false;
+      var was = w ? w[y] : width(series, y, look);
+      if (was !== null && was !== undefined && was <= here) return false;
     }
     return true;
+  }
+
+  /* Every week's `width`, for one series and one lookback, in one pass.
+
+     The squeeze compares this week's range against all fifty-two before it, and
+     each of those was being rebuilt from its own `look` bars every time it was
+     asked for — so one week's answer cost 52 × look bar reads, and a whole
+     history rebuilt each width fifty-three times over. Built once here, each
+     costs `look` reads and every comparison after that is an array lookup. The
+     window is still walked rather than rolled: a rolling extreme has to drop
+     values as it slides, and a hole in the history invalidates the window
+     outright, which is fiddlier than it is worth for the factor it saves.
+
+     The numbers are identical either way, and the tests run both paths against
+     each other to keep it that way. */
+  function widths(series, look) {
+    var out = new Array(series.close.length);
+    for (var i = 0; i < out.length; i++) out[i] = width(series, i, look);
+    return out;
+  }
+
+  /* Every week the rule fires on, for one name, in one pass.
+
+     Signals depend on the rule, its lookback and the history — and on nothing
+     else. The hold, the target, the direction and the overlap rule all belong
+     to what happens *after* a signal, so they cannot change where the signals
+     are. Separating the two is what lets the sweep below ask about eight
+     holding periods without finding the same signals eight times, and it is
+     also the honest shape of the thing: the rule decides when you would have
+     bought, and everything else decides what that was worth. */
+  function signals(payload, series, rule, look, start) {
+    var out = [];
+    var last = (payload.weeks || []).length - 1;
+    if (last < 0 || !series) return out;
+    var w = rule === "squeeze" ? widths(series, look) : null;
+    for (var i = Math.max(0, start || 0); i <= last; i++) {
+      if (fires(series, i, rule, look, w)) out.push(i);
+    }
+    return out;
   }
 
   // The high-to-low range of the `look` weeks ending at `i`, as a share of the
@@ -277,7 +321,7 @@
      counted, which is the right reading for the baseline and the wrong one for
      anything you plan to trade. Both are reported: `fired` is how often the
      rule spoke, `rows` is how many of those became trades. */
-  function run(payload, series, opt) {
+  function run(payload, series, opt, found) {
     var out = { rows: [], fired: 0, taken: 0, hit: 0, miss: 0, open: 0, skipped: 0,
                 touched: 0, trades: 0, rate: null, touch_rate: null, median_exit: null,
                 median_best: null, median_worst: null, median_weeks: null,
@@ -289,8 +333,14 @@
     var start = from(payload, opt.years);
     var busyUntil = -1;
 
-    for (var i = start; i <= last; i++) {
-      if (!fires(series, i, opt.rule, look)) continue;
+    // `found` is the same name's signals, already located — the sweep hands
+    // them in so that eight holding periods share one search. Absent, they are
+    // found here. Either way they are the signals for this rule and lookback
+    // over this stretch of history, and the hold cannot have moved them.
+    var at = found || signals(payload, series, opt.rule, look, start);
+
+    for (var n = 0; n < at.length; n++) {
+      var i = at[n];
       out.fired++;
       // One trade at a time, unless the caller asked for all of them.
       if (!opt.overlap && i <= busyUntil) continue;
@@ -329,14 +379,16 @@
      trades puts three into the denominator rather than a 100% record into a
      mean. What pooling does not fix is that these names move together — said on
      the page, under the number, every time it is printed. */
-  function all(payload, opt) {
+  function all(payload, opt, found) {
     var out = { names: [], rows: [], fired: 0, taken: 0, trades: 0, hit: 0, touched: 0,
                 open: 0, skipped: 0, rate: null, touch_rate: null, median_exit: null,
                 median_best: null, median_worst: null };
     var series = (payload || {}).series || [];
     var exits = [], bests = [], worsts = [];
     for (var i = 0; i < series.length; i++) {
-      var one = run(payload, series[i], opt);
+      // `found` is one entry per series, in the same order — the sweep's shared
+      // signal search. Absent, each name finds its own.
+      var one = run(payload, series[i], opt, found ? found[i] : null);
       out.names.push(one);
       out.fired += one.fired;
       out.taken += one.taken;
@@ -363,6 +415,127 @@
     out.median_best = median(bests);
     out.median_worst = median(worsts);
     return out;
+  }
+
+  /* ---- the sweep --------------------------------------------------------
+
+     One setting is a number; the grid around it is evidence.
+
+     The Repeat test has the same problem and answers it the same way: asking
+     someone to pick one week out of fifty-three, and then painting all
+     fifty-three so they can see whether the one they picked sits on a green
+     ridge or is the single good week in a red field. Here the two dials are the
+     lookback and the hold, so the sweep is a grid rather than a strip, and each
+     cell is that pair's edge over its own baseline.
+
+     Two things make it cheap enough to do at all, and both are facts about what
+     depends on what:
+
+       * signals depend on the rule and its lookback, never on the hold — so one
+         search per lookback serves the whole row;
+       * the baseline depends on the hold, the direction, the target and the
+         stretch of history, never on the lookback — so one baseline per hold
+         serves the whole column.
+
+     Getting the second one wrong is the subtle way a grid like this lies: a
+     column measured against another column's baseline would show an edge that
+     is really just the difference between holding four weeks and holding
+     twenty-six. */
+
+  // A week to a year for the hold; a month to a year for the lookback. Both are
+  // in weeks, and both are coarse on purpose — a grid fine enough to hide the
+  // shape of the thing is a grid that only finds noise.
+  var SWEEP_HOLDS = [1, 2, 4, 8, 13, 26, 39, 52];
+  var SWEEP_LOOKS = [4, 8, 13, 26, 39, 52];
+
+  // Below this many finished trades a cell is reported but never crowned. Three
+  // trades at 100% is not the best setting on the grid, for the same reason two
+  // judged years is not the best week on the Repeat test.
+  var SWEEP_FLOOR = 30;
+
+  function axis(values, current) {
+    var out = values.slice();
+    // The cell you are on is always in the grid, so the sweep is about your
+    // setting rather than about a menu that happens not to contain it.
+    if (current && out.indexOf(current) === -1) out.push(current);
+    out.sort(function (a, b) { return a - b; });
+    return out;
+  }
+
+  /* Which rows and columns a sweep of these settings would have.
+
+     Exported because a caller that caches a grid has to know whether the grid
+     it holds is still the right *shape* before deciding to recompute it — and
+     asking by running the sweep is not asking, it is doing the work. The two
+     dials the grid sweeps are deliberately absent from what it returns beyond
+     making sure the current pair is on it. */
+  function sweepAxes(opt, axes) {
+    return {
+      holds: axis((axes && axes.holds) || SWEEP_HOLDS, Math.round(opt.hold)),
+      looks: RULES[opt.rule] && RULES[opt.rule].look
+        ? axis((axes && axes.looks) || SWEEP_LOOKS, Math.round(opt.look))
+        : [Math.round(opt.look) || 1]     // a rule with no lookback has one row
+    };
+  }
+
+  /* Re-mark which cell the controls are sitting on.
+
+     Separate from building the grid because a cached grid outlives the dials:
+     move from an 8-week hold to a 13-week one and the grid is unchanged — every
+     cell of it was already computed — but the cell you are *on* is not, and an
+     outline left on the old one is a grid quietly pointing at the wrong answer. */
+  function here(sw, opt) {
+    for (var i = 0; i < sw.cells.length; i++) {
+      sw.cells[i].here = sw.cells[i].look === Math.round(opt.look) &&
+                         sw.cells[i].hold === Math.round(opt.hold);
+    }
+    return sw;
+  }
+
+  function sweep(payload, opt, axes) {
+    var resolved = sweepAxes(opt, axes);
+    var holds = resolved.holds, looks = resolved.looks;
+    var series = (payload || {}).series || [];
+    var start = from(payload, opt.years);
+
+    // One baseline per hold — never per cell, and never shared across holds.
+    var base = {};
+    for (var h = 0; h < holds.length; h++) {
+      base[holds[h]] = all(payload, baselineOf({ dir: opt.dir, hold: holds[h],
+                                                 target: opt.target, years: opt.years }));
+    }
+
+    var cells = [];
+    for (var l = 0; l < looks.length; l++) {
+      // One signal search per lookback, shared by every hold in the row.
+      var found = [];
+      for (var n = 0; n < series.length; n++) {
+        found.push(signals(payload, series[n], opt.rule, looks[l], start));
+      }
+      for (var k = 0; k < holds.length; k++) {
+        var cell = all(payload, { rule: opt.rule, look: looks[l], dir: opt.dir,
+                                  hold: holds[k], target: opt.target, years: opt.years,
+                                  overlap: opt.overlap }, found);
+        var gap = edge(cell, base[holds[k]]);
+        cells.push({ look: looks[l], hold: holds[k], trades: cell.trades,
+                     rate: cell.rate, base_rate: base[holds[k]].rate, edge: gap.rate,
+                     exit: cell.median_exit, worst: cell.median_worst,
+                     thin: cell.trades < SWEEP_FLOOR, here: false });
+      }
+    }
+
+    // The crown, and the distribution it is sitting on. A cell twenty points
+    // clear of the field and a cell two points clear are the same crown and very
+    // different evidence, so the runner-up and the middle are reported beside it
+    // — the Repeat test's week strip says the same thing about its own winner.
+    var ranked = cells.filter(function (c) { return c.edge !== null && !c.thin; })
+                      .sort(function (a, b) { return b.edge - a.edge; });
+    here({ cells: cells }, opt);
+    return { cells: cells, holds: holds, looks: looks, floor: SWEEP_FLOOR,
+             ranked: ranked.length,
+             best: ranked[0] || null, runner: ranked[1] || null,
+             middle: median(ranked.map(function (c) { return c.edge; })),
+             tried: cells.length };
   }
 
   /* The settings that make the baseline: the same names, direction, hold,
@@ -398,7 +571,10 @@
     return r.what.replace(/\{n\}/g, String(look));
   }
 
-  return { RULES: RULES, RULE_KEYS: RULE_KEYS, NOTES: NOTES, median: median, width: width, fires: fires,
-           warmup: warmup, from: from, trade: trade, run: run, all: all,
-           baselineOf: baselineOf, edge: edge, describe: describe };
+  return { RULES: RULES, RULE_KEYS: RULE_KEYS, NOTES: NOTES, median: median, width: width,
+           widths: widths, fires: fires, signals: signals, warmup: warmup, from: from,
+           trade: trade, run: run, all: all, sweep: sweep, sweepAxes: sweepAxes, here: here,
+           baselineOf: baselineOf,
+           edge: edge, describe: describe,
+           SWEEP_HOLDS: SWEEP_HOLDS, SWEEP_LOOKS: SWEEP_LOOKS, SWEEP_FLOOR: SWEEP_FLOOR };
 });

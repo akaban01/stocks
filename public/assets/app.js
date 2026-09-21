@@ -2616,7 +2616,7 @@
   // on its own is a fact about the decade, not about the rule.
 
   var bt = { rule: "squeeze", look: 8, dir: "up", hold: 8, target: 8, years: 10,
-             overlap: false, ticker: "" };
+             overlap: false, ticker: "", sweepOn: false };
   var btSort = { key: "edge", dir: -1 };
 
   /* One range per numeric control, for the same reason the money section has
@@ -2986,6 +2986,184 @@
       " year" + (bt.years === 1 ? "" : "s") + ".</p>";
   }
 
+  /* ---------------------------------------------- sweeping the two dials
+   *
+   * The controls ask you to pick a hold and a lookback out of the hundreds of
+   * pairs available, with nothing to go on. This runs the rule on all of them
+   * and paints the grid, so you can see whether the pair you picked sits on a
+   * ridge of settings that all worked or is the one green cell in a red field —
+   * which is most of what tells a pattern from a coincidence.
+   *
+   * It is off by default: it is forty-odd runs of the answer above, and it is a
+   * second question rather than the one the controls ask.
+   */
+
+  // Keyed on what would change the grid. The two dials the grid sweeps are not
+  // in it — that is the point: adopt a cell and the grid it came from is still
+  // the grid, so it stays put instead of flickering through a recompute.
+  var btGrid = { key: null, value: null };
+
+  function btSweep(d) {
+    var opt = btOpt();
+    // The shape is asked for first, and the grid is only built on a miss —
+    // resolving the axes by running the sweep would be doing the very work the
+    // cache exists to skip.
+    var axes = SpreadBacktest.sweepAxes(opt);
+    var key = JSON.stringify([bt.rule, bt.dir, bt.target, bt.years, bt.overlap,
+                              axes.looks, axes.holds]);
+    if (btGrid.key !== key) btGrid = { key: key, value: SpreadBacktest.sweep(d, opt) };
+    // Always re-marked, hit or miss: the grid outlives the dials, and the cell
+    // the controls are on is the one thing about it that moves.
+    return SpreadBacktest.here(btGrid.value, opt);
+  }
+
+  // The 90th percentile of the edges on the grid, so one runaway cell cannot
+  // wash the rest of it out — the same shape of scale the month heat map uses.
+  function btSweepScale(cells) {
+    var mags = cells.filter(function (c) { return has(c.edge) && !isNaN(c.edge); })
+                    .map(function (c) { return Math.abs(c.edge); })
+                    .sort(function (a, b) { return a - b; });
+    if (!mags.length) return 1;
+    return Math.max(1, mags[Math.floor(mags.length * 0.9)] || mags[mags.length - 1]);
+  }
+
+  function btWeeks(n) { return n + "w"; }
+
+  function btSweepCell(c, scale) {
+    var say = btWeeks(c.look) + " lookback held " + btWeeks(c.hold) + ": " +
+      (has(c.rate) ? num(c.rate, 0) + "% of " + num(c.trades, 0) + " trades closed " +
+        btGoal() + btSide() + ", against " + num(c.base_rate, 0) + "% for every week — " +
+        points(c.edge, 0)
+       : "nothing finished") +
+      (c.thin ? ". Under " + SpreadBacktest.SWEEP_FLOOR + " trades, so it is shown but never "
+              + "ranked." : "");
+    // The cell you are on is outlined; a thin one is faded. Neither is carried
+    // by colour alone — the number is in the cell and the whole of it is in the
+    // label a screen reader reads.
+    return '<td class="sweepcell' + (c.thin ? " thin" : "") + '" tabindex="0"' +
+      ' data-look="' + c.look + '" data-hold="' + c.hold + '"' +
+      (c.here ? ' aria-pressed="true"' : '') +
+      ' style="' + heatStyle(c.thin ? null : c.edge, scale) + '"' +
+      ' title="' + esc(say) + '" aria-label="' + esc(say) + '">' +
+      (has(c.edge) ? points(c.edge, 0).replace(" pts", "").replace(" pt", "") : "—") +
+      "</td>";
+  }
+
+  function btSweepTable(sw) {
+    var scale = btSweepScale(sw.cells);
+    var by = {};
+    for (var i = 0; i < sw.cells.length; i++) {
+      var c = sw.cells[i];
+      (by[c.look] = by[c.look] || {})[c.hold] = c;
+    }
+    var head = "<tr><th>lookback \\ hold</th>" + sw.holds.map(function (h) {
+      return '<th class="r">' + btWeeks(h) + "</th>";
+    }).join("") + "</tr>";
+    var body = sw.looks.map(function (l) {
+      return '<tr><td class="t">' + btWeeks(l) + "</td>" + sw.holds.map(function (h) {
+        return btSweepCell(by[l][h], scale);
+      }).join("") + "</tr>";
+    }).join("");
+    return '<div class="tablewrap"><table class="scan heat sweep"><thead>' + head +
+      "</thead><tbody>" + body + "</tbody></table></div>";
+  }
+
+  /* The crown, and the field it is sitting on.
+   *
+   * The best of forty-eight tries is a low bar to clear by chance, so the
+   * winner is never printed alone: the runner-up says whether the win is a
+   * ridge or a spike, and the middle of the rankable cells says what an
+   * ordinary cell on this grid looks like. A grid whose middle is negative and
+   * whose best is +5 is not a strategy that works — it is one cell. */
+  function btSweepVerdict(sw) {
+    if (!sw.best) {
+      return '<p class="empty">No cell on this grid has ' + SpreadBacktest.SWEEP_FLOOR +
+        " finished trades behind it, so none of them can be ranked. Widen the history, or " +
+        "pick a rule that fires more often.</p>";
+    }
+    var spread = sw.runner ? sw.best.edge - sw.runner.edge : null;
+    return '<div class="rulebar">' +
+      '<div class="rule ' + (sw.best.edge > 0 ? "cheap" : "rich") + '">' +
+        '<span class="k">Best — ' + btWeeks(sw.best.look) + " lookback, held " +
+          btWeeks(sw.best.hold) + ", " + esc(points(sw.best.edge, 0)) + "</span>" +
+        '<div class="v">' + num(sw.best.rate, 0) + "% of " + num(sw.best.trades, 0) +
+          " trades closed " + esc(btGoal() + btSide()) + ", against " +
+          num(sw.best.base_rate, 0) + "% for weeks in general. " +
+          '<button class="bestweek" data-look="' + sw.best.look + '" data-hold="' +
+          sw.best.hold + '">Use these settings</button></div></div>' +
+      '<div class="rule fair"><span class="k">Runner-up — ' +
+        (sw.runner ? esc(points(sw.runner.edge, 0)) + " at " + btWeeks(sw.runner.look) +
+          " / " + btWeeks(sw.runner.hold) : "none") + "</span>" +
+        '<div class="v">' + (spread === null ? "Only one cell could be ranked."
+          : "The winner is " + esc(points(spread, 1)) + " clear of it. A cell well clear of "
+            + "the field is a ridge; a cell a fraction clear is the same crown and much "
+            + "weaker evidence.") + "</div></div>" +
+      '<div class="rule ' + (sw.middle > 0 ? "cheap" : "rich") + '">' +
+        '<span class="k">The middle cell — ' + esc(points(sw.middle, 0)) + "</span>" +
+        '<div class="v">Half the ranked cells did better than this and half worse. This is ' +
+          "what an <i>ordinary</i> setting on this grid is worth, and it is the number the " +
+          "winner has to be read against: a grid whose middle is negative has one good cell, " +
+          "not a rule that works.</div></div>" +
+      "</div>";
+  }
+
+  function btSweepBody(d) {
+    var sw = btSweep(d);
+    var lookless = !(SpreadBacktest.RULES[bt.rule] || {}).look;
+    return '<div class="lede">The same rule at every hold' +
+      (lookless ? "" : " against every lookback") + ", each cell measured against " +
+      "<b>its own column's baseline</b> — every week at that same hold, which is the only " +
+      "thing a hold of 26 weeks can honestly be compared with. Green is an edge over that, " +
+      "red is worse than it. Click a cell to move the controls there.</div>" +
+      btSweepVerdict(sw) + btSweepTable(sw) +
+      '<p class="faint" style="font-size:.83rem;margin:10px 0 0">' + sw.tried +
+      " cells, " + sw.ranked + " of them with at least " + SpreadBacktest.SWEEP_FLOOR +
+      " finished trades behind them — the rest are faded, shown but never ranked. " +
+      "<b>These are not " + sw.tried + " independent tries.</b> Neighbouring cells share most " +
+      "of their trades, and the names move together on top of that, so the grid is nearer one " +
+      "broad answer than " + sw.tried + " of them. And the winner is the best of " + sw.tried +
+      " — a high bar to clear on purpose and a low one to clear by luck, which is why the " +
+      "runner-up and the middle are printed beside it.</p>";
+  }
+
+  function btSweepAdopt(look, hold) {
+    bt.look = btClamp("look", look);
+    bt.hold = btClamp("hold", hold);
+    $("#bt-look").value = bt.look;
+    $("#bt-hold").value = bt.hold;
+    btStore();
+    btDraw();
+    $("#btcontrols").scrollIntoView({ block: "nearest" });
+  }
+
+  function btSweepDraw() {
+    var host = $("#sweepbody");
+    $("#sweepsection").hidden = !bt.sweepOn;
+    if (!bt.sweepOn || !store.weekly) { host.innerHTML = ""; return; }
+    if (!store.weekly.series.length) { host.innerHTML = ""; return; }
+    host.innerHTML = btSweepBody(store.weekly);
+
+    function adopt(el) { btSweepAdopt(Number(el.dataset.look), Number(el.dataset.hold)); }
+    var cells = host.querySelectorAll("td.sweepcell, button.bestweek");
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].addEventListener("click", function () { adopt(this); });
+      cells[i].addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+          e.preventDefault();
+          adopt(this);
+        }
+      });
+    }
+  }
+
+  function wireSweep() {
+    $("#bt-sweep-on").addEventListener("change", function () {
+      bt.sweepOn = !!this.checked;
+      btStore();
+      btSweepDraw();
+    });
+  }
+
   function btDraw() {
     var d = store.weekly, host = $("#backtestbody");
     if (!d) return;
@@ -3019,6 +3197,11 @@
         }
       });
     }
+
+    // The grid reads the same settings this tab does, so it redraws with it —
+    // cached on the axes, so adopting a cell does not recompute the grid it
+    // came from.
+    btSweepDraw();
   }
 
   function btPick(ticker) {
@@ -3121,7 +3304,7 @@
     if (saved) {
       for (var key in bt) {
         if (!has(saved[key])) continue;
-        bt[key] = key === "overlap" ? !!saved[key]
+        bt[key] = (key === "overlap" || key === "sweepOn") ? !!saved[key]
           : key === "rule" ? (SpreadBacktest.RULES[saved[key]] ? saved[key] : bt.rule)
           : key === "dir" ? (saved[key] === "down" ? "down" : "up")
           : key === "ticker" ? String(saved[key])
@@ -3134,6 +3317,7 @@
     $("#bt-target").value = bt.target;
     $("#bt-years").value = bt.years;
     $("#bt-overlap").checked = bt.overlap;
+    $("#bt-sweep-on").checked = bt.sweepOn;
     for (var k = 0; k < dirs.length; k++) {
       dirs[k].setAttribute("aria-pressed", dirs[k].dataset.dir === bt.dir ? "true" : "false");
     }
@@ -3301,6 +3485,7 @@
     wireRepeat();
     wireSpread();
     wireBacktest();
+    wireSweep();
     // A fragment is an explicit request, so it outranks the last visit's tab.
     var linked = parseHash();
     var savedView = null;
