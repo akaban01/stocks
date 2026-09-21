@@ -172,8 +172,14 @@
 
   /* ---- what the trade would actually have cost and paid ------------------
 
-     A debit vertical, priced off each year's own entry, and the one part of
+     A debit vertical, priced off each trade's own entry, and the one part of
      this tab that involves money rather than percentages.
+
+     It is used by two tabs. The Repeat test prices one trade per year; the
+     Backtest tab prices every trade a rule took. Nothing here knows the
+     difference, because it reads only `settled`, `entry`, `exit` and
+     `exit_pct` off a row — and a second copy of option arithmetic, drifting
+     quietly from this one, is exactly the failure this file exists to avoid.
 
      Read the honesty of it before the numbers. **The debit is yours, not the
      market's.** This repo holds ten years of stock bars and no option history
@@ -260,7 +266,12 @@
       // reason a $0.40 debit is $40 of real money.
       var paid = debit * 100 * lots;
       var back = worth * 100 * lots;
-      var row = { year: r.year, entry: r.entry, exit: r.exit, exit_pct: r.exit_pct,
+      // `when` is whatever the caller labels a trade by: the Repeat test has one
+      // per year and says so, the Backtest tab has many and labels them by the
+      // week they opened. The arithmetic below never reads it — it is carried
+      // through so the table above it can say which row is which.
+      var row = { year: r.year, when: r.year !== undefined ? r.year : r.start,
+                  entry: r.entry, exit: r.exit, exit_pct: r.exit_pct,
                   long: kLong, short: kShort, width: width, debit: debit, worth: worth,
                   paid: paid, received: back, net: back - paid,
                   roi: paid ? ((back - paid) / paid) * 100 : null,

@@ -587,6 +587,31 @@ zero, by construction. With one-trade-at-a-time on, "every week" becomes every
 and the gap that shows up is the **noise floor** on those settings. That is the
 bar a real rule has to clear, and it is printed rather than left to be guessed.
 
+### Optional: price it as an option
+
+Everything above is percentages of the stock and rests on nothing but the
+closes. This section is the other half — **what it would have cost and what it
+would have paid, in dollars** — for the name currently picked in the ranking.
+Pick another name there to price that one instead. It is deliberately one name
+at a time: a dollar total across twenty-nine names is a portfolio nobody ran,
+sized by nothing.
+
+The arithmetic is the **same function** the Repeat test's money section uses. It
+reads `settled`, `entry`, `exit` and `exit_pct` off a row and nothing else, and
+the Backtest tab's rows carry exactly those — so this borrows the option maths
+rather than keeping a second copy that would drift from it. A held-to-expiry
+option is worth its intrinsic value and nothing else, so everything downstream
+of the debit you set is exact.
+
+> ⚠️ **The debit is yours, not the market's** — and it bites harder here than on
+> the Repeat test. There is no option history in this repo, so you set the debit
+> and it is held constant across every trade. But a rule like the squeeze
+> *selects* for a volatility regime, so its trades are not a random sample of
+> what options cost: you are pricing the quietest weeks in the history at the
+> same debit as every other week. The **breakeven debit** in the totals is the
+> number that needs no view on any of this — it is what would have made the run
+> wash, and it is the one to take to a live quote.
+
 ### What it refuses to do, and what it still cannot see
 
 The rules live in `public/assets/backtest.js`, next to the code that implements
@@ -802,6 +827,10 @@ public/assets/app.js       data loading + rendering (vanilla JS)
 public/assets/styles.css   the design system
 ```
 
+`trial.js` also owns the option payoff arithmetic, which **both** tabs call —
+the Repeat test prices one trade per year, the Backtest tab prices every trade a
+rule took, and neither keeps its own copy of what a vertical is worth at expiry.
+
 `trial.js` and `backtest.js` are separate because they are the two pieces of
 frontend that are *rules* rather than renderings: what a hit, a miss, a
 still-open trade and a skipped one mean, and — on the second — what a rule is
@@ -920,7 +949,7 @@ are easy to move if you disagree.
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q          # 412 network-free tests
+python -m pytest -q          # 414 network-free tests
 ruff check .                 # the lint CI runs — see ruff.toml
 ```
 
