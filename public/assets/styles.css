@@ -170,6 +170,13 @@ h3 { font-size: .95rem; margin: 0 0 8px; }
   padding: 14px 18px; border-bottom: 1px solid var(--line-soft);
 }
 .tkr { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.01em; }
+/* A ticker that links into a backtest of itself. Deliberately not painted like
+   an ordinary link: it sits inside a card head and a dense table, and colouring
+   thirty of them would turn both into a wall of blue. It reads as text until
+   you go near it. */
+a.totest { color: inherit; text-decoration: none; }
+a.totest:hover { color: var(--link); text-decoration: underline; }
+a.totest:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 2px; }
 .px { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: .9rem; }
 
 .badge {

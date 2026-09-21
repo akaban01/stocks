@@ -160,6 +160,22 @@
   var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "repeat", "backtest",
                    "validation", "reference"];
   var CHART_VIEWS = ["prices", "seasonality"];
+  /* The two tabs that are *about* one name, and so carry it in the fragment:
+   *
+   *     …/#backtest#NVDA   the Backtest tab, on NVDA
+   *     …/#repeat#AAPL     the Repeat test, on AAPL
+   *
+   * Their dials — hold, target, lookback — stay out of the URL and in
+   * localStorage, because those are working state. The name is not: it is what
+   * the tables on screen are *about*, and "look at NVDA's squeeze" is the thing
+   * a reader wants to send someone. It is also what lets a Scanner row link
+   * straight into a backtest of that name, which needs no new machinery — an
+   * ordinary anchor and the fragment handler already here. */
+  var NAMED_TABS = { repeat: 1, backtest: 1 };
+  // A plausible ticker, and nothing that could be a tab or a chart view. Both
+  // of those are checked first, so this only has to be narrow enough not to
+  // swallow a typo into something that looks like a name.
+  var TICKER_RE = /^[A-Za-z][A-Za-z0-9.\-]{0,9}$/;
   var curTab = "playbook";
   var curView = "prices";
   // Set while the page is putting itself into a state it was *handed* — during
@@ -175,18 +191,29 @@
     for (var i = 0; i < parts.length; i++) {
       var seg = parts[i];
       try { seg = decodeURIComponent(seg); } catch (e) { /* leave it as typed */ }
-      seg = seg.trim().toLowerCase();
-      if (!out.tab && TAB_NAMES.indexOf(seg) !== -1) out.tab = seg;
-      else if (!out.view && CHART_VIEWS.indexOf(seg) !== -1) out.view = seg;
+      seg = seg.trim();
+      // Tab and view names are matched case-insensitively; a ticker keeps the
+      // case it is written in until it is upper-cased, because "#backtest#nvda"
+      // is a reasonable thing to type and NVDA is what the data calls it.
+      var lower = seg.toLowerCase();
+      if (!out.tab && TAB_NAMES.indexOf(lower) !== -1) out.tab = lower;
+      else if (!out.view && CHART_VIEWS.indexOf(lower) !== -1) out.view = lower;
+      else if (!out.ticker && TICKER_RE.test(seg)) out.ticker = seg.toUpperCase();
     }
     // A bare "#seasonality" can only mean one tab, so read it as that tab.
     if (out.view && !out.tab) out.tab = "charts";
     return out.tab ? out : null;
   }
 
+  // The name the tab on screen is about, for the tabs that are about one.
+  function tabName(tab) {
+    return tab === "repeat" ? rp.ticker : tab === "backtest" ? bt.ticker : "";
+  }
+
   function writeHash() {
     if (hashLock) return;
-    var want = "#" + curTab + (curTab === "charts" ? "#" + curView : "");
+    var name = NAMED_TABS[curTab] ? tabName(curTab) : "";
+    var want = "#" + curTab + (curTab === "charts" ? "#" + curView : name ? "#" + name : "");
     if (location.hash === want) return;
     // replaceState, not pushState: the tab strip moves on arrow keys, and one
     // history entry per keystroke would bury whatever the reader arrived from.
@@ -199,11 +226,35 @@
 
   // Someone edited the address bar, or followed a link into the page they are
   // already on. Either way the fragment is now the instruction.
+  /* A name carried in the fragment, applied to the tab that was asked for.
+
+     Deliberately *before* showTab: the tab's render reads this state, and
+     setting it afterwards would draw the old name and then redraw. A name the
+     screen does not have is left to the tab's own fallback — the same one a
+     remembered name that has since dropped out of the screen goes through —
+     rather than being a special case here. */
+  function applyName(tab, ticker) {
+    if (!NAMED_TABS[tab] || !ticker) return;
+    // A name this screen does not have is ignored outright once the payload is
+    // in — not adopted and then fallen back from. Adopting it blanked the
+    // picker and left every table below asking about a name that is not there.
+    // Before the payload lands there is nothing to check against, so it is
+    // taken on trust and the render's own fallback catches it.
+    if (store.weekly && !store.weekly.series.some(function (x) { return x.ticker === ticker; })) {
+      return;
+    }
+    if (tab === "repeat") { rp.ticker = ticker; rpStore(); } else { bt.ticker = ticker; btStore(); }
+    if (!store.weekly) return;
+    var select = $(tab === "repeat" ? "#rp-ticker" : "#bt-ticker");
+    if (select && select.options.length) select.value = ticker;
+  }
+
   function applyHash() {
     var want = parseHash();
     if (want) {
       hashLock = true;
       if (want.view) showChartView(want.view);
+      applyName(want.tab, want.ticker);
       showTab(want.tab);
       hashLock = false;
     }
@@ -410,7 +461,8 @@
 
     var head = '<div class="card-head">' +
       '<span class="rank">#' + num(sig.rank, 0) + "</span>" +
-      '<span class="tkr">' + esc(sig.ticker) + "</span>" +
+      '<span class="tkr"><a class="totest" href="#backtest#' + esc(sig.ticker) + '" title="' +
+        esc("backtest a rule on " + sig.ticker) + '">' + esc(sig.ticker) + "</a></span>" +
       '<span class="px">' + num(sig.price, 2) + "</span>" +
       '<span class="badge ' + t + '">' + esc(actionMeta.label || rec.action || "—") + "</span>" +
       screenBadge(sig) +
@@ -605,7 +657,14 @@
 
   var COLUMNS = [
     { k: "rank", h: "#", f: function (s) { return num(s.rank, 0); }, r: true },
-    { k: "ticker", h: "Ticker", f: function (s) { return esc(s.ticker); }, cls: "t" },
+    // The ticker is a link into the Backtest tab on that name. An ordinary
+    // anchor, because the fragment handler above already knows what to do with
+    // one — no click handler, and it works from a middle-click or a copied
+    // address like any other link on the page.
+    { k: "ticker", h: "Ticker", cls: "t", f: function (s) {
+        return '<a class="totest" href="#backtest#' + esc(s.ticker) + '" title="' +
+          esc("backtest a rule on " + s.ticker) + '">' + esc(s.ticker) + "</a>";
+      } },
     { k: "price", h: "Price", f: function (s) { return num(s.price, 2); }, r: true },
     { k: "score", h: "Score", r: true, f: function (s) {
         var hue = 8 + (Number(s.score) / 100) * 132;
@@ -2406,6 +2465,7 @@
     rp.ticker = ticker;
     $("#rp-ticker").value = ticker;
     rpStore();
+    writeHash();
     rpDraw();
     $("#repeatcontrols").scrollIntoView({ block: "nearest" });
   }
@@ -2529,11 +2589,6 @@
         select.innerHTML = d.series.map(function (s) {
           return '<option value="' + esc(s.ticker) + '">' + esc(s.ticker) + "</option>";
         }).join("");
-        // A remembered name that has since dropped out of the screen is not an
-        // error; it just is not on this page any more.
-        var known = d.series.some(function (s) { return s.ticker === rp.ticker; });
-        if (!known) rp.ticker = (d.series[0] || {}).ticker || "";
-        select.value = rp.ticker;
         rpWeekLabel(d);
       }
       if (!d.series.length) {
@@ -2541,6 +2596,14 @@
           "this screen has the " + (d.min_weeks || 26) + " weeks the test needs.</p>";
         return;
       }
+      // A remembered name that has since dropped out of the screen is not an
+      // error; it just is not on this page any more. Checked on every render
+      // rather than only the first, because a fragment can name a ticker before
+      // the payload that would have vetted it has landed.
+      var known = d.series.some(function (s) { return s.ticker === rp.ticker; });
+      if (!known) rp.ticker = (d.series[0] || {}).ticker || "";
+      $("#rp-ticker").value = rp.ticker;
+      writeHash();
       rpDraw();
     }).catch(function (e) {
       $("#repeatbody").innerHTML = loadError(e, "weekly", "python run.py");
@@ -2552,6 +2615,7 @@
       return function () {
         fn(this);
         rpStore();
+        writeHash();          // as on the Backtest tab: the name is a view
         if (store.weekly) { rpWeekLabel(store.weekly); rpDraw(); }
       };
     }
@@ -3460,6 +3524,7 @@
     bt.ticker = ticker;
     $("#bt-ticker").value = ticker;
     btStore();
+    writeHash();
     btDraw();
   }
 
@@ -3500,12 +3565,17 @@
         select.innerHTML = d.series.map(function (s) {
           return '<option value="' + esc(s.ticker) + '">' + esc(s.ticker) + "</option>";
         }).join("");
-        // A remembered name that has since dropped out of the screen is not an
-        // error; it just is not on this page any more.
-        var known = d.series.some(function (s) { return s.ticker === bt.ticker; });
-        if (!known) bt.ticker = (d.series[0] || {}).ticker || "";
-        select.value = bt.ticker;
       }
+      // Every render, not only the first. A remembered name that has since
+      // dropped out of the screen is not an error — it just is not on this page
+      // any more — and neither is one that arrived in a fragment before the
+      // payload did, which is the only path that can still get one here.
+      var known = d.series.some(function (s) { return s.ticker === bt.ticker; });
+      if (!known) bt.ticker = (d.series[0] || {}).ticker || "";
+      select.value = bt.ticker;
+      // Whatever name it settled on — asked for, remembered or fallen back to —
+      // is the one the address bar should say.
+      writeHash();
       btDraw();
     }).catch(function (e) {
       $("#backtestbody").innerHTML = loadError(e, "weekly", "python run.py");
@@ -3518,6 +3588,10 @@
         fn(this);
         btStore();
         btApplyRule();
+        // The name is in the fragment, so changing it there moves the URL too.
+        // For every other control this is a no-op: writeHash returns early when
+        // the fragment already says what is on screen.
+        writeHash();
         if (store.weekly) btDraw();
       };
     }
@@ -3771,6 +3845,11 @@
     // Nothing is on screen yet — the showTab below writes both halves at once.
     hashLock = true;
     showChartView((linked && linked.view) || savedView);
+    // And the name the fragment asked for, before anything renders. A cold load
+    // does not go through applyHash — that listens for hashchange, and arriving
+    // at a URL is not a change — so a deep link into one name was parsed here
+    // and then quietly dropped in favour of whatever was remembered.
+    if (linked) applyName(linked.tab, linked.ticker);
     hashLock = false;
 
     window.addEventListener("hashchange", applyHash);
