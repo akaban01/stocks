@@ -1,6 +1,6 @@
 {
   "schema_version": "2.7.0",
-  "generated_at": "2026-09-22T00:11:39Z",
+  "generated_at": "2026-09-22T23:39:01Z",
   "as_of": "2026-09-22",
   "history_years": 5,
   "universe": 30,
@@ -11,15 +11,15 @@
     "squeeze": 0.21
   },
   "lift": {
-    "compression": 0.113,
-    "vol_room": 0.1989,
+    "compression": 0.1128,
+    "vol_room": 0.1984,
     "squeeze": 0.0835
   },
   "bars": {
-    "total": 34637,
-    "train": 24257,
+    "total": 34669,
+    "train": 24289,
     "test": 10380,
-    "cutoff": "2025-04-17"
+    "cutoff": "2025-04-22"
   },
   "separation": {
     "heuristic": {
@@ -28,9 +28,9 @@
         "vol_room": 0.2,
         "squeeze": 0.45
       },
-      "high_break_pct": 39.0,
-      "low_break_pct": 29.1,
-      "separation_pts": 9.9
+      "high_break_pct": 39.1,
+      "low_break_pct": 29.0,
+      "separation_pts": 10.0
     },
     "calibrated": {
       "weights": {
@@ -38,8 +38,8 @@
         "vol_room": 0.5,
         "squeeze": 0.21
       },
-      "high_break_pct": 44.0,
-      "low_break_pct": 26.7,
+      "high_break_pct": 43.8,
+      "low_break_pct": 26.6,
       "separation_pts": 17.2
     }
   },
