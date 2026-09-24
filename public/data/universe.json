@@ -1,0 +1,40 @@
+{
+  "etfs": [
+    "HLAL",
+    "SPUS"
+  ],
+  "max_holdings": 30,
+  "as_of": "2026-09-24",
+  "tickers": [
+    "NVDA",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AVGO",
+    "META",
+    "MU",
+    "TSLA",
+    "AMD",
+    "LLY",
+    "XOM",
+    "JNJ",
+    "INTC",
+    "ABBV",
+    "CSCO",
+    "LRCX",
+    "AMAT",
+    "CVX",
+    "MRK",
+    "PG",
+    "KO",
+    "PANW",
+    "HD",
+    "CRWD",
+    "SNDK",
+    "GEV",
+    "TMO",
+    "TXN",
+    "ORCL",
+    "KLAC"
+  ]
+}

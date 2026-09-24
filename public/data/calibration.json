@@ -1,26 +1,30 @@
 {
-  "schema_version": "2.7.0",
-  "generated_at": "2026-09-23T23:48:05Z",
-  "as_of": "2026-09-23",
+  "schema_version": "2.8.0",
+  "generated_at": "2026-09-24T17:16:31Z",
+  "as_of": "2026-09-24",
   "history_years": 5,
   "universe": 30,
+  "method_version": 2,
   "ok": true,
   "weights": {
     "compression": 0.29,
-    "vol_room": 0.5,
-    "squeeze": 0.21
+    "vol_room": 0.51,
+    "squeeze": 0.2
   },
   "lift": {
-    "compression": 0.1125,
-    "vol_room": 0.1988,
-    "squeeze": 0.0813
+    "compression": 0.1109,
+    "vol_room": 0.1943,
+    "squeeze": 0.0745
   },
   "bars": {
-    "total": 34657,
-    "train": 24261,
-    "test": 10396,
-    "cutoff": "2025-04-22"
+    "total": 34056,
+    "train": 23847,
+    "test": 9915,
+    "embargoed": 294,
+    "cutoff": "2025-05-01",
+    "test_start": "2025-05-16"
   },
+  "separation_basis": "quintile",
   "separation": {
     "heuristic": {
       "weights": {
@@ -28,24 +32,24 @@
         "vol_room": 0.2,
         "squeeze": 0.45
       },
-      "high_break_pct": 38.9,
-      "low_break_pct": 29.0,
-      "separation_pts": 9.9
+      "high_break_pct": 42.2,
+      "low_break_pct": 26.1,
+      "separation_pts": 16.1
     },
     "calibrated": {
       "weights": {
-        "compression": 0.29,
-        "vol_room": 0.5,
+        "compression": 0.28,
+        "vol_room": 0.51,
         "squeeze": 0.21
       },
-      "high_break_pct": 43.7,
-      "low_break_pct": 26.6,
-      "separation_pts": 17.1
+      "high_break_pct": 43.0,
+      "low_break_pct": 24.7,
+      "separation_pts": 18.3
     }
   },
   "verdict": {
     "holds": true,
-    "text": "The calibrated weights hold up out-of-sample — they separate high- from low-score band-break rates by more than the hand-set heuristic did."
+    "text": "Weights fitted on the train split alone separate the top from the bottom score quintile on the held-out test split by more than the hand-set heuristic does."
   },
-  "method": "Each weight is set in proportion to that feature's exceed-rate lift — how much more often the expected-move band breaks at the favourable end of the feature than at the unfavourable end. Lift is measured on a train split and the resulting weights are scored on a held-out test split, so the number above is out-of-sample."
+  "method": "Each weight is set in proportion to that feature's exceed-rate lift — how much more often the expected-move band breaks at the favourable end of the feature than at the unfavourable end. Lift is measured on a train split, a gap of one horizon is dropped so no training outcome reaches into the test period, and the train-split weights are scored on the held-out rest by comparing the top and bottom fifth of the score. The weights the scanner runs on are refitted on all history."
 }
