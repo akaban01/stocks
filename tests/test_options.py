@@ -158,3 +158,21 @@ def test_view_as_dict_drops_the_raw_chain():
     payload = make_view().as_dict()
     assert "chain" not in payload
     assert payload["iv_rank"] is not None and payload["expiry"]
+
+
+def test_quotes_record_whether_the_mid_is_live_or_the_last_trade():
+    import pandas as pd
+
+    from spread_scanner import options
+    leg = pd.DataFrame([
+        {"strike": 100.0, "bid": 2.0, "ask": 2.2, "lastPrice": 2.1, "impliedVolatility": 0.3,
+         "openInterest": 10, "volume": 1},
+        {"strike": 105.0, "bid": 0.0, "ask": 0.0, "lastPrice": 0.9, "impliedVolatility": 0.3,
+         "openInterest": 10, "volume": 0},
+        {"strike": 110.0, "bid": 0.0, "ask": 0.0, "lastPrice": 0.0, "impliedVolatility": 0.3,
+         "openInterest": 0, "volume": 0},
+    ])
+    q = options._quotes(leg, "call")
+    assert (q[100.0].mid_source, q[100.0].mid) == ("quote", 2.1)
+    assert (q[105.0].mid_source, q[105.0].mid) == ("last", 0.9)
+    assert (q[110.0].mid_source, q[110.0].mid) == ("none", None)

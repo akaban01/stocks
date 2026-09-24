@@ -82,3 +82,49 @@ def test_fetch_halal_universe_ranks_by_weight_and_dedups(monkeypatch):
 def test_fetch_halal_universe_empty_when_every_fetch_fails(monkeypatch):
     monkeypatch.setattr(universe, "fetch_etf_holdings", lambda s, **k: [])
     assert universe.fetch_halal_universe(["SPUS", "HLAL"]) == []
+
+
+ISSUER_CSV = """Date,Account,StockTicker,CUSIP,SecurityName,Shares,Price,MarketValue,Weightings,NetAssets
+09/23/2026,SPUS,NVDA,67066G104,NVIDIA Corp,2007686,228.87,459499094.82,14.02%,3276653985.0
+09/23/2026,SPUS,BRK.B,000000000,Berkshire,1,1,1,1.50%,3276653985.0
+09/23/2026,SPUS,Cash&Other,Cash&Other,Cash & Other,1,1,1,0.10%,3276653985.0
+"""
+
+
+def test_issuer_csv_parses_ticker_and_weight_and_drops_cash():
+    rows = universe._parse_issuer_csv(ISSUER_CSV)
+    assert rows == [("NVDA", 14.02), ("BRK-B", 1.5)]
+    assert universe._parse_issuer_csv("nothing,useful\n1,2\n") == []
+
+
+def test_issuer_csv_is_tried_before_the_page(monkeypatch):
+    calls = []
+
+    def fake_get(url, timeout):
+        calls.append(url)
+        if url.endswith(".csv"):
+            return ISSUER_CSV
+        raise AssertionError("the page should not be fetched when the CSV worked")
+
+    monkeypatch.setattr(universe, "_get", fake_get)
+    rows = universe.fetch_etf_holdings("SPUS")
+    assert rows[0] == ("NVDA", 14.02) and len(calls) == 1
+
+
+def test_page_is_the_fallback_when_the_csv_is_empty(monkeypatch):
+    page = '<tr><td><a href="/stocks/aapl/">AAPL</a></td><td>9.5%</td></tr>'
+    monkeypatch.setattr(universe, "_get", lambda url, timeout: "" if url.endswith(".csv") else page)
+    assert universe.fetch_etf_holdings("SPUS") == [("AAPL", 9.5)]
+
+
+def test_last_good_list_is_saved_and_used_when_live_fetch_fails(tmp_path, monkeypatch):
+    cache = tmp_path / "universe.json"
+    monkeypatch.setattr(universe, "fetch_halal_universe", lambda s, m, csv_urls=None: ["NVDA", "AAPL"])
+    assert universe.resolve_universe(["SPUS"], 30, cache) == (["NVDA", "AAPL"], None)
+
+    monkeypatch.setattr(universe, "fetch_halal_universe", lambda s, m, csv_urls=None: [])
+    tickers, as_of = universe.resolve_universe(["SPUS"], 30, cache)
+    assert tickers == ["NVDA", "AAPL"] and as_of
+    # A list saved for other funds, or another cap, is not this universe.
+    assert universe.resolve_universe(["HLAL"], 30, cache) == ([], None)
+    assert universe.resolve_universe(["SPUS"], 10, cache) == ([], None)

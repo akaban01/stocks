@@ -74,7 +74,9 @@ def test_calibration_payload_shape():
     assert payload["ok"] is True
     assert abs(sum(payload["weights"].values()) - 1.0) < 0.05
     assert set(payload["separation"]) == {"heuristic", "calibrated"}
-    assert payload["bars"]["train"] + payload["bars"]["test"] == payload["bars"]["total"]
+    bars = payload["bars"]
+    assert bars["train"] + bars["test"] + bars["embargoed"] == bars["total"]
+    assert bars["embargoed"] > 0
     assert isinstance(payload["verdict"]["holds"], bool)
     json.dumps(payload)
 
@@ -90,3 +92,84 @@ def test_round_helper_nulls_non_finite():
     assert backtest._round(float("inf")) is None
     assert backtest._round(None) is None
     assert backtest._round(1.234, 2) == 1.23
+
+
+# --------------------------------------------------- the statistics that claim
+
+
+def test_non_overlapping_keeps_one_bar_per_horizon_per_ticker():
+    data = {"A": _synth(0), "B": _synth(1)}
+    recs, _ = backtest.run_backtest(data, PARAMS)
+    indep = backtest.non_overlapping(recs, 10)
+    assert 0 < len(indep) <= len(recs) // 10 + 2
+    for _, g in indep.groupby("ticker"):
+        assert (g["pos"].diff().dropna() == 10).all()
+
+
+def test_run_backtest_reports_an_independent_interval():
+    data = {t: _synth(i) for i, t in enumerate("ABCD")}
+    _, stats = backtest.run_backtest(data, PARAMS)
+    ind = stats["independent"]
+    assert ind["n"] < stats["n"]
+    own = ind["own_band"]
+    if own["edge_pts"] is not None:
+        assert own["lo_pts"] <= own["edge_pts"] <= own["hi_pts"]
+
+
+def test_bootstrap_edge_resamples_dates_and_brackets_the_point():
+    rng = np.random.RandomState(0)
+    n = 400
+    recs = pd.DataFrame({
+        "date": np.repeat(np.arange(100), 4),
+        "broke_band": rng.rand(n) < 0.4,
+    })
+    hi = pd.Series(np.tile([True, True, False, False], 100))
+    # Make the high bucket break far more often: a clear, positive edge.
+    recs.loc[hi.values, "broke_band"] = rng.rand(hi.sum()) < 0.8
+    out = backtest.bootstrap_edge(recs, hi, ~hi, "broke_band", reps=500)
+    assert out["dates"] == 100
+    assert out["lo_pts"] > 0
+    assert out["lo_pts"] <= out["edge_pts"] <= out["hi_pts"]
+    # Deterministic: the published interval must not wobble between runs.
+    assert backtest.bootstrap_edge(recs, hi, ~hi, "broke_band", reps=500) == out
+
+
+def test_verdict_needs_the_interval_to_clear_zero():
+    data = {"A": _synth(0), "B": _synth(1)}
+    _, stats = backtest.run_backtest(data, PARAMS)
+    stats["independent"]["own_band"] = {"edge_pts": 12.0, "lo_pts": -3.0, "hi_pts": 25.0, "dates": 40}
+    payload = backtest.backtest_payload(stats, PARAMS, n_tickers=2, years=5)
+    assert payload["verdict"]["holds"] is False
+    stats["independent"]["own_band"] = {"edge_pts": 12.0, "lo_pts": 2.0, "hi_pts": 25.0, "dates": 40}
+    payload = backtest.backtest_payload(stats, PARAMS, n_tickers=2, years=5)
+    assert payload["verdict"]["holds"] is True
+    assert payload["verdict"]["long_band_text"]
+    json.dumps(payload)
+
+
+def test_calibration_row_shows_the_train_weights_that_produced_it():
+    data = {"A": _synth(0), "B": _synth(1), "C": _synth(2)}
+    recs, _ = backtest.run_backtest(data, PARAMS)
+    c = backtest.calibrate_weights(recs)
+    payload = backtest.calibration_payload(c, years=5, universe=3)
+    assert payload["separation"]["calibrated"]["weights"] == c["train_weights"]
+    assert payload["weights"] == c["weights"]
+    assert payload["separation_basis"] == "quintile"
+
+
+def test_calibration_embargo_keeps_training_outcomes_out_of_the_test_split():
+    data = {"A": _synth(0), "B": _synth(1)}
+    recs, _ = backtest.run_backtest(data, PARAMS)
+    c = backtest.calibrate_weights(recs, embargo=10)
+    dates = np.sort(recs["date"].unique())
+    gap = ((dates > c["cutoff"]) & (dates < c["test_start"])).sum()
+    assert gap == 10
+
+
+def test_calibration_holds_only_when_strictly_better():
+    c = {"lift": {}, "weights": {}, "train_weights": {}, "cutoff": 0, "test_start": None,
+         "n": 3, "n_train": 2, "n_test": 1,
+         "sep_heuristic": (40.0, 30.0, 10.0), "sep_calibrated": (39.8, 30.0, 9.8)}
+    assert backtest.calibration_payload(c, years=5, universe=1)["verdict"]["holds"] is False
+    c["sep_calibrated"] = (41.0, 30.0, 11.0)
+    assert backtest.calibration_payload(c, years=5, universe=1)["verdict"]["holds"] is True

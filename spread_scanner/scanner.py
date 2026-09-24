@@ -71,20 +71,27 @@ MIN_PERCENTILE_FRAC = 0.5
 _WEIGHT_KEYS = ("compression", "vol_room", "squeeze")
 
 
-def apply_weights_file(path: str | Path = "weights.json") -> dict | None:
-    """Override SCORE_WEIGHTS from a calibration file written by calibrate.py.
-    Returns the file payload if applied, else None (missing/invalid -> keep
-    the hardcoded defaults). Validates keys and that the weights ~sum to 1."""
-    global SCORE_WEIGHTS
+def load_weights_file(path: str | Path = "weights.json") -> tuple[dict, dict] | None:
+    """Read a calibration file written by calibrate.py.
+
+    Returns ``(weights, payload)`` when the file is valid, else None (missing or
+    invalid -> callers keep ``SCORE_WEIGHTS``). Validates the keys and that the
+    weights ~sum to 1.
+
+    Deliberately pure: this used to overwrite the module-level ``SCORE_WEIGHTS``,
+    which made the score a function of whichever file some earlier call happened
+    to load — one test that loaded weights leaked them into every test after it.
+    Callers now pass the weights they mean to ``analyze`` / ``scan``."""
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
     except (FileNotFoundError, ValueError, OSError):
         return None
+    if not isinstance(payload, dict):
+        return None
     w = payload.get("weights", payload)
     try:
         if set(_WEIGHT_KEYS) <= set(w) and abs(sum(float(w[k]) for k in _WEIGHT_KEYS) - 1.0) < 0.05:
-            SCORE_WEIGHTS = {k: float(w[k]) for k in _WEIGHT_KEYS}
-            return payload
+            return {k: float(w[k]) for k in _WEIGHT_KEYS}, payload
     except (TypeError, ValueError):
         pass
     return None
@@ -97,14 +104,15 @@ def _squeeze_signal(squeeze_on: bool, squeeze_days: int) -> float:
     return SQUEEZE_FLOOR + (1 - SQUEEZE_FLOOR) * min(squeeze_days, 15) / 15
 
 
-def _setup_score(squeeze_on: bool, squeeze_days: int, bw_pctile, hv_pctile) -> float:
+def _setup_score(squeeze_on: bool, squeeze_days: int, bw_pctile, hv_pctile,
+                 weights: dict | None = None) -> float:
     """Weighted blend of three "coiled spring" signals, scaled to 0..100.
 
     * compression — low Bollinger bandwidth percentile (tight range)
     * vol room    — low historical-vol percentile (room to expand)
     * squeeze     — squeeze on, longer = more stored energy
     """
-    w = SCORE_WEIGHTS
+    w = weights or SCORE_WEIGHTS
     raw = (w["compression"] * (1 - _nz(bw_pctile))
            + w["vol_room"] * (1 - _nz(hv_pctile))
            + w["squeeze"] * _squeeze_signal(squeeze_on, squeeze_days))
@@ -121,8 +129,9 @@ def _lean(momentum: float, price: float, sma20: float) -> str:
     return "Neutral"
 
 
-def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
-    """Compute a Signal for one ticker, or None if there isn't enough data."""
+def analyze(ticker: str, df: pd.DataFrame, p: dict, weights: dict | None = None) -> Signal | None:
+    """Compute a Signal for one ticker, or None if there isn't enough data.
+    `weights` defaults to the built-in ``SCORE_WEIGHTS``."""
     df = df.dropna(subset=["Open", "High", "Low", "Close"]).copy()
     min_bars = max(p["percentile_lookback"], p["bb_length"], p["vol_lookback"]) + 5
     # Two thresholds, because "enough history to compute the indicators" is not
@@ -178,7 +187,7 @@ def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
     return Signal(
         ticker=ticker,
         price=round(price, 2),
-        score=_setup_score(squeeze_on, squeeze_days, bw_pctile, hv_pctile),
+        score=_setup_score(squeeze_on, squeeze_days, bw_pctile, hv_pctile, weights),
         squeeze_on=squeeze_on,
         squeeze_days=squeeze_days,
         squeeze_fired=squeeze_fired,
@@ -197,12 +206,12 @@ def analyze(ticker: str, df: pd.DataFrame, p: dict) -> Signal | None:
     )
 
 
-def scan(data: dict[str, pd.DataFrame], p: dict) -> pd.DataFrame:
+def scan(data: dict[str, pd.DataFrame], p: dict, weights: dict | None = None) -> pd.DataFrame:
     """Analyze every ticker and return a DataFrame ranked by Setup Score."""
     rows = []
     for ticker, df in data.items():
         try:
-            sig = analyze(ticker, df, p)
+            sig = analyze(ticker, df, p, weights)
         except Exception as exc:  # one bad ticker shouldn't sink the scan
             print(f"  ! {ticker}: {exc}")
             continue

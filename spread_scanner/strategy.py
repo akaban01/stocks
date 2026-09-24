@@ -114,6 +114,7 @@ class Leg:
     iv: float | None
     open_interest: int | None
     label: str
+    mid_source: str = "quote"  # quote / last / none — see options.Quote
 
 
 @dataclass
@@ -136,12 +137,17 @@ class Plan:
     # one's, and annualising it over the long leg understates it by the ratio
     # between them. None means "same as dte".
     profit_horizon_dte: int | None = None
-    net: float | None = None            # + = debit paid, − = credit received ($/spread)
+    net: float | None = None            # + = debit paid, − = credit received ($/spread),
+                                        #   at the planning fill (`fill_basis`)
+    net_mid: float | None = None        # the same at every leg's mid — the best case
+    net_natural: float | None = None    # buying every ask, selling every bid — the worst
+    fill_basis: str = ""                # how `net` was priced; see FILL_SLIP
     max_profit: float | None = None     # None = unlimited
     max_loss: float | None = None       # None = undefined
     breakevens: list[float] = field(default_factory=list)
     profit_zone: str = ""               # above / below / inside / outside
-    pop: float | None = None            # model probability of profit, 0..1
+    pop: float | None = None            # model probability of profit, 0..1 — held to expiry
+    pop_basis: str = ""                 # what `pop` assumes; see _finish
     credit_to_width: float | None = None
     manage: dict = field(default_factory=dict)
     sizing: dict = field(default_factory=dict)
@@ -193,20 +199,33 @@ def _p_above(spot: float, strike: float, sigma: float) -> float | None:
     return _norm_cdf((math.log(spot / strike) - sigma * sigma / 2) / sigma)
 
 
-def pop_estimate(spot: float, breakevens: list[float], zone: str, sigma: float) -> float | None:
-    """Probability of finishing in the profit zone, from the same model."""
+def pop_estimate(spot: float, breakevens: list[float], zone: str, sigma: float,
+                 sigma_at=None) -> float | None:
+    """Probability of finishing in the profit zone at expiry, from the same model.
+
+    `sigma_at(strike)`, when given, supplies the total vol to use *at each
+    breakeven* — that strike's own implied vol rather than the at-the-money
+    one. With a put skew the downside breakeven of a condor sits where the
+    market prices far more vol than ATM, and a single flat sigma understates
+    how often that tail is reached. It is the smile read strike by strike, not
+    a full skew-adjusted digital, but it points the right way on both tails."""
     if not breakevens or sigma <= 0:
         return None
+
+    def above(k: float) -> float | None:
+        s_k = sigma_at(k) if sigma_at else None
+        return _p_above(spot, k, s_k if s_k and s_k > 0 else sigma)
+
     if zone == "above":
-        p = _p_above(spot, min(breakevens), sigma)
+        p = above(min(breakevens))
     elif zone == "below":
-        p = _p_above(spot, max(breakevens), sigma)
+        p = above(max(breakevens))
         p = None if p is None else 1 - p
     elif zone in ("inside", "outside"):
         if len(breakevens) < 2:
             return None
         lo, hi = min(breakevens), max(breakevens)
-        p_lo, p_hi = _p_above(spot, lo, sigma), _p_above(spot, hi, sigma)
+        p_lo, p_hi = above(lo), above(hi)
         if p_lo is None or p_hi is None:
             return None
         inside = p_lo - p_hi
@@ -257,6 +276,7 @@ def make_leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | N
         action=action, right=q.right, strike=q.strike, expiry=expiry, qty=qty,
         mid=q.mid, bid=q.bid, ask=q.ask, iv=q.iv, open_interest=q.open_interest,
         label=f"{action.title()} {qty}× {expiry} {strike_txt} {q.right}",
+        mid_source=getattr(q, "mid_source", "quote"),
     )
 
 
@@ -265,8 +285,33 @@ def make_leg(action: str, q: Quote | None, expiry: str, qty: int = 1) -> Leg | N
 CONTRACT_MULTIPLIER = 100
 
 
-def net_cost(legs: list[Leg]) -> float | None:
+# Where between mid and the far side of each market the plan assumes it fills,
+# as a share of the half-spread. 0 is every leg at mid — the price a quote
+# screen shows and nobody is guaranteed; 1 is the natural price, buying every
+# ask and selling every bid. A third is a working limit order in an ordinary
+# market. Max loss, breakevens, probability and size are all priced here, so a
+# four-leg condor in a 10%-wide market no longer shows the credit only a
+# perfect fill on all four legs would collect.
+FILL_SLIP = 1 / 3
+
+
+def _leg_price(leg: Leg, slip: float) -> float | None:
+    """One leg's per-unit price at `slip` of the way from mid toward its far side."""
+    if leg.mid is None:
+        return None
+    if slip and leg.bid is not None and leg.ask is not None and leg.ask >= leg.bid > 0:
+        far = leg.ask if leg.action == "buy" else leg.bid
+        return leg.mid + slip * (far - leg.mid)
+    return leg.mid
+
+
+def net_cost(legs: list[Leg], slip: float = FILL_SLIP) -> float | None:
     """Net cost per spread in dollars. Positive = debit, negative = credit.
+
+    Each leg is priced `slip` of the way from its mid toward the side you would
+    pay (see `FILL_SLIP`); ``slip=0`` is the mid, ``slip=1`` the natural price.
+    A leg with no two-sided market has no spread to cross and is priced at its
+    mid, which is then the last trade — `Leg.mid_source` says so.
 
     Only legs this order actually transacts count. A leg with ``action="own"``
     is stock you already hold — the covered call's shares — and it is not a
@@ -278,16 +323,48 @@ def net_cost(legs: list[Leg]) -> float | None:
     for leg in legs:
         if leg.action == "own":
             continue
-        if leg.mid is None:
+        price = _leg_price(leg, slip)
+        if price is None:
             return None
         mult = 1 if leg.right == "share" else CONTRACT_MULTIPLIER
-        total += (leg.mid if leg.action == "buy" else -leg.mid) * leg.qty * mult
+        total += (price if leg.action == "buy" else -price) * leg.qty * mult
     return round(total, 2)
+
+
+def fill_basis(slip: float = FILL_SLIP) -> str:
+    return f"mid + {slip:.0%} of the half-spread toward the natural price"
+
+
+def stale_legs(legs: list[Leg]) -> list[Leg]:
+    """Traded legs priced off the last trade rather than a live bid/ask."""
+    return [leg for leg in legs if leg.action != "own" and leg.right != "share"
+            and leg.mid_source != "quote"]
 
 
 def sigma_to_expiry(view: OptionView, dte: int) -> float:
     """1σ move over the life of the expiry, as a fraction of spot."""
     return view.iv_annual / 100 * math.sqrt(max(dte, 1) / 365)
+
+
+def strike_sigma(view: OptionView, expiry: str | None, dte: int | None, strike: float) -> float | None:
+    """Total vol to `expiry` read off the out-of-the-money contract nearest
+    `strike` (puts below spot, calls above) — the smile at that strike. None
+    when the chain has no IV there; callers fall back to the ATM sigma."""
+    if not expiry or not dte:
+        return None
+    right = "put" if strike < view.spot else "call"
+    q = pick_quote(view, expiry, right, strike)
+    if q is None or not q.iv or q.iv <= 0:
+        return None
+    return q.iv / 100 * math.sqrt(max(dte, 1) / 365)
+
+
+# What every published probability of profit assumes. The management rules
+# close most plans early (50% of max profit, a stop, a days-to-expiry cut), so
+# the number is the chance the position would be in profit *if held to
+# expiry* — not the chance the managed trade makes money.
+POP_BASIS = ("held to expiry, lognormal with each breakeven at its own strike's implied vol; "
+             "ignores the early exits in the management rules")
 
 
 # ------------------------------------------------------------- plan assembly
@@ -366,14 +443,19 @@ def _single_expiry(plan: Plan) -> bool:
 
 def _finish(plan: Plan, view: OptionView, sigma: float, budget: float) -> Plan:
     plan.net = net_cost(plan.legs)
+    plan.net_mid = net_cost(plan.legs, slip=0)
+    plan.net_natural = net_cost(plan.legs, slip=1)
+    plan.fill_basis = fill_basis()
     # `pop_estimate` is a terminal-price model: it asks where the stock lands on
     # one expiry. A structure whose legs expire on different dates has no single
     # terminal price — a calendar's outcome turns on what implied volatility is
     # doing at the *front* expiry with the back leg still alive — so it gets no
     # probability rather than a confident-looking one. The long-dated engine
     # refuses the same way for the diagonal (see leaps.long_spreads).
-    plan.pop = (pop_estimate(view.spot, plan.breakevens, plan.profit_zone, sigma)
+    plan.pop = (pop_estimate(view.spot, plan.breakevens, plan.profit_zone, sigma,
+                             sigma_at=lambda k: strike_sigma(view, plan.expiry, plan.dte, k))
                 if _single_expiry(plan) else None)
+    plan.pop_basis = POP_BASIS if plan.pop is not None else ""
     plan.risk_form = resolve_risk_form(plan.risk_form.get("basis", "none"))
     plan.sizing = size_position(plan, budget)
     plan.playbook = PLAYBOOK.get(plan.key, "")
@@ -645,12 +727,13 @@ def _covered_call(view: OptionView, sigma: float) -> Plan | None:
         legs=[shares, call_leg], expiry=exp, dte=dte, profit_zone="above",
         risk_form={"basis": "covered"}, manage=_manage_credit(),
     )
-    if call.mid is not None:
-        credit = round(call.mid * 100, 2)
-        plan.net = -credit
+    net = net_cost(plan.legs)                      # the planned fill, like every other plan
+    if net is not None:
+        credit = -net
+        plan.net = net
         plan.max_profit = round((call.strike - view.spot) * 100 + credit, 2)
         plan.max_loss = round(view.spot * 100 - credit, 2)   # if it goes to zero
-        plan.breakevens = [round(view.spot - call.mid, 2)]
+        plan.breakevens = [round(view.spot - credit / 100, 2)]
     return plan
 
 
@@ -890,6 +973,12 @@ def _warnings(view: OptionView, row: dict, plan: Plan, earnings_inside: bool) ->
     if plan.net is None and plan.legs:
         out.append("Some legs had no two-sided market, so the net price, max loss and probability "
                    "below could not be computed. Price it in your broker before deciding.")
+    stale = stale_legs(plan.legs)
+    if stale and plan.net is not None:
+        names = ", ".join(leg.label for leg in stale)
+        out.append(f"No live bid/ask on {names} — priced off the last trade, which may be hours or "
+                   "days old. The net, max loss and probability below are indicative only; price "
+                   "it in your broker before deciding.")
     if row.get("note"):
         out.append(f"Data note: {row['note']}.")
     return out
@@ -904,6 +993,9 @@ def _order_text(plan: Plan) -> str:
     if plan.net is not None:
         text += (f" — net debit ${plan.net:,.2f}" if plan.net > 0
                  else f" — net credit ${-plan.net:,.2f}") + " per spread"
+        if plan.net_mid is not None and plan.net_natural is not None and plan.net_mid != plan.net_natural:
+            text += (f" (planned fill; ${abs(plan.net_mid):,.2f} at mid, "
+                     f"${abs(plan.net_natural):,.2f} at the natural price)")
     return text
 
 
