@@ -7,7 +7,7 @@ import pytest
 
 from spread_scanner import weekly as wk
 
-APP_JS = Path(__file__).resolve().parents[1] / "public" / "assets" / "app.js"
+APP_DIR = Path(__file__).resolve().parents[1] / "public" / "assets" / "app"
 
 
 def _frame(start, end, daily=0.0, seed=0, spread=0.01):
@@ -188,16 +188,16 @@ def test_every_rule_the_page_prints_is_one_the_payload_carries():
     The frontend now warns the reader when a rule is missing at runtime. This is
     the other half: the same mismatch, caught before it ships.
     """
-    source = APP_JS.read_text(encoding="utf-8")
+    source = "\n".join(f.read_text(encoding="utf-8") for f in sorted(APP_DIR.glob("*.js")))
     named: list[str] = []
     for const in ("RP_RULES", "SP_RULES"):
         block = re.search(rf"var {const} = \[(.*?)\];", source, re.S)
-        assert block, f"{const} is not declared in app.js any more — has it been renamed?"
+        assert block, f"{const} is not declared in public/assets/app/ any more — has it been renamed?"
         named += re.findall(r'"([a-z_]+)"', block.group(1))
 
-    assert named, "no reference keys found in app.js"
+    assert named, "no reference keys found in public/assets/app/"
     assert not [k for k in named if k not in wk.REFERENCE], (
-        f"app.js prints reference keys the payload does not carry: "
+        f"the page prints reference keys the payload does not carry: "
         f"{sorted(set(named) - set(wk.REFERENCE))}")
 
 

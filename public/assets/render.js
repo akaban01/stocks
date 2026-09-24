@@ -1,8 +1,8 @@
 /* Spread Scanner — the frontend's pure rendering helpers.
  *
  * Every function here takes payload data and returns an HTML string; none of
- * them touches the DOM or the page's state. They are split out of app.js for
- * one reason: app.js builds the page by concatenating strings into innerHTML,
+ * them touches the DOM or the page's state. They are split out of the page scripts (assets/app/) for
+ * one reason: the page is built by concatenating strings into innerHTML,
  * and the only thing standing between a payload field and the page's markup is
  * remembering to call esc() on it. Some of that payload is text scraped from
  * third-party pages. tests/test_render_js.py runs *this file* under node with

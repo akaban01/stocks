@@ -1011,9 +1011,19 @@ No build step, no dependencies, no external assets:
 public/index.html          the shell and the tab markup
 public/assets/trial.js     the Repeat test's counting rules and spread maths, on their own
 public/assets/backtest.js  the Backtest tab's rules: when a signal fires, what happened next, and the sweep
-public/assets/app.js       data loading + rendering (vanilla JS)
+public/assets/render.js    pure payload -> HTML helpers (tested under node with hostile input)
+public/assets/app/         the page itself, one file per part, loaded in order by index.html:
+  core.js                  shared helpers, tab wiring, the URL fragment
+  playbook.js scanner.js spreads.js charts.js repeat.js backtest-tab.js validation.js
+                           one per tab (validation.js also holds Reference)
+  boot.js                  loads the payloads and starts the page (last)
 public/assets/styles.css   the design system
 ```
+
+The page files share one object, `window.SpreadApp`: a name used by more than
+one file is read as `App.name`, and everything else stays private to its file.
+To add a tab, add a file between `core.js` and `boot.js` in `index.html` and
+export what `boot.js` or another tab needs onto `App`.
 
 `trial.js` also owns the option payoff arithmetic, which **both** tabs call —
 the Repeat test prices one trade per year, the Backtest tab prices every trade a
@@ -1028,7 +1038,7 @@ pinned to the code that ships rather than to a Python re-implementation that
 would drift from it. Tests skip themselves where node is missing; GitHub's
 runners all have it.
 
-Nothing generates these — edit and reload. `app.js` reads all of its trading copy
+Nothing generates these — edit and reload. The page reads all of its trading copy
 from `scan.json`'s `reference` block, so adding a strategy on the Python side
 surfaces in the UI without touching the frontend. The palette lives once, as
 custom properties in `styles.css`: the charts read `--up` / `--down` / `--wait`

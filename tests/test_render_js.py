@@ -1,6 +1,6 @@
 """The page's HTML builders, fed payloads that are nothing but injections.
 
-app.js renders by concatenating strings into innerHTML, so every payload field
+The page (public/assets/app/) renders by concatenating strings into innerHTML, so every payload field
 that reaches the page is one forgotten esc() away from being markup. Some of the
 payload is text scraped from third-party pages. These tests run the real
 `public/assets/render.js` under node with every string replaced by an HTML/
