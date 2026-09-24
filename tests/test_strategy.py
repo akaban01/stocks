@@ -642,3 +642,47 @@ def test_untested_selling_goes_ahead_with_a_warning():
     # Tested and paid: no warning.
     paid = rec(RICH, short_vol=strategy.short_vol_evidence(_rich_bt(40, -12.0)))
     assert paid.action == "SELL_PREMIUM" and not any("not been tested" in w for w in paid.warnings)
+
+
+# ------------------------------------------- near-term directional spreads
+
+def test_directional_spreads_list_all_four_verticals_with_no_size_when_nothing_is_picked():
+    row, view = make_row(), make_view(iv=31, hv=30, iv_rank=45)
+    r = strategy.recommend(row, view).as_dict()
+    assert r["plan"]["key"] not in strategy.DIRECTIONAL_KEYS
+    block = strategy.directional_spreads(row, view, r)
+    assert [c["key"] for c in block["candidates"]] == strategy.DIRECTIONAL_KEYS
+    assert block["preferred"] is None
+    assert all(c["sizing"]["contracts"] is None for c in block["candidates"])
+    assert "no proven directional read" in block["summary"]
+    # One direction each: two bullish, two bearish, all on the near expiry.
+    assert sorted(c["bias"] for c in block["candidates"]) == ["bearish", "bearish",
+                                                               "bullish", "bullish"]
+    assert {c["expiry"] for c in block["candidates"]} == {view.expiry}
+
+
+def test_directional_spreads_pick_is_the_recommendations_own_plan_and_size():
+    row = make_row(squeeze_on=False, squeeze_fired=True, fired_dir="up")
+    view = make_view(iv=18, hv=30, iv_rank=8)
+    r = strategy.recommend(row, view).as_dict()
+    assert r["plan"]["key"] == "bull_call_spread"
+    block = strategy.directional_spreads(row, view, r)
+    assert block["preferred"] == "bull_call_spread"
+    picked = next(c for c in block["candidates"] if c["key"] == "bull_call_spread")
+    assert picked["sizing"] == r["plan"]["sizing"]
+    assert picked["legs"] == r["plan"]["legs"]
+    others = [c for c in block["candidates"] if c["key"] != "bull_call_spread"]
+    assert others and all(c["sizing"]["contracts"] is None for c in others)
+
+
+def test_directional_spreads_skip_unpriced_names_and_floor_iv():
+    assert strategy.directional_spreads(make_row(), None) is None
+    assert strategy.directional_spreads(make_row(), make_view(iv=0.5, hv=30)) is None
+    rows = [make_row("AAA"), make_row("BBB")]
+    out = strategy.directional_spreads_all(rows, {"AAA": make_view("AAA")})
+    assert list(out) == ["AAA"]
+
+
+def test_directional_spreads_warn_about_earnings_inside_the_expiry():
+    block = strategy.directional_spreads(make_row(earnings_in_days=5.0), make_view(dte=24))
+    assert any("earnings" in w for w in block["warnings"])

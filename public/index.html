@@ -62,7 +62,20 @@
 
     <!-- -------------------------------------------------------- spreads -->
     <section id="panel-spreads" class="panel" data-tab="spreads" role="tabpanel" aria-labelledby="tab-spreads" hidden>
-      <div class="lede">
+      <div class="filters" id="spreadviews" role="group" aria-label="Which spreads">
+        <button class="chip" data-spreadview="long" aria-pressed="true">≈13 months</button>
+        <button class="chip" data-spreadview="near" aria-pressed="false">Near-term, one direction</button>
+      </div>
+      <div class="lede" data-spreadview="near" hidden>
+        The <b>bull and bear vertical spreads</b> on each name's near expiry — the same one the
+        Scanner trades on. Each is a bet the stock goes <b>one way</b>: bull spreads pay if it rises,
+        bear spreads if it falls. A <b>debit</b> spread (bull call, bear put) is paid for up front; a
+        <b>credit</b> spread (bull put, bear call) is paid to you and pays out if the stock does not
+        move against it. The <b>pick</b> is the Scanner's own recommendation when that is one of
+        these; everything else is listed for comparison with no size, because a vertical is only
+        worth placing on a direction read the backtest has shown to work.
+      </div>
+      <div class="lede" data-spreadview="long">
         Every <b>≈13-month spread</b> the chains support — the same names, held for a year instead of
         a fortnight. Out here <b>time decay barely works for you</b> and the level of implied
         volatility does most of the moving, so none of these are income trades: they are directional
@@ -72,7 +85,7 @@
       <div class="meta" id="spreadmeta"></div>
       <div class="filters" id="spreadfilters"></div>
       <div id="spreadtable"></div>
-      <p class="faint" style="font-size:.82rem;margin-top:12px">
+      <p class="faint" data-spreadview="long" style="font-size:.82rem;margin-top:12px">
         Long-dated options are listed on January cycles, so the expiry nearest 13 months out can sit
         anywhere from ~9 to ~18 months away. The real days-to-expiry is in every row.
       </p>

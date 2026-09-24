@@ -404,6 +404,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Built {sum(len(b['candidates']) for b in long_blocks.values())} long-dated spreads "
               f"across {len(long_blocks)} names.")
 
+    # ---- Near-term one-direction spreads -------------------------------------
+    # The bull and bear verticals on the near expiry, listed side by side on
+    # the Spreads tab. The pick is the recommendation's own plan, so it never
+    # disagrees with the Scanner.
+    near_blocks = strategy.directional_spreads_all(scan_rows, views, recs)
+
     # The compliance screen's own verdict, per name. In `filter` mode this is
     # every survivor saying why it survived; in `annotate` mode it is the only
     # thing distinguishing a name that failed from one that passed.
@@ -444,6 +450,7 @@ def main(argv: list[str] | None = None) -> int:
         recommendations=recs,
         option_views=views,
         long_spreads=long_blocks,
+        near_spreads=near_blocks,
         screens=screens,
         screen_meta={"mode": screen_mode,
                      "thresholds": {"max_debt_ratio": formula.get("max_debt_ratio", 0.33),
