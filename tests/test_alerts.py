@@ -115,3 +115,15 @@ def test_a_failing_webhook_never_breaks_the_run(monkeypatch, capsys):
     monkeypatch.setattr(alerts, "_post", boom)
     assert alerts.maybe_alert(_rows("AAA"), 60.0, {}) == 0
     assert "failed to send" in capsys.readouterr().out
+
+
+def test_the_alert_says_how_many_to_trade_or_why_none():
+    from spread_scanner import alerts
+    assert alerts._size_line({"contracts": 2, "total_risk": 760.0}) == "size: 2× (risks $760)"
+    assert "over the per-trade budget" in alerts._size_line(
+        {"contracts": 0, "over_budget": True, "risk_per_spread": 8780.0})
+    assert "cap on today's total risk" in alerts._size_line(
+        {"contracts": 0, "portfolio_capped": True, "risk_per_spread": 300.0})
+    assert "trimmed" in alerts._size_line(
+        {"contracts": 1, "total_risk": 300.0, "portfolio_capped": True})
+    assert alerts._size_line({}) == ""

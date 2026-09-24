@@ -66,10 +66,31 @@ def _format_message(rows: pd.DataFrame, threshold: float,
             lines.append(f"   ↳ {verb}: *{plan.get('name', '—')}*{iv}")
             if plan.get("legs"):
                 lines.append(f"   ↳ {rec.get('detail', '')}")
+                size = _size_line(plan.get("sizing") or {})
+                if size:
+                    lines.append(f"   ↳ {size}")
         else:
             lines.append(f"   ↳ lean {r['lean']} (no IV read this run)")
     lines.append("_Not financial advice. Price it in your broker before trading._")
     return "\n".join(lines)
+
+
+def _size_line(sizing: dict) -> str:
+    """How many to trade, or why none. A plan sized at zero — over the per-trade
+    budget, or cut by the cap on the day's total risk — used to be announced
+    exactly like one that fits."""
+    n = sizing.get("contracts")
+    if n is None:
+        return ""
+    if n == 0 and sizing.get("portfolio_capped"):
+        return "size: 0 — cut by the cap on today's total risk"
+    if n == 0 or sizing.get("over_budget"):
+        risk = sizing.get("risk_per_spread")
+        return ("size: 0 — one spread risks " + (f"${risk:,.0f}" if risk else "more")
+                + ", over the per-trade budget")
+    total = sizing.get("total_risk")
+    return f"size: {n}×" + (f" (risks ${total:,.0f})" if total else "") + \
+        (" — trimmed by the cap on today's total risk" if sizing.get("portfolio_capped") else "")
 
 
 def _post(url: str, message: str) -> None:
