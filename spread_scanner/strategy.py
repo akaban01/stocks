@@ -1242,7 +1242,22 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
         if builder is None:
             return None
         plan = builder(view, sigma)
-        return _finish(plan, view, sigma, risk_budget) if plan else None
+        if plan is None:
+            return None
+        # A credit vertical on a name with no direction read is half an iron
+        # condor, not a directional call. Its builder's thesis says "the lean
+        # is up/down", which on the 2026-09-24 scan told JNJ's card it had a
+        # bearish lean the direction gate had just set aside.
+        if bias == "neutral" and plan.key in ("bull_put_spread", "bear_call_spread"):
+            side = "put" if plan.key == "bull_put_spread" else "call"
+            plan.thesis = (
+                "Premium is rich and there is no directional read, so this is one side of an "
+                f"iron condor — the {side} side"
+                + (", where the skew pays more" if side == "put" and view.skew_label == "put_skew"
+                   else "")
+                + ". It still loses if the stock runs through the short strike, so it is a bet "
+                "the stock does not move far " + ("down." if side == "put" else "up."))
+        return _finish(plan, view, sigma, risk_budget)
 
     plan = build(primary_key) if primary_key != "stand_aside" else None
     if plan is None:
