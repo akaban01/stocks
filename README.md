@@ -464,6 +464,14 @@ it with numbers: alongside the winner it prints the runner-up and the middle of
 the rankable weeks, so the crown is visibly sitting on a distribution. A week
 twenty points clear of the field and a week two points clear are the same crown
 and very different evidence, and there is a one-click button here to adopt it.
+The strip also asks the question directly (`SpreadTrial.bestByChance`): with
+every week given the same true rate, the average across them, how often does luck
+alone produce a best week this good? Above 5% of the time, the button says
+"Highest here" instead of "Best here" and the note says no week stands out. The
+simulation treats the weeks as independent, and neighbouring weeks share most of
+their window, so it errs toward calling it luck. On one run, holding 8 weeks for
++8% over 10 years, no name's best week cleared it; the typical name's best week
+turned up by luck about 9 times in 10.
 
 **The target is a distance, not a level.** $250 meant something very different in
 2016, so each year's target price is computed from that year's own entry, and

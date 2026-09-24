@@ -763,3 +763,42 @@ def test_a_repeat_test_row_still_labels_itself_by_its_year():
                                 "contracts": 1})
     assert got["rows"][0]["year"] == 2019
     assert got["rows"][0]["when"] == 2019
+
+
+# ---- is the best week better than luck? ------------------------------------
+
+def best_by_chance(cells: list[dict], sims: int = 2000) -> dict:
+    script = f"""
+      const trial = require({json.dumps(str(TRIAL_JS))});
+      process.stdout.write(JSON.stringify(trial.bestByChance({json.dumps(cells)}, {sims}, 7)));
+    """
+    done = subprocess.run(["node", "-e", script], capture_output=True, text=True, timeout=60)
+    assert done.returncode == 0, done.stderr
+    return json.loads(done.stdout)
+
+
+def _weeks(rates_hits, decided=10):
+    return [{"week": w + 1, "hit": h, "decided": decided, "rate": h / decided * 100}
+            for w, h in enumerate(rates_hits)]
+
+
+def test_a_best_week_that_is_only_the_luckiest_of_fifty_is_called_chance():
+    # 50 weeks, all around 6 in 10, the best at 9 in 10: exactly what luck does.
+    cells = _weeks([6, 5, 7, 6, 6, 5, 7, 6, 8, 6] * 5)
+    cells[17] = {**cells[17], "hit": 9, "rate": 90.0}
+    out = best_by_chance(cells)
+    assert out["p"] > 0.05
+    assert out["pooled"] == pytest.approx(sum(c["hit"] for c in cells) / 500 * 100)
+
+
+def test_a_week_far_beyond_luck_is_not():
+    # Every week near 3 in 10, one week at 10 in 10: luck almost never does that.
+    cells = _weeks([3, 2, 4, 3] * 12)
+    cells[5] = {**cells[5], "hit": 10, "rate": 100.0}
+    assert best_by_chance(cells)["p"] < 0.05
+
+
+def test_best_by_chance_is_deterministic_and_needs_a_field():
+    cells = _weeks([6, 5, 7, 6, 9, 6])
+    assert best_by_chance(cells) == best_by_chance(cells)
+    assert best_by_chance(cells[:1])["p"] is None

@@ -311,6 +311,56 @@
     return out;
   }
 
+  /* ---- is the best week better than luck? --------------------------------
+
+     The strip crowns the best of up to 53 weeks, each judged on ten years or
+     so, and the best of 53 tries is high by construction even when no week is
+     special. This asks how often it would be *that* high by chance: every
+     rankable week gets the same true hit rate — the pooled rate across them —
+     and its own number of judged years; the simulated best of those is compared
+     with the real one, `sims` times. `p` is the share of runs whose best week
+     did at least as well.
+
+     The weeks are simulated as independent. Real neighbouring weeks share most
+     of their windows, so there are fewer independent tries than 53 and luck
+     reaches less far than this assumes: `p` errs on the side of "chance",
+     which is the safe side for a button that says "buy in this week".
+     Deterministic (seeded), so the page does not change its mind on reload. */
+  function rng(seed) {                         // mulberry32
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function bestByChance(cells, sims, seed) {
+    var rank = (cells || []).filter(function (c) {
+      return c.rate !== null && c.rate !== undefined && c.decided > 0;
+    });
+    if (rank.length < 2) return { p: null, pooled: null, sims: 0 };
+    var hits = 0, tries = 0, best = -1;
+    rank.forEach(function (c) {
+      hits += c.hit; tries += c.decided;
+      if (c.rate > best) best = c.rate;
+    });
+    var p0 = hits / tries, n = sims || 2000, rand = rng(seed || 1), beat = 0;
+    for (var s = 0; s < n; s++) {
+      var top = -1;
+      for (var i = 0; i < rank.length; i++) {
+        var k = 0;
+        for (var j = 0; j < rank[i].decided; j++) if (rand() < p0) k++;
+        var r = (k / rank[i].decided) * 100;
+        if (r > top) top = r;
+      }
+      if (top >= best - 1e-9) beat++;
+    }
+    return { p: beat / n, pooled: p0 * 100, sims: n };
+  }
+
   return { weekId: weekId, median: median, index: index, year: year, run: run,
-           economics: economics };
+           economics: economics, bestByChance: bestByChance };
 });
