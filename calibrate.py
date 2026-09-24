@@ -91,11 +91,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
-    elif (cfg.get("universe") or {}).get("source") == "etf":
-        uni = cfg["universe"]
-        tickers = universe.from_config(uni, outdir)[0] or (cfg.get("tickers") or [])
     else:
-        tickers = cfg.get("tickers") or []
+        # The names the scan actually ran on, after the halal screen.
+        tickers, source = universe.for_validation(cfg, outdir)
+        print(f"Universe: {len(tickers)} names from {source}.")
 
     print(f"Calibrating on {len(tickers)} tickers over {args.years}y...")
     raw = data.download(tickers, period=f"{args.years}y")

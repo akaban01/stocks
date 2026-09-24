@@ -1190,3 +1190,44 @@ def recommend_all(rows: list[dict], views: dict[str, OptionView],
         out[ticker] = recommend(row, views.get(ticker), risk_budget,
                                 allow_undefined_risk, long_vol).as_dict()
     return out
+
+
+# ------------------------------------------------------------- whole portfolio
+
+_TRADES = ("BUY_PREMIUM", "SELL_PREMIUM", "NEUTRAL_INCOME")
+
+
+def apply_portfolio_cap(recs: dict[str, dict], cap: float | None) -> dict:
+    """Cap the day's total risk across every recommended trade, in place.
+
+    Each plan is sized against the per-position budget on its own. The universe
+    is a few dozen large caps that move together, so five "separate" trades on
+    one day are close to one position five times the size, and a per-trade
+    budget says nothing about that. Trades are funded in order of confidence;
+    once the cap is used, later ones are cut to what still fits, or to zero,
+    and their sizing note says the portfolio cap did it. Returns a summary for
+    the payload."""
+    summary = {"cap": cap, "used": 0.0, "capped": []}
+    if not cap or cap <= 0:
+        return summary
+    order = sorted((t for t, r in recs.items() if r and r.get("action") in _TRADES),
+                   key=lambda t: -(recs[t].get("confidence") or 0))
+    used = 0.0
+    for t in order:
+        sizing = (recs[t].get("plan") or {}).get("sizing") or {}
+        risk, n = sizing.get("risk_per_spread"), sizing.get("contracts")
+        if not risk or not n:
+            continue
+        fit = max(0, min(n, int((cap - used) // risk)))
+        if fit < n:
+            sizing["contracts"] = fit
+            sizing["total_risk"] = round(fit * risk, 2)
+            sizing["portfolio_capped"] = True
+            sizing["note"] = (
+                (f"Cut from {n}× to {fit}× " if fit else f"Held at 0 (was {n}×) ")
+                + f"by the ${cap:,.0f} cap on total risk across today's trades — the names "
+                "here move together, so their risks add up. " + str(sizing.get("note") or ""))
+            summary["capped"].append(t)
+        used += fit * risk
+    summary["used"] = round(used, 2)
+    return summary

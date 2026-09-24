@@ -173,3 +173,27 @@ def test_calibration_holds_only_when_strictly_better():
     assert backtest.calibration_payload(c, years=5, universe=1)["verdict"]["holds"] is False
     c["sep_calibrated"] = (41.0, 30.0, 11.0)
     assert backtest.calibration_payload(c, years=5, universe=1)["verdict"]["holds"] is True
+
+
+def test_earnings_windows_cover_the_bars_whose_outcome_includes_the_report():
+    idx = pd.bdate_range("2026-01-05", periods=30)
+    flags = backtest._earnings_windows(idx, [idx[20]], horizon=10)
+    assert flags[10:20].all()
+    assert not flags[:10].any() and not flags[20:].any()
+    # A date outside the history marks nothing.
+    assert not backtest._earnings_windows(idx, [pd.Timestamp("2030-01-01")], 10).any()
+
+
+def test_backtest_reports_the_edge_with_earnings_windows_removed():
+    dates = pd.bdate_range("2024-01-01", periods=400)
+    data = {t: _synth(i).set_index(dates) for i, t in enumerate("ABCD")}
+    first = dates
+    earnings = {"A": [first[150], first[250]], "B": [first[200]]}
+    recs, stats = backtest.run_backtest(data, PARAMS, earnings=earnings)
+    assert recs["earnings_in_window"].any()
+    ex = stats["ex_earnings"]
+    assert ex["names_with_dates"] == 2 and ex["names"] == 4
+    assert ex["n"] < stats["independent"]["n"]
+    payload = backtest.backtest_payload(stats, PARAMS, n_tickers=4, years=5)
+    assert payload["ex_earnings"]["text"]
+    json.dumps(payload)

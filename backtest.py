@@ -49,12 +49,10 @@ def main(argv: list[str] | None = None) -> int:
     # Universe: explicit override, else fetched ETF holdings, else config list.
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
-    elif (cfg.get("universe") or {}).get("source") == "etf":
-        uni = cfg["universe"]
-        tickers = universe.from_config(uni, outdir)[0]
-        tickers = tickers or (cfg.get("tickers") or [])
     else:
-        tickers = cfg.get("tickers") or []
+        # The names the scan actually ran on, after the halal screen.
+        tickers, source = universe.for_validation(cfg, outdir)
+        print(f"Universe: {len(tickers)} names from {source}.")
 
     if not tickers:
         print("No tickers to backtest.", file=sys.stderr)
@@ -64,7 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     raw = data.download(tickers, period=f"{args.years}y")
     print(f"Got data for {len(raw)}/{len(tickers)} tickers.")
 
-    recs, stats = backtest.run_backtest(raw, params, weights=weights)
+    print("Fetching past earnings dates (to report the edge with earnings windows removed)...")
+    earnings = data.earnings_history(list(raw))
+    print(f"  dates for {len(earnings)}/{len(raw)} names.")
+    recs, stats = backtest.run_backtest(raw, params, weights=weights, earnings=earnings)
     payload = backtest.backtest_payload(stats, params, n_tickers=len(raw), years=args.years,
                                         weights=weights,
                                         weights_as_of=(weights_meta or {}).get("as_of"))
@@ -84,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
                   f"· broke band {b['broke_band_pct']:.0f}%")
         print(f"\n{payload['verdict']['text']}")
         print(payload["verdict"]["long_band_text"])
+        if payload.get("ex_earnings"):
+            print(payload["ex_earnings"]["text"])
     else:
         print(payload.get("note", "No results."))
     imp = payload["implied"]

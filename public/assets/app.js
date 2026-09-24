@@ -573,6 +573,11 @@
     // Whether straddles and strangles were on the menu this run, and the
     // evidence that decided it. Withheld is the default until the record says
     // buying premium on the setup pays.
+    if (d.portfolio && d.portfolio.capped && d.portfolio.capped.length) {
+      $("#summary").innerHTML += ' <span class="dim">The ' + money(d.portfolio.cap, 0) +
+        " cap on total risk across today's trades cut " + esc(d.portfolio.capped.join(", ")) +
+        " — these names move together, so their risks add up.</span>";
+    }
     if (d.long_vol && d.long_vol.supported === false) {
       $("#summary").innerHTML += ' <span class="dim">Straddles and strangles are withheld: ' +
         esc(d.long_vol.text) + "</span>";
@@ -3878,6 +3883,9 @@
           ? '<div class="verdict ' + (d.independent && d.independent.long_band &&
               d.independent.long_band.ci95_pts[0] > 0 ? "good" : "bad") + '">' +
             esc(d.verdict.long_band_text) + "</div>"
+          : "") +
+        (d.ex_earnings && d.ex_earnings.text
+          ? '<p class="dim" style="font-size:.85rem">' + esc(d.ex_earnings.text) + "</p>"
           : "") +
         (d.independent
           ? '<p class="faint" style="font-size:.82rem">Verdicts use ' + num(d.independent.bars, 0) +

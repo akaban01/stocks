@@ -128,3 +128,25 @@ def test_last_good_list_is_saved_and_used_when_live_fetch_fails(tmp_path, monkey
     # A list saved for other funds, or another cap, is not this universe.
     assert universe.resolve_universe(["HLAL"], 30, cache) == ([], None)
     assert universe.resolve_universe(["SPUS"], 10, cache) == ([], None)
+
+
+def test_share_classes_of_one_company_take_one_slot(monkeypatch):
+    pages = {"SPUS": [("GOOGL", 5.2), ("GOOG", 4.3), ("AAPL", 9.0), ("MSFT", 8.0)]}
+    monkeypatch.setattr(universe, "fetch_etf_holdings", lambda s, **k: pages[s])
+    # Alphabet's combined 9.5% outranks Apple's 9.0% as one entry.
+    assert universe.fetch_halal_universe(["SPUS"], max_holdings=3) == ["GOOGL", "AAPL", "MSFT"]
+
+
+def test_screened_list_is_what_validation_measures(tmp_path, monkeypatch):
+    universe.save_screened(tmp_path / "data" / "screened.json", ["NVDA", "AAPL"], "filter")
+    cfg = {"universe": {"source": "etf"}, "tickers": ["X"]}
+    monkeypatch.setattr(universe, "from_config", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("must not fetch when a screened list exists")))
+    tickers, source = universe.for_validation(cfg, tmp_path)
+    assert tickers == ["NVDA", "AAPL"] and "screened" in source
+
+
+def test_validation_falls_back_without_a_screened_list(tmp_path, monkeypatch):
+    monkeypatch.setattr(universe, "from_config", lambda uni, outdir: (["NVDA"], None))
+    assert universe.for_validation({"universe": {"source": "etf"}}, tmp_path)[0] == ["NVDA"]
+    assert universe.for_validation({"tickers": ["X"]}, tmp_path) == (["X"], "the config watchlist")
