@@ -1,6 +1,6 @@
 {
-  "schema_version": "2.8.0",
-  "generated_at": "2026-09-24T17:58:20Z",
+  "schema_version": "2.9.0",
+  "generated_at": "2026-09-24T19:40:15Z",
   "universe": 29,
   "history_years": 5,
   "horizon_days": 10,
@@ -59,9 +59,9 @@
       "bars": 2703,
       "avg_abs_move_pct": 5.4,
       "median_abs_move_pct": 3.9,
-      "coverage_pct": 58.9,
+      "coverage_pct": 59.0,
       "expansion": 1.05,
-      "broke_band_pct": 41.1,
+      "broke_band_pct": 41.0,
       "broke_long_band_pct": 32.9
     },
     "off": {
