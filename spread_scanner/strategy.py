@@ -35,7 +35,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field
 
-from .options import OptionView, Quote
+from .options import MIN_IV_HISTORY, OI_FAIR, SPREAD_FAIR, OptionView, Quote
 
 # --- strike placement, in sigmas of the chosen expiry ------------------------
 SHORT_SIGMA = 1.0        # ~16-delta short strike for credit structures
@@ -914,6 +914,24 @@ def long_vol_evidence(backtest: dict | None) -> dict:
             "text": "No backtest is available to show that buying premium on this setup pays."}
 
 
+def _illiquid_reason(view: OptionView) -> str:
+    """Why a chain was judged too thin to trade, naming whichever test failed.
+
+    "poor" is either a wide bid/ask *or* too little open interest. Citing the
+    bid/ask on a chain that failed on open interest alone told the reader a
+    0.6%-wide market was too wide to trade."""
+    sp, oi = view.atm_spread_pct, view.atm_open_interest
+    parts = []
+    if sp is not None and sp > SPREAD_FAIR:
+        parts.append(f"the at-the-money bid/ask is ~{sp:.0f}% of mid")
+    if oi is not None and oi < OI_FAIR:
+        parts.append(f"only {oi:,} contract{'s' if oi != 1 else ''} of open interest at the "
+                     f"at-the-money strike (under {OI_FAIR})")
+    if not parts:
+        return "the at-the-money market is too thin"
+    return " and ".join(parts)
+
+
 def _choose(view: OptionView, row: dict, bias: str, strength: str,
             earnings_inside: bool, allow_undefined: bool,
             long_vol_ok: bool = True, long_vol_note: str = "",
@@ -933,8 +951,7 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
     # depth data and it's bad; "unknown" means the feed gave us nothing, which
     # is a reason to keep the structure simple, not to refuse outright.
     if view.liquidity == "poor":
-        wide = (f"the at-the-money bid/ask is ~{view.atm_spread_pct:.0f}% of mid"
-                if view.atm_spread_pct is not None else "the at-the-money market is wide")
+        wide = _illiquid_reason(view)
         return "stand_aside", [], [
             {"name": "Any multi-leg spread here",
              "reason": wide[0].upper() + wide[1:] +
@@ -1067,7 +1084,21 @@ def _confidence(view: OptionView, row: dict, strength: str, plan: Plan,
 def _why(view: OptionView, row: dict, bias: str, strength: str) -> list[str]:
     out = []
     if view.iv_rank is not None:
-        out.append(f"IV rank {view.iv_rank:.0f}/100 ({view.premium_state} premium, blended score {view.premium_score:.0f}).")
+        out.append(f"IV rank {view.iv_rank:.0f}/100 ({view.premium_state} premium, blended score "
+                   f"{view.premium_score:.0f}).")
+        # Until the name has its own implied-vol history, the rank is IV placed
+        # inside the range of *realized* vol, and one violent stretch of price
+        # action sets the top of that range for a year. Say so where it bites.
+        if view.iv_rank_basis != "implied" and view.iv_rank in (0.0, 100.0):
+            out.append(f"That rank is IV against the past year's realized volatility, not past "
+                       f"implied volatility (the name has fewer than {MIN_IV_HISTORY} logged IV "
+                       "readings). Today's IV sits "
+                       + ("below every realized reading in that range — one violent stretch "
+                          "can set the range's top for a year, so treat 'cheap' here as "
+                          "'priced below recent realized swings', not 'cheap for this name'."
+                          if view.iv_rank == 0.0 else
+                          "above every realized reading in that range — treat 'rich' here as "
+                          "'priced above recent realized swings', not 'rich for this name'."))
     else:
         out.append(f"Premium score {view.premium_score:.0f}/100 — {view.premium_state}.")
     out.append(f"Options price a {view.implied_move_pct:.1f}% move over the horizon vs "
@@ -1381,7 +1412,17 @@ def directional_spreads(row: dict, view: OptionView | None, rec: dict | None = N
         warnings.append(f"An earnings report falls inside this {view.days_to_expiry}-day expiry. "
                         "The gap on the day can jump straight past either strike.")
     if view.liquidity == "poor":
-        warnings.append("The chain is thin — expect to pay a wide bid/ask on the way in and out.")
+        warnings.append(f"The chain is thin: {_illiquid_reason(view)}. Expect to give up a lot "
+                        "of the edge on the way in and out.")
+    thin = [c for c in candidates if c.get("credit_to_width") is not None
+            and c["credit_to_width"] < MIN_CREDIT_TO_WIDTH]
+    if thin:
+        worst = min(thin, key=lambda c: c["credit_to_width"])
+        warnings.append(f"{'The credit spread here collects' if len(thin) == 1 else 'The credit spreads here collect'} "
+                        f"little for the risk — the {worst['name']} takes only "
+                        f"{worst['credit_to_width']:.0%} of its width, under the "
+                        f"{MIN_CREDIT_TO_WIDTH:.0%} this scanner treats as thin compensation. "
+                        "A fill worse than the one assumed here collects less still.")
     return {
         "expiry": view.expiry,
         "dte": view.days_to_expiry,
