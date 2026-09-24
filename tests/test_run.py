@@ -551,3 +551,35 @@ def test_low_score_control_names_are_logged_but_not_traded(offline, tmp_path, mo
     # Priced for the log only: no option read and no trade on its card.
     card = {s["ticker"]: s for s in scan["signals"]}[control]
     assert card["options"] is None and card["recommendation"]["action"] == "NO_DATA"
+
+
+def test_unproven_direction_reads_leave_no_preferred_long_dated_spread(offline, config, tmp_path):
+    _publish_backtest(tmp_path, {**SUPPORTIVE_BACKTEST, "direction": {"text": "none", "reads": {
+        k: {"proven": False} for k in ("lean_bullish", "lean_bearish",
+                                       "fired_bullish", "fired_bearish")}}})
+    assert run.main(["--config", str(config)]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    assert scan["direction"]["source"] == "backtest"
+    for s in scan["signals"]:
+        rec = s["recommendation"]
+        if rec["action"] != "NO_DATA":
+            assert rec["bias"] == "neutral"
+        if s.get("long_dated"):
+            assert s["long_dated"]["preferred"] is None
+
+
+def test_a_name_the_screen_could_not_check_is_published_as_not_screened(offline, config,
+                                                                      tmp_path, monkeypatch):
+    def partial(tickers, **kw):
+        details = {t: halal.ScreenResult(ticker=t, compliant=(None if t == "BBB" else True),
+                                         industry_ok=(None if t == "BBB" else True),
+                                         debt_ratio=None, cash_ratio=None, receivables_ratio=None,
+                                         industry="", reasons=["not screened: test"])
+                   for t in tickers}
+        return list(tickers), [], details
+    monkeypatch.setattr(halal, "screen_universe", partial)
+    assert run.main(["--config", str(config)]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    by = {s["ticker"]: s for s in scan["signals"]}
+    assert by["BBB"]["screen"]["compliant"] is None          # not True, not False
+    assert scan["screen"]["unknown"] == ["BBB"]

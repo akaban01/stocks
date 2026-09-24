@@ -197,3 +197,31 @@ def test_backtest_reports_the_edge_with_earnings_windows_removed():
     payload = backtest.backtest_payload(stats, PARAMS, n_tickers=4, years=5)
     assert payload["ex_earnings"]["text"]
     json.dumps(payload)
+
+
+def test_hit_vs_base_measures_a_read_against_how_often_the_move_went_that_way_anyway():
+    rng = np.random.RandomState(1)
+    n = 400
+    recs = pd.DataFrame({"date": np.repeat(np.arange(100), 4),
+                         "fwd_ret": rng.normal(0.5, 3, n)})          # mostly up: a base rate > 50%
+    signal = pd.Series(rng.rand(n) < 0.3)
+    # A useless read is right about as often as the base rate...
+    useless = backtest.hit_vs_base(recs, signal, 1, reps=300)
+    assert abs(useless["edge_pts"]) < 10 and useless["lo_pts"] < 0 < useless["hi_pts"]
+    # ...a good one clears it.
+    recs.loc[signal.values, "fwd_ret"] = np.abs(recs.loc[signal.values, "fwd_ret"]) + 0.1
+    good = backtest.hit_vs_base(recs, signal, 1, reps=300)
+    assert good["hit_pct"] == 100.0 and good["lo_pts"] > 0
+
+
+def test_backtest_payload_reports_each_direction_read():
+    data = {t: _synth(i) for i, t in enumerate("ABCD")}
+    recs, stats = backtest.run_backtest(data, PARAMS)
+    assert set(recs["lean"].unique()) <= {-1, 0, 1} and set(recs["fired"].unique()) <= {-1, 0, 1}
+    payload = backtest.backtest_payload(stats, PARAMS, n_tickers=4, years=5)
+    d = payload["direction"]
+    assert set(d["reads"]) == {"lean_bullish", "lean_bearish", "fired_bullish", "fired_bearish"}
+    assert d["text"]
+    for r in d["reads"].values():
+        assert isinstance(r["proven"], bool)
+    json.dumps(payload)

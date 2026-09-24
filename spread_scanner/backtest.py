@@ -98,7 +98,25 @@ def _per_ticker_records(df: pd.DataFrame, p: dict, weights: dict | None = None,
     em_long_pct = sigma_long * np.sqrt(p["horizon_days"]) * 100
 
     # Realized absolute move over the FORWARD horizon (the outcome).
-    fwd_abs = (close.shift(-p["horizon_days"]) / close - 1).abs() * 100
+    fwd_ret = (close.shift(-p["horizon_days"]) / close - 1) * 100
+    fwd_abs = fwd_ret.abs()
+
+    # The two direction reads the strategy engine trades on, computed exactly
+    # as the live scanner computes them (scanner.analyze / scanner._lean), so
+    # the backtest can say whether either predicts which way the move goes.
+    # lean: +1 bullish (momentum > 0 and above the 20-day average), -1 bearish
+    # (both the other way), 0 mixed. fired: the direction a squeeze broke in,
+    # within `release_window` bars of releasing, else 0.
+    momentum = ind.squeeze_momentum(df, p["kc_length"]).fillna(0.0)
+    sma20 = close.rolling(20).mean()
+    above = close > sma20.fillna(close)
+    bull = momentum > 0
+    lean = np.where(bull & above, 1, np.where(~bull & ~above, -1, 0))
+    off_streak = _consecutive_true(~squeeze)
+    last_on_close = close.where(squeeze).ffill()
+    rw = int(p.get("release_window", 2))
+    released = (~squeeze) & (off_streak >= 1) & (off_streak <= rw) & last_on_close.notna()
+    fired = np.where(released, np.sign(close - last_on_close).fillna(0), 0).astype(int)
 
     out = pd.DataFrame({
         "ticker": ticker,
@@ -112,6 +130,9 @@ def _per_ticker_records(df: pd.DataFrame, p: dict, weights: dict | None = None,
         "em_pct": em_pct,
         "em_long_pct": em_long_pct,
         "fwd_abs": fwd_abs,
+        "fwd_ret": fwd_ret,
+        "lean": lean,
+        "fired": fired,
     }).dropna()
     out["earnings_in_window"] = _earnings_windows(df.index, earnings,
                                                   p["horizon_days"])[out["pos"].to_numpy()]
@@ -178,6 +199,53 @@ def bootstrap_edge(recs: pd.DataFrame, hi_mask, lo_mask, col: str = "broke_band"
             "dates": int(len(arr)), "reps": int(len(draws))}
 
 
+def hit_vs_base(recs: pd.DataFrame, mask, sign: int, reps: int = 1000, seed: int = 0) -> dict:
+    """How often bars in `mask` moved in direction `sign` over the horizon,
+    against how often *every* bar did — with a 95% interval on the gap,
+    resampling whole dates (see `bootstrap_edge`).
+
+    The base rate is the point: on names that mostly rose, "bullish" signals are
+    right well over half the time simply because most windows went up. A
+    direction signal is worth trading only if it beats that."""
+    empty = {"n": 0, "hit_pct": None, "base_pct": None, "edge_pts": None,
+             "lo_pts": None, "hi_pts": None}
+    if recs.empty:
+        return empty
+    right = (np.sign(recs["fwd_ret"]) == sign)
+    frame = pd.DataFrame({"date": recs["date"].values,
+                          "k": (right & mask).astype(int).values, "n": mask.astype(int).values,
+                          "K": right.astype(int).values, "N": 1})
+    g = frame.groupby("date")[["k", "n", "K", "N"]].sum()
+    if g["n"].sum() == 0:
+        return empty
+    arr = g.to_numpy(dtype=float)
+
+    def gap(t):
+        return (t[..., 0] / t[..., 1] - t[..., 2] / t[..., 3]) * 100
+
+    tot = arr.sum(axis=0)
+    rng = np.random.default_rng(seed)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        draws = gap(arr[rng.integers(0, len(arr), size=(reps, len(arr)))].sum(axis=1))
+    draws = draws[np.isfinite(draws)]
+    lo, hi = (np.percentile(draws, [2.5, 97.5]) if len(draws) else (None, None))
+    return {"n": int(tot[1]), "hit_pct": float(tot[0] / tot[1] * 100),
+            "base_pct": float(tot[2] / tot[3] * 100), "edge_pts": float(gap(tot)),
+            "lo_pts": None if lo is None else float(lo), "hi_pts": None if hi is None else float(hi)}
+
+
+def direction_stats(indep: pd.DataFrame) -> dict:
+    """Does either direction read predict the move? On the non-overlapping sample."""
+    if indep.empty or "lean" not in indep:
+        return {}
+    return {
+        "lean_bullish": hit_vs_base(indep, indep["lean"] == 1, 1),
+        "lean_bearish": hit_vs_base(indep, indep["lean"] == -1, -1),
+        "fired_bullish": hit_vs_base(indep, indep["fired"] == 1, 1),
+        "fired_bearish": hit_vs_base(indep, indep["fired"] == -1, -1),
+    }
+
+
 def run_backtest(data: dict[str, pd.DataFrame], p: dict,
                  weights: dict | None = None,
                  earnings: dict[str, list] | None = None) -> tuple[pd.DataFrame, dict]:
@@ -230,6 +298,7 @@ def run_backtest(data: dict[str, pd.DataFrame], p: dict,
         "own_band": bootstrap_edge(indep, hi_m, lo_m, "broke_band"),
         "long_band": bootstrap_edge(indep, hi_m, lo_m, "broke_long_band"),
     }
+    stats["direction"] = direction_stats(indep)
     # The same, with every window that holds an earnings report taken out. A
     # report is a scheduled jump the option market prices in advance, so a
     # "breakout" that is really an earnings gap is not the squeeze working.
@@ -491,6 +560,7 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
             "long_band": interval(long_),
         },
         "ex_earnings": _ex_earnings_block(stats.get("ex_earnings"), interval),
+        "direction": _direction_block(stats.get("direction"), p["horizon_days"]),
         "verdict": {
             "holds": bool(holds),
             "edge_pts": _round(edge),
@@ -544,6 +614,33 @@ def _ex_earnings_block(ex: dict | None, interval) -> dict | None:
             "names": int(ex["names"]),
             "share_of_bars_with_earnings_pct": _round(ex["share_of_bars_with_earnings"] * 100),
             "own_band": own, "long_band": lb, "text": text}
+
+
+_DIRECTION_LABELS = {
+    "lean_bullish": "Bullish lean", "lean_bearish": "Bearish lean",
+    "fired_bullish": "Squeeze fired up", "fired_bearish": "Squeeze fired down",
+}
+
+
+def _direction_block(d: dict | None, horizon: int) -> dict | None:
+    """Each direction read's hit rate against the base rate, with a sentence."""
+    if not d:
+        return None
+    rows = {}
+    for key, v in d.items():
+        rows[key] = {"label": _DIRECTION_LABELS.get(key, key), "n": v["n"],
+                     "hit_pct": _round(v["hit_pct"]), "base_pct": _round(v["base_pct"]),
+                     "edge_pts": _round(v["edge_pts"]),
+                     "ci95_pts": [_round(v["lo_pts"]), _round(v["hi_pts"])],
+                     "proven": bool(v["lo_pts"] is not None and v["lo_pts"] > 0)}
+    proven = [r["label"] for r in rows.values() if r["proven"]]
+    text = ((f"Direction reads that beat the base rate over {horizon} days (95% interval above "
+             f"zero): {', '.join(proven)}. Only these are traded on.")
+            if proven else
+            (f"No direction read beats the base rate over {horizon} days: how often the move went "
+             "the way the lean or the squeeze release pointed is within noise of how often it "
+             "went that way anyway. Directional trades are withheld until one does."))
+    return {"horizon_days": int(horizon), "reads": rows, "text": text}
 
 
 def _round(v, nd: int = 1):

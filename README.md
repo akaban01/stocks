@@ -160,6 +160,18 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > every window that holds an earnings report removed (dates from Yahoo, about 16%
 > of bars): on one run the own-band edge stayed at +14 pts and the 60-day-band
 > edge at −2.
+>
+> **Directional trades need evidence too** (`strategy.direction_requires_evidence`).
+> The engine's direction reads are the momentum lean and the way a squeeze
+> released. The backtest measures each one, per side, against the base rate: how
+> often the move went that way anyway (`backtest.json` → `direction`). On one run
+> over the screened names, the bullish lean was right 56.2% of the time against a
+> 55.6% base, the bearish lean 45.5% against 44.3%, and a squeeze release was no
+> better (and on about 50 cases per side). A read is traded on only when its 95%
+> interval clears zero. Until one does, every name is treated as having no
+> direction: no directional debit or credit spreads, and no preferred 13-month
+> spread. Most days that means most cards stand aside, which is what the evidence
+> supports.
 
 ## Quick start (local)
 
@@ -362,7 +374,12 @@ not — *which months have these names actually risen and fallen in?* — with t
 things on the page:
 
 - the pooled **best and worst month** across the whole basket, with the average
-  move, the hit rate and how many years stand behind each;
+  move, the hit rate and how many years stand behind each. Twelve averages always
+  have a highest and a lowest, so a month is named only when it is more extreme
+  than the best (or worst) month in 95% of histories with the calendar months
+  shuffled (`seasonality.extreme_p`). Otherwise the tile says no month stands out
+  and how often chance produced one that extreme. Each month also carries
+  `excess_pct`, its average minus the name's average month;
 - **average move** and **how often it worked** as two twelve-bar charts. They are
   deliberately separate: a fat average built on one spectacular year sits right
   on the coin-flip line in the second chart, which is exactly the tell you want;
@@ -859,12 +876,16 @@ AND  accounts receivable / market cap    < 33%   (optional)
 ```
 
 The resulting **Debt%** and **Cash%** show in every report so you can see the
-verification. Set `halal_screen.financial_formula.mode: annotate` to keep names
+verification. For a second opinion, `python check_musaffa.py -n 30` reads Musaffa's
+public verdict for the names the last scan published (`public/data/screened.json`);
+it prints for you to read, and nothing in the pipeline uses it. Set `halal_screen.financial_formula.mode: annotate` to keep names
 that fail instead of dropping them — each one then arrives carrying its verdict:
 a **Fails screen** badge on its card, the reason underneath it, a `fails` in the
 scanner table's **Screen** column, and a banner naming every flagged name at the
-top of the page. A name the screen could not reach at all is a third state,
-**Not screened**, and never renders as a pass: "we did not check this" and "this
+top of the page. A name the screen could not reach, or could not finish (Yahoo
+returned no fundamentals, or no market cap, debt or cash figure), is a third
+state, **Not screened**, and never renders as a pass. It is kept and flagged
+by default (`financial_formula.unscreened: keep`), or dropped with `drop`: "we did not check this" and "this
 passed" are different claims, and only one of them is safe to imply. (Until
 recently only the two ratios reached the payload, so a
 name kept for being a bank rendered exactly like one that passed. On a page whose

@@ -105,6 +105,9 @@ halal_screen:
     max_debt_ratio: 0.33    # interest-bearing debt / market cap
     max_cash_ratio: 0.33    # cash & equivalents / market cap
     max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
+    unscreened: keep        # a name whose fundamentals Yahoo could not supply:
+                            # 'keep' = publish it marked "not screened" (never as a pass);
+                            # 'drop' = leave it out of the scan
 
 options:
   # Read the option chain for the top-ranked names: ATM implied volatility, IV
@@ -153,6 +156,13 @@ strategy:
                             #        inside the expiry. Leave false unless you know
                             #        exactly what an open-ended loss means for you.
   long_vol_requires_evidence: true
+  direction_requires_evidence: true
+                            # Trade on a direction read (the momentum lean, or the
+                            # way a squeeze released) only when the last backtest
+                            # shows that read calling direction better than the
+                            # base rate. Otherwise the name is treated as having no
+                            # directional read — for the near-term and 13-month
+                            # spreads alike.
                             # Offer long straddles / strangles only when the last
                             # backtest shows buying premium on the setup pays:
                             # first the move against logged implied vol, until

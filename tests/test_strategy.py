@@ -575,3 +575,35 @@ def test_no_cap_changes_nothing():
     recs = {"A": _trade(0.9, 400, 5)}
     assert strategy.apply_portfolio_cap(recs, 0)["capped"] == []
     assert recs["A"]["plan"]["sizing"]["contracts"] == 5
+
+
+# ------------------------------------------------- direction needs evidence
+
+
+def _dir_bt(**proven):
+    return {"direction": {"text": "t", "reads": {k: {"proven": v} for k, v in proven.items()}}}
+
+
+def test_an_unproven_lean_is_treated_as_no_direction():
+    row = make_row(lean="Bullish")
+    ev = strategy.direction_evidence(_dir_bt(lean_bullish=False))
+    assert strategy.effective_bias(row, ev)[:2] == ("neutral", "none")
+    assert "not traded on" in strategy.effective_bias(row, ev)[2]
+    ev = strategy.direction_evidence(_dir_bt(lean_bullish=True))
+    assert strategy.effective_bias(row, ev) == ("bullish", "weak", "")
+    # Ungated library callers keep the raw read.
+    assert strategy.effective_bias(row, None)[:2] == ("bullish", "weak")
+
+
+def test_no_backtest_proves_no_direction():
+    ev = strategy.direction_evidence(None)
+    assert ev["source"] == "none" and ev["proven"] == {}
+    assert strategy.effective_bias(make_row(lean="Bearish"), ev)[:2] == ("neutral", "none")
+
+
+def test_a_rich_name_with_an_unproven_lean_gets_a_non_directional_structure():
+    ev = strategy.direction_evidence(_dir_bt(lean_bullish=False, lean_bearish=False))
+    r = rec({"iv": 58, "hv": 28, "iv_rank": 88}, {"lean": "Bullish"}, direction=ev)
+    assert r.bias == "neutral"
+    assert r.plan["key"] in ("iron_condor", "bull_put_spread", "bear_call_spread")
+    assert any("not traded on" in w for w in r.why)

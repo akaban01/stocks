@@ -894,18 +894,19 @@
   /* The verdict, and it is not the crown.
    *
    * A search that works picks settings that go on beating their own baseline
-   * far more often than a coin would. One that is fitting noise picks settings
-   * that hold up about half the time, with a large in-sample edge and nothing
-   * left out of sample — and prints exactly that. */
+   * far more often than settings picked blind would (`random_held_pct`: on
+   * names that mostly rose, that is not a coin's 50%). One that is fitting
+   * noise picks settings that hold up about as often as random ones, with a
+   * large in-sample edge and nothing left out of sample — and prints that. */
   function bsVerdict(all) {
     function tile(cls, k, v) {
       return '<div class="rule ' + cls + '"><span class="k">' + k + '</span><div class="v">' + v +
         "</div></div>";
     }
-    var pct = all.held_pct;
-    // Better than a coin by a margin worth the name. Under that, the search is
-    // an expensive way to generate noise and is told to say so.
-    var works = App.has(pct) && pct >= 65;
+    var pct = all.held_pct, rand = all.random_held_pct;
+    // Better than settings picked at random, by a margin worth the name. Under
+    // that, the search is an expensive way to generate noise and says so.
+    var works = App.has(pct) && (App.has(rand) ? pct >= rand + 15 : pct >= 65);
     var decay = App.has(all.median_train) && App.has(all.median_test)
       ? all.median_train - all.median_test : null;
 
@@ -918,11 +919,16 @@
            "the name</b> over the same weeks. Either test alone is cheap — a short that loses " +
            "less than other shorts passes the first, and any long on a name that rose passes " +
            "the second. " +
+           (App.has(rand)
+             ? "A setting picked at random, from the same list, held up " + App.num(rand, 0) +
+               "% of the time — that is the bar, not a coin. "
+             : "") +
            (works
-             ? "Better than a coin by enough to be worth something — but read the decay beside "
+             ? "The picks clear it by enough to be worth something — but read the decay beside "
                + "it before believing any single row."
-             : "<b>That is about what a coin would do.</b> Picking a strategy per name, on this "
-               + "much history, mostly finds what already happened rather than what is going to.")) +
+             : "<b>That is about what picking at random does.</b> Choosing a strategy per name, "
+               + "on this much history, mostly finds what already happened rather than what is "
+               + "going to.")) +
       tile("rich", "Against simply holding — " + points(all.median_train, 0) + " → " +
              points(all.median_test, 0),
            "The yardstick is the alternative anyone actually had: buying the name and keeping " +

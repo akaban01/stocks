@@ -52,6 +52,7 @@
   var riskFormNote = R.riskFormNote; App.riskFormNote = riskFormNote;
   var statsTable = R.statsTable; App.statsTable = statsTable;
   var impliedSection = R.impliedSection; App.impliedSection = impliedSection;
+  var directionSection = R.directionSection; App.directionSection = directionSection;
 
   var DATA_DIR = "data/";
   // The payload shape this page was written against. Every file the backend

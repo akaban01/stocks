@@ -25,8 +25,8 @@ human to read, and the human is the one who decides.
 
 Usage
 -----
-    python check_musaffa.py            # first 15 from config.yaml
-    python check_musaffa.py -n 25      # first 25
+    python check_musaffa.py            # the first 15 names the last scan published
+    python check_musaffa.py -n 30      # all of them (the scan publishes ~29)
     python check_musaffa.py --tickers AAPL,MSFT,NVDA
     python check_musaffa.py --json     # machine-readable results
 """
@@ -60,10 +60,24 @@ _STATUS_LABEL = {
 
 
 def load_tickers(config_path: str, limit: int) -> list[str]:
-    """First `limit` tickers from ``config.yaml``'s ``tickers:`` list."""
+    """First `limit` of the names the last scan actually published.
+
+    That is the screened list run.py saves (`universe.screened_file`, default
+    ``public/data/screened.json``). It used to be the config's ``tickers:``
+    fallback watchlist — which the scan only uses when the ETF fetch fails, and
+    which starts with the ETFs themselves — so most of the names on the page
+    were never checked. The fallback list is still used when no scan has run."""
     with Path(config_path).open(encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh) or {}
-    tickers = [str(t).strip().upper() for t in (cfg.get("tickers") or []) if str(t).strip()]
+    outdir = Path((cfg.get("output") or {}).get("dir", "public"))
+    screened = outdir / (cfg.get("universe") or {}).get("screened_file", "data/screened.json")
+    try:
+        tickers = json.loads(screened.read_text(encoding="utf-8"))["tickers"]
+        print(f"Using the names the last scan published ({screened}).")
+    except (OSError, ValueError, KeyError, TypeError):
+        tickers = cfg.get("tickers") or []
+        print(f"No {screened} yet — using the config watchlist instead.")
+    tickers = [str(t).strip().upper() for t in tickers if str(t).strip()]
     return tickers[:limit]
 
 
@@ -86,7 +100,13 @@ def _extract(html: str, ticker: str) -> dict:
     stock's fields, not a related name the page also embeds. Returns whatever
     it can find; missing fields come back as None."""
     anchor = re.search(re.escape(f"stock-overview:{ticker.upper()}"), html)
-    window = html[anchor.start(): anchor.start() + 6000] if anchor else html
+    if not anchor:
+        # Without the stock's own block, a status found anywhere on the page
+        # could belong to a related name the page also embeds. Say "unrated"
+        # rather than guess.
+        return {"ticker": ticker.upper(), "status_raw": None, "status": "Unrated (not found)",
+                "ranking": None, "name": "", "as_of": ""}
+    window = html[anchor.start(): anchor.start() + 6000]
 
     status_m = re.search(r'"shariahCompliantStatus"\s*:\s*"([A-Z_]+)"', window)
     rank_m = re.search(r'"compliantRanking"\s*:\s*(\d+)', window)

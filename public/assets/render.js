@@ -207,7 +207,27 @@
       "</tr></thead><tbody>" + rows + "</tbody></table>";
   }
 
-  return { esc: esc, has: has, num: num, money: money, cash: cash, pct: pct,
+  // Does the lean or the squeeze release call direction better than the base
+  // rate? Only reads that do are traded on (strategy.direction_evidence).
+  function directionSection(dir) {
+    if (!dir || !dir.reads) return "";
+    var keys = ["lean_bullish", "lean_bearish", "fired_bullish", "fired_bearish"];
+    var rows = keys.filter(function (k) { return dir.reads[k]; }).map(function (k) {
+      var r = dir.reads[k], ci = r.ci95_pts || [];
+      return "<tr><td>" + esc(r.label) + '</td><td class="r">' + num(r.n, 0) + "</td>" +
+        '<td class="r">' + pct(r.hit_pct, 0) + '</td><td class="r">' + pct(r.base_pct, 0) + "</td>" +
+        '<td class="r">' + (has(r.edge_pts) ? (r.edge_pts > 0 ? "+" : "") + num(r.edge_pts, 0) : "—") +
+        (has(ci[0]) ? ' <span class="dim">(' + num(ci[0], 0) + " to " + num(ci[1], 0) + ")</span>" : "") +
+        '</td><td class="r">' + (r.proven ? "traded on" : "not traded on") + "</td></tr>";
+    }).join("");
+    return "<h3>Does the direction read work?</h3><p>" + esc(dir.text) + "</p>" +
+      '<table class="stats"><thead><tr><th>Read</th><th class="r">n</th>' +
+      '<th class="r">went that way</th><th class="r">base rate</th>' +
+      '<th class="r">edge, pts (95% CI)</th><th class="r"></th></tr></thead><tbody>' +
+      rows + "</tbody></table>";
+  }
+
+  return { directionSection: directionSection, esc: esc, has: has, num: num, money: money, cash: cash, pct: pct,
            multiExpiry: multiExpiry, sizeCell: sizeCell, legsTable: legsTable,
            noteList: noteList, manageBlock: manageBlock, altBlock: altBlock,
            riskFormNote: riskFormNote, statsTable: statsTable, impliedSection: impliedSection };

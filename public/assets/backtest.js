@@ -784,6 +784,11 @@
              !c.train.thin && !c.test.thin && c.train.exit > 0;
     });
     out.ranked = usable.length;
+    // The benchmark the pick has to beat: how many of the usable settings —
+    // any of them, chosen blind — pass the same held-up test on the holdout.
+    // On names that mostly rose that is not a coin's 50%, and a search is only
+    // worth running if its picks clear it.
+    out.usable_held = usable.filter(function (c) { return c.test.ret > 0 && c.test.exit > 0; }).length;
     if (!usable.length) return out;
 
     var byTrain = usable.slice().sort(function (a, b) { return b.train.ret - a.train.ret; });
@@ -821,9 +826,13 @@
     for (var i = 0; i < series.length; i++) names.push(best(payload, series[i], opt, axes));
     var rated = names.filter(function (n) { return n.pick; });
     var held = rated.filter(function (n) { return n.held_up; });
+    var usableN = 0, usableHeld = 0;
+    rated.forEach(function (n) { usableN += n.ranked; usableHeld += n.usable_held || 0; });
     return {
       names: names, rated: rated.length, held: held.length,
       held_pct: rated.length ? (held.length / rated.length) * 100 : null,
+      // Same test, settings picked at random instead of by the search.
+      random_held_pct: usableN ? (usableHeld / usableN) * 100 : null,
       median_train: median(rated.map(function (n) { return n.pick.train.ret; })),
       median_test: median(rated.map(function (n) { return n.pick.test.ret; })),
       median_hindsight: median(rated.map(function (n) { return n.hindsight.test.ret; })),

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import statistics
 
+import numpy as np
 import pandas as pd
 
 MONTH_NAMES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -32,6 +33,13 @@ MONTH_NAMES = ("Jan", "Feb", "Mar", "Apr", "May", "Jun",
 # A month needs at least this many distinct years before it can be called the
 # best or the worst. Fewer than three and one earnings blow-up is the pattern.
 MIN_YEARS = 3
+
+# Naming a best and a worst month means picking the extremes of twelve noisy
+# averages, and twelve averages always have extremes. A month is named only
+# when its average is more extreme than the best (or worst) month is in at least
+# 95% of histories with the calendar months shuffled — `extreme_p` below.
+SHUFFLES = 1000
+ALPHA = 0.05
 
 
 
@@ -131,6 +139,62 @@ def _extremes(rows: list[dict], min_years: int = MIN_YEARS, years_of=_row_years)
             min(ranked, key=lambda r: r["avg_pct"])["month"])
 
 
+def extreme_p(returns: pd.Series, months: set[int], seed: int = 0,
+              shuffles: int = SHUFFLES) -> tuple[float | None, float | None]:
+    """(p for the best month, p for the worst), from a calendar-shuffle test.
+
+    Each shuffle re-deals which calendar month every *period* belongs to — the
+    same deal for every name in a pooled series, so names that moved together
+    in one month still move together — and records the highest and lowest
+    monthly average among `months`. p is the share of shuffles at least as
+    extreme as what was observed. Deterministic (fixed seed)."""
+    if returns is None or returns.empty or not months:
+        return None, None
+    periods = pd.PeriodIndex(returns.index)
+    codes, uniques = pd.factorize(periods)
+    labels = np.asarray(uniques.month) - 1
+    vals = returns.to_numpy(dtype=float)
+    eligible = np.array(sorted(m - 1 for m in months))
+
+    def extremes(lab):
+        rows = lab[codes]
+        sums = np.bincount(rows, weights=vals, minlength=12)
+        counts = np.bincount(rows, minlength=12)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            means = sums / counts
+        means = means[eligible]
+        return np.nanmax(means), np.nanmin(means)
+
+    obs_max, obs_min = extremes(labels)
+    rng = np.random.default_rng(seed)
+    hi = lo = 0
+    for _ in range(shuffles):
+        mx, mn = extremes(rng.permutation(labels))
+        hi += mx >= obs_max - 1e-12
+        lo += mn <= obs_min + 1e-12
+    return (hi + 1) / (shuffles + 1), (lo + 1) / (shuffles + 1)
+
+
+def _judge(summary: dict, returns: pd.Series, years_of=_row_years) -> None:
+    """Keep the named best/worst month only if it beats the shuffle test, and
+    add each month's average relative to the name's (or pool's) average month."""
+    rows = summary["months"]
+    overall = float(returns.mean()) if len(returns) else None
+    for r in rows:
+        r["excess_pct"] = (round(r["avg_pct"] - overall, 2)
+                           if r["avg_pct"] is not None and overall is not None else None)
+    months = {r["month"] for r in rows if r["avg_pct"] is not None and years_of(r) >= MIN_YEARS}
+    p_best, p_worst = extreme_p(returns, months)
+    summary["best_p"] = None if p_best is None else round(p_best, 3)
+    summary["worst_p"] = None if p_worst is None else round(p_worst, 3)
+    summary["avg_month_pct"] = None if overall is None else round(overall, 2)
+    if p_best is None or p_best >= ALPHA:
+        summary["best_month"] = None
+    if p_worst is None or p_worst >= ALPHA:
+        summary["worst_month"] = None
+    summary["alpha"] = ALPHA
+
+
 def summarize(returns: pd.Series) -> dict | None:
     """Reduce a series of monthly returns to the payload the frontend draws."""
     if returns is None or returns.empty:
@@ -138,13 +202,15 @@ def summarize(returns: pd.Series) -> dict | None:
     rows = month_rows(returns)
     best, worst = _extremes(rows)
     years = sorted(set(returns.index.year))
-    return {
+    out = {
         "months": rows,
         "best_month": best,
         "worst_month": worst,
         "observations": int(len(returns)),
         "years": {"start": int(years[0]), "end": int(years[-1]), "count": len(years)},
     }
+    _judge(out, returns)
+    return out
 
 
 def pooled(returns_by_ticker: dict[str, pd.Series]) -> dict | None:
@@ -185,8 +251,9 @@ def pooled(returns_by_ticker: dict[str, pd.Series]) -> dict | None:
              for t, m in matches for idx, v in m.items()),
             key=lambda e: (e["year"], e["ticker"]))
 
-    summary["best_month"], summary["worst_month"] = _extremes(
-        summary["months"], years_of=lambda r: (r["ticker_years"] or {}).get("median", 0))
+    typical = lambda r: (r["ticker_years"] or {}).get("median", 0)          # noqa: E731
+    summary["best_month"], summary["worst_month"] = _extremes(summary["months"], years_of=typical)
+    _judge(summary, pd.concat(parts), years_of=typical)
     summary["tickers"] = len(parts)
     summary["min_years"] = MIN_YEARS
     return summary

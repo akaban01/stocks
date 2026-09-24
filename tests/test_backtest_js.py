@@ -1110,3 +1110,21 @@ def test_every_name_is_searched_and_the_hold_up_count_is_the_verdict():
     assert got["held"] <= got["rated"] <= got["names"]
     if got["rated"]:
         assert got["pct"] == (got["held"] / got["rated"]) * 100
+
+
+def test_best_all_reports_the_random_setting_benchmark():
+    """The search's picks are judged against settings picked blind, not a coin:
+    `random_held_pct` is the share of every usable setting that passed the
+    same held-up test on the holdout."""
+    data = payload({"AAA": [100 * (1.01 ** i) * (1 + 0.05 * ((i % 7) - 3) / 3) for i in range(400)],
+                    "BBB": [100 * (0.999 ** i) * (1 + 0.04 * ((i % 5) - 2) / 2) for i in range(400)]})
+    out = node(f"""
+      const d = {json.dumps(data)};
+      const all = bt.bestAll(d, {{target: 5}});
+      let n = 0, k = 0;
+      for (const x of all.names) if (x.pick) {{ n += x.ranked; k += x.usable_held; }}
+      process.stdout.write(JSON.stringify({{all: {{rated: all.rated,
+        random_held_pct: all.random_held_pct}}, n, k}}));
+    """)
+    assert out["all"]["rated"] > 0
+    assert out["all"]["random_held_pct"] == pytest.approx(100 * out["k"] / out["n"])
