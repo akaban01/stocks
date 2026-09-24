@@ -265,6 +265,15 @@
         " cap on total risk across today's trades cut " + App.esc(d.portfolio.capped.join(", ")) +
         " — these names move together, so their risks add up.</span>";
     }
+    // Direction reads the evidence did not back are not traded on (see the
+    // "Does it work?" tab); say so once rather than on every card.
+    if (d.direction && d.direction.proven) {
+      var unproven = Object.keys(d.direction.proven).filter(function (k) { return !d.direction.proven[k]; });
+      if (!Object.keys(d.direction.proven).length || unproven.length === Object.keys(d.direction.proven).length) {
+        App.$("#summary").innerHTML += ' <span class="dim">Directional trades are withheld: ' +
+          App.esc(d.direction.text) + "</span>";
+      }
+    }
     if (d.long_vol && d.long_vol.supported === false) {
       App.$("#summary").innerHTML += ' <span class="dim">Straddles and strangles are withheld: ' +
         App.esc(d.long_vol.text) + "</span>";

@@ -105,3 +105,13 @@ def test_a_last_trade_price_is_marked_in_the_order_table():
     html = render("r.legsTable(d)", PLAN)
     assert "last traded price" in html
     assert "mid $130.00, natural $100.00" in html
+
+
+def test_direction_section_escapes_labels_and_text():
+    read = {"label": EVIL, "n": 10, "hit_pct": 50, "base_pct": 49, "edge_pts": 1,
+            "ci95_pts": [-3, 5], "proven": False}
+    d = {"text": EVIL, "reads": {k: read for k in ("lean_bullish", "lean_bearish",
+                                                   "fired_bullish", "fired_bearish")}}
+    html = render("r.directionSection(d)", d)
+    assert_inert(html)
+    assert "not traded on" in html

@@ -52,7 +52,7 @@
         "<p>Realized moves landed inside the ±1σ band <b>" + App.pct(d.coverage_pct, 0) +
         "</b> of the time against a theoretical 68%. " +
         (d.coverage_ok ? "The bands are well calibrated." : "The bands look mis-calibrated — consider tuning <code>vol_lookback</code>.") +
-        "</p>" + App.impliedSection(d.implied) +
+        "</p>" + App.impliedSection(d.implied) + App.directionSection(d.direction) +
         "<p class=\"faint\" style=\"font-size:.82rem\">" + App.esc(d.caveat) + "</p>";
     }).catch(function (e) {
       App.$("#score-backtest").innerHTML = App.loadError(e, "backtest", "python backtest.py --years 5");

@@ -782,6 +782,44 @@ def directional_bias(row: dict) -> tuple[str, str]:
     return "neutral", "none"
 
 
+_DIR_LABEL = {"lean_bullish": "bullish lean", "lean_bearish": "bearish lean",
+              "fired_bullish": "upward squeeze release", "fired_bearish": "downward squeeze release"}
+
+
+def direction_evidence(backtest: dict | None) -> dict:
+    """Which direction reads the last published backtest shows beating the base rate.
+
+    ``{"proven": {read: bool}, "source", "text"}``. A read is proven when the
+    95% interval on (its hit rate − the base rate) sits above zero on the
+    non-overlapping sample (`backtest.direction_stats`). No backtest, or one
+    that predates the test, proves nothing: a direction signal does not get to
+    spend money until it has shown it can call direction."""
+    reads = (((backtest or {}).get("direction") or {}).get("reads")) or {}
+    if not reads:
+        return {"proven": {}, "source": "none",
+                "text": ("No backtest of the direction reads is published yet, so no lean or "
+                         "squeeze release is traded on.")}
+    return {"proven": {k: bool(v.get("proven")) for k, v in reads.items()}, "source": "backtest",
+            "text": (backtest.get("direction") or {}).get("text", "")}
+
+
+def effective_bias(row: dict, evidence: dict | None) -> tuple[str, str, str]:
+    """(bias, strength, note): the direction read to trade on, after the evidence gate.
+
+    `evidence` None means ungated (library callers). Otherwise a read the
+    backtest has not proven is dropped to neutral, and `note` says which read
+    was set aside and why, for the card."""
+    bias, strength = directional_bias(row)
+    if evidence is None or bias == "neutral":
+        return bias, strength, ""
+    key = ("fired_" if strength == "strong" else "lean_") + bias
+    if (evidence.get("proven") or {}).get(key):
+        return bias, strength, ""
+    return "neutral", "none", (
+        f"The {_DIR_LABEL[key]} is not traded on: in the backtest it did not call direction "
+        "better than the base rate, so this is treated as a name with no directional read.")
+
+
 def _earnings_inside(row: dict, dte: int | None) -> bool:
     days = row.get("earnings_in_days")
     if days is None or (isinstance(days, float) and math.isnan(days)) or days < 0:
@@ -1096,7 +1134,8 @@ def _headline(plan: Plan, view: OptionView, ticker: str) -> str:
 # ------------------------------------------------------------------ entry point
 
 def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
-              allow_undefined_risk: bool = False, long_vol: dict | None = None) -> Recommendation:
+              allow_undefined_risk: bool = False, long_vol: dict | None = None,
+              direction: dict | None = None) -> Recommendation:
     """The single instruction for one ticker: what to do, and with which legs."""
     ticker = str(row.get("ticker", "?"))
 
@@ -1113,7 +1152,8 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
                       "Raise `options.top_n` in the config to price more names."],
         )
 
-    bias, strength = directional_bias(row)
+    # `direction` is `direction_evidence(...)`; None means ungated.
+    bias, strength, dir_note = effective_bias(row, direction)
     sigma = sigma_to_expiry(view, view.days_to_expiry)
     earnings_inside = _earnings_inside(row, view.days_to_expiry)
 
@@ -1168,7 +1208,7 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
         plan=plan.as_dict(),
         alternatives=alternatives,
         avoid=avoid,
-        why=_why(view, row, bias, strength),
+        why=_why(view, row, bias, strength) + ([dir_note] if dir_note else []),
         warnings=_warnings(view, row, plan, earnings_inside),
     )
 
@@ -1180,7 +1220,8 @@ def _no_data_headline(ticker: str) -> str:
 def recommend_all(rows: list[dict], views: dict[str, OptionView],
                   risk_budget: float = 500.0,
                   allow_undefined_risk: bool = False,
-                  long_vol: dict | None = None) -> dict[str, dict]:
+                  long_vol: dict | None = None,
+                  direction: dict | None = None) -> dict[str, dict]:
     """{ticker: recommendation dict} for every scanned row."""
     out: dict[str, dict] = {}
     for row in rows:
@@ -1188,7 +1229,7 @@ def recommend_all(rows: list[dict], views: dict[str, OptionView],
         if not ticker:
             continue
         out[ticker] = recommend(row, views.get(ticker), risk_budget,
-                                allow_undefined_risk, long_vol).as_dict()
+                                allow_undefined_risk, long_vol, direction).as_dict()
     return out
 
 

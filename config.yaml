@@ -153,6 +153,13 @@ strategy:
                             #        inside the expiry. Leave false unless you know
                             #        exactly what an open-ended loss means for you.
   long_vol_requires_evidence: true
+  direction_requires_evidence: true
+                            # Trade on a direction read (the momentum lean, or the
+                            # way a squeeze released) only when the last backtest
+                            # shows that read calling direction better than the
+                            # base rate. Otherwise the name is treated as having no
+                            # directional read — for the near-term and 13-month
+                            # spreads alike.
                             # Offer long straddles / strangles only when the last
                             # backtest shows buying premium on the setup pays:
                             # first the move against logged implied vol, until

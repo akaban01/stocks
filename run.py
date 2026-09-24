@@ -350,18 +350,26 @@ def main(argv: list[str] | None = None) -> int:
     # Straddles and strangles only where the record says buying premium on
     # this setup pays. The evidence is the last published backtest — the one
     # the daily workflow committed after yesterday's scan.
+    last_backtest = report.read_json(Path(outdir) / "data" / "backtest.json")
     long_vol = None
     if strat_cfg.get("long_vol_requires_evidence", True):
-        long_vol = strategy.long_vol_evidence(
-            report.read_json(Path(outdir) / "data" / "backtest.json"))
+        long_vol = strategy.long_vol_evidence(last_backtest)
         print(f"Long volatility {'allowed' if long_vol['supported'] else 'withheld'} "
               f"({long_vol['source']}): {long_vol['text']}")
+    # Direction reads (the lean, the squeeze release) only where the same
+    # backtest shows them calling direction better than the base rate.
+    direction = None
+    if strat_cfg.get("direction_requires_evidence", True):
+        direction = strategy.direction_evidence(last_backtest)
+        proven = [k for k, v in direction["proven"].items() if v]
+        print(f"Direction reads traded on: {', '.join(proven) or 'none'} ({direction['source']})")
     recs = strategy.recommend_all(
         scan_rows,
         views,
         risk_budget=risk_budget,
         allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
         long_vol=long_vol,
+        direction=direction,
     )
     # One cap on the day's total risk, on top of the per-trade budget.
     portfolio = strategy.apply_portfolio_cap(
@@ -377,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     # The same chain, a different question: if you wanted this name for the next
     # year, which spread expresses it. Reuses the directional read the near-term
     # engine already made, so the two tabs never disagree about the lean.
-    biases = {str(r.get("ticker")): strategy.directional_bias(r) for r in scan_rows}
+    biases = {str(r.get("ticker")): strategy.effective_bias(r, direction)[:2] for r in scan_rows}
     long_blocks = leaps.long_spreads_all(
         scan_rows, views,
         risk_budget=float(strat_cfg.get("long_risk_budget_usd", risk_budget * 5)),
@@ -443,6 +451,7 @@ def main(argv: list[str] | None = None) -> int:
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
         long_vol=long_vol,
+        direction=direction,
         portfolio=portfolio,
     )
     print(f"\nWrote {scan_path}")
