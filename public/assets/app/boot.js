@@ -33,6 +33,7 @@
     }
     App.wireRepeat();
     App.wireSpread();
+    App.wireSpreadViews();
     App.wireBacktest();
     App.wireMoney();
     App.wireBacktestViews();

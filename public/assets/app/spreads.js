@@ -1,10 +1,12 @@
-/* Spread Scanner — frontend: the Spreads tab (the ≈13-month table and its detail panel).
+/* Spread Scanner — frontend: the Spreads tab (the ≈13-month table, the near-term
+ * one-direction table, and their shared detail panel).
  * One of the files in public/assets/app/ (see core.js for how they fit together). */
 (function (App) {
   "use strict";
 
   // Shared with the other frontend files (function declarations are hoisted).
   App.renderSpreads = renderSpreads;
+  App.wireSpreadViews = wireSpreadViews;
 
   // --------------------------------------------------------------- spreads
   //
@@ -17,6 +19,46 @@
   // then by ticker. Clicking any header replaces it with a plain column sort.
   var SPREAD_SORT = { key: "pick", dir: 1 };
   var spreadFilters = { keys: new Set(), preferredOnly: false };
+
+  /* Two views of the same table. "long" is the ≈13-month block each signal
+     carries as `long_dated`; "near" is the bull and bear verticals on the near
+     expiry, carried as `near_term`. Same row shape, so one table serves both. */
+  var SPREAD_VIEWS = { long: "long_dated", near: "near_term" };
+  var spreadView = "long";
+  try {
+    var savedSpreadView = localStorage.getItem("spreadview");
+    if (SPREAD_VIEWS[savedSpreadView]) spreadView = savedSpreadView;
+  } catch (e) { /* private mode */ }
+
+  function showSpreadView(view) {
+    if (!SPREAD_VIEWS[view]) view = "long";
+    if (view !== spreadView) {
+      // The structures differ between the views, so a structure filter from
+      // one would hide everything in the other.
+      spreadFilters.keys.clear();
+      SPREAD_SORT = { key: "pick", dir: 1 };
+    }
+    spreadView = view;
+    var buttons = document.querySelectorAll("#spreadviews button");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].setAttribute("aria-pressed",
+        buttons[i].dataset.spreadview === view ? "true" : "false");
+    }
+    var parts = document.querySelectorAll('#panel-spreads > [data-spreadview]');
+    for (var j = 0; j < parts.length; j++) parts[j].hidden = parts[j].dataset.spreadview !== view;
+    try { localStorage.setItem("spreadview", view); } catch (e) { /* private mode */ }
+  }
+
+  function wireSpreadViews() {
+    showSpreadView(spreadView);
+    var buttons = document.querySelectorAll("#spreadviews button");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () {
+        showSpreadView(this.dataset.spreadview);
+        if (App.store.scan) renderSpreads(true);
+      });
+    }
+  }
 
 
   function legSummary(plan) {
@@ -59,8 +101,9 @@
   // detail panel can show that name's summary and caveats.
   function spreadRows() {
     var out = [];
+    var field = SPREAD_VIEWS[spreadView];
     (App.store.scan.signals || []).forEach(function (s) {
-      var ld = s.long_dated;
+      var ld = s[field];
       if (!ld) return;
       (ld.candidates || []).forEach(function (plan, i) {
         out.push({
@@ -73,7 +116,7 @@
     return out;
   }
 
-  var SPREAD_COLUMNS = [
+  var ALL_COLUMNS = [
     { k: "ticker", h: "Ticker", cls: "t",
       f: function (r) {
         return App.esc(r.ticker) + (r.preferred ? ' <span class="pick" title="What the ' +
@@ -149,6 +192,7 @@
     var b = r.block;
     var head = '<div class="sd-head">' + App.esc(r.ticker) + " at " + App.num(r.price, 2) +
       " · " + App.esc(b.expiry) + " · " + App.num(b.dte, 0) + " days" +
+      (spreadView === "near" && b.premium_state ? " · premium " + App.esc(b.premium_state) : "") +
       (App.has(b.iv_annual) ? " · ATM IV " + App.pct(b.iv_annual, 0) : "") +
       " · liquidity " + App.esc(b.liquidity || "unknown") +
       (App.has(b.atm_spread_pct) ? " (spread " + App.pct(b.atm_spread_pct, 0) + ")" : "") + "</div>";
@@ -214,6 +258,7 @@
     host.dataset.done = "1";
 
     var all = spreadRows();
+    if (spreadView === "near") return renderNear(host, all);
     var summary = App.store.scan.long_dated || {};
     App.$("#spreadmeta").innerHTML = all.length
       ? "<b>" + App.num(summary.candidates || all.length, 0) + "</b> long-dated spreads across <b>" +
@@ -233,6 +278,34 @@
       App.$("#spreadfilters").innerHTML = "";
       return;
     }
+    renderTable(host, all);
+  }
+
+  function renderNear(host, all) {
+    var summary = App.store.scan.near_term || {};
+    App.$("#spreadmeta").innerHTML = all.length
+      ? "<b>" + App.num(summary.candidates || all.length, 0) + "</b> one-direction spreads across <b>" +
+        App.num(summary.tickers, 0) + "</b> names · expiries " +
+        App.esc((summary.expiries || []).join(", ")) + " · " + App.num(summary.preferred, 0) +
+        " recommended by the Scanner"
+      : "";
+    if (!all.length) {
+      host.innerHTML = '<p class="empty">No near-term directional spreads in the last run.</p>' +
+        '<p class="empty faint">Only the top-ranked names are priced, and a name needs live ' +
+        "quotes on its near expiry for a spread to be built. A scan published before this view " +
+        "existed carries none — the next scheduled run fills it in.</p>";
+      App.$("#spreadfilters").innerHTML = "";
+      return;
+    }
+    renderTable(host, all);
+  }
+
+  function renderTable(host, all) {
+    // A yearly return on a three-week trade is a four-figure percentage that
+    // compares with nothing on this page, so the near view leaves it out.
+    var SPREAD_COLUMNS = ALL_COLUMNS.filter(function (c) {
+      return !(spreadView === "near" && c.k === "ror");
+    });
     renderSpreadFilters(all);
 
     var rows = all.filter(function (r) {

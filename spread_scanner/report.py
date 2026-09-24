@@ -28,7 +28,8 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.8.0"   # 2.8: fill prices, pop_basis, iv_history, independent-sample stats
+SCHEMA_VERSION = "2.9.0"   # 2.9: near_term directional spreads per signal
+# 2.8: fill prices, pop_basis, iv_history, independent-sample stats
 
 # An equity option quoted below this annualized implied volatility is not a
 # quote. Outside US market hours the feed returns every contract with a floor
@@ -332,6 +333,17 @@ def _long_dated_summary(signals: list[dict]) -> dict:
     }
 
 
+def _near_term_summary(signals: list[dict]) -> dict:
+    """Headline counts for the Spreads tab's near-term view."""
+    blocks = [s["near_term"] for s in signals if s.get("near_term")]
+    return {
+        "tickers": len(blocks),
+        "candidates": sum(len(b.get("candidates") or []) for b in blocks),
+        "preferred": sum(1 for b in blocks if b.get("preferred")),
+        "expiries": sorted({b["expiry"] for b in blocks if b.get("expiry")}),
+    }
+
+
 def _screen_summary(signals: list[dict], meta: dict | None) -> dict:
     """What the compliance screen did, and to whom.
 
@@ -360,6 +372,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
                recommendations: dict[str, dict] | None = None,
                option_views: dict | None = None,
                long_spreads: dict[str, dict] | None = None,
+               near_spreads: dict[str, dict] | None = None,
                screens: dict[str, dict] | None = None,
                screen_meta: dict | None = None,
                universe: dict | None = None,
@@ -373,6 +386,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
     recommendations = recommendations or {}
     option_views = option_views or {}
     long_spreads = long_spreads or {}
+    near_spreads = near_spreads or {}
     screens = screens or {}
 
     signals: list[dict] = []
@@ -388,6 +402,8 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         # recommendation: they answer a different question on the same chain,
         # and most names have no long-dated chain at all.
         signal["long_dated"] = _clean(long_spreads.get(ticker))
+        # The near-term bull and bear verticals, for the Spreads tab's other view.
+        signal["near_term"] = _clean(near_spreads.get(ticker))
         # The compliance verdict travels with the row. Without it a name kept by
         # `annotate` mode because it only *failed* the screen renders exactly
         # like one that passed — the quietest possible failure on a page whose
@@ -410,6 +426,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         "counts": _counts(signals),
         "screen": _screen_summary(signals, screen_meta),
         "long_dated": _long_dated_summary(signals),
+        "near_term": _near_term_summary(signals),
         "top_actions": _headline_actions(signals),
         # Whether straddles/strangles were allowed this run, and the evidence.
         # None when the gate is switched off in the config.

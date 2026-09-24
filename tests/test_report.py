@@ -244,3 +244,15 @@ def test_a_single_odd_name_does_not_condemn_a_working_feed():
 def test_the_threshold_is_where_it_says_it_is():
     assert report.option_data_health([_sig("AAA", report.MIN_PLAUSIBLE_IV)])["ok"]
     assert not report.option_data_health([_sig("AAA", report.MIN_PLAUSIBLE_IV - 0.01)])["ok"]
+
+
+def test_near_term_blocks_ship_per_signal_with_a_summary():
+    row, view = make_row("AAA"), make_view("AAA")
+    blocks = strategy.directional_spreads_all([row], {"AAA": view})
+    df = pd.DataFrame([row, make_row("BBB")])
+    payload = report.build_scan(df, {"horizon_days": 10}, near_spreads=blocks)
+    by = {s["ticker"]: s for s in payload["signals"]}
+    assert len(by["AAA"]["near_term"]["candidates"]) == 4
+    assert by["BBB"]["near_term"] is None
+    assert payload["near_term"] == {"tickers": 1, "candidates": 4, "preferred": 0,
+                                    "expiries": [view.expiry]}

@@ -1316,3 +1316,95 @@ def apply_portfolio_cap(recs: dict[str, dict], cap: float | None) -> dict:
         used += fit * risk
     summary["used"] = round(used, 2)
     return summary
+
+
+# ------------------------------------------------ near-term directional spreads
+
+# The four one-direction verticals on the near expiry, in the order the Spreads
+# tab lists them: bullish first, debit before credit.
+DIRECTIONAL_KEYS = ["bull_call_spread", "bull_put_spread", "bear_put_spread", "bear_call_spread"]
+
+# Below this annualized IV the chain is a feed artifact (no quotes), the same
+# floor the long-dated engine and the publish check use.
+MIN_DIRECTIONAL_IV = 5.0
+
+
+def directional_spreads(row: dict, view: OptionView | None, rec: dict | None = None) -> dict | None:
+    """Every near-term one-direction vertical this chain supports, for one ticker.
+
+    The recommendation answers *what to do*; this lists the bull and bear
+    verticals whether or not either is what to do, so they can be compared
+    side by side. The pick is whatever the recommendation itself traded — when
+    its plan is one of these verticals — so this table and the Scanner card can
+    never disagree. Every other candidate is listed for reference with no size:
+    a contract count on a spread the page does not recommend reads as one."""
+    if view is None or not view.expiry or not view.days_to_expiry:
+        return None
+    if view.iv_annual is None or view.iv_annual < MIN_DIRECTIONAL_IV:
+        return None
+    sigma = sigma_to_expiry(view, view.days_to_expiry)
+    rec_plan = (rec or {}).get("plan") or {}
+    pick = rec_plan.get("key") if rec_plan.get("key") in DIRECTIONAL_KEYS else None
+
+    candidates: list[dict] = []
+    for key in DIRECTIONAL_KEYS:
+        plan = _BUILDERS[key](view, sigma)
+        if plan is None:
+            continue
+        plan = _finish(plan, view, sigma, 0.0)
+        if key == pick and rec_plan.get("sizing"):
+            # The card's own size, portfolio cap included.
+            plan.sizing = dict(rec_plan["sizing"])
+        else:
+            plan.sizing = {"contracts": None,
+                           "note": "Not recommended — listed for reference, so no position "
+                                   "size is suggested."}
+        candidates.append(plan.as_dict())
+    if pick is not None and not any(c["key"] == pick for c in candidates):
+        pick = None
+
+    bias = (rec or {}).get("bias") or "neutral"
+    if not candidates:
+        summary = "The near-term chain has no strikes at the distances these spreads need."
+    elif pick:
+        name = next(c["name"] for c in candidates if c["key"] == pick)
+        summary = (f"The Scanner's recommendation for this name is the {name} — the other "
+                   "verticals are listed for comparison.")
+    else:
+        summary = (f"{len(candidates)} one-direction spreads price out on the {view.expiry} "
+                   "expiry, but the scanner has no proven directional read on this name, so "
+                   "none is recommended. Each one is a bet the stock goes one way; listed for "
+                   "reference.")
+
+    warnings: list[str] = []
+    if _earnings_inside(row, view.days_to_expiry):
+        warnings.append(f"An earnings report falls inside this {view.days_to_expiry}-day expiry. "
+                        "The gap on the day can jump straight past either strike.")
+    if view.liquidity == "poor":
+        warnings.append("The chain is thin — expect to pay a wide bid/ask on the way in and out.")
+    return {
+        "expiry": view.expiry,
+        "dte": view.days_to_expiry,
+        "iv_annual": view.iv_annual,
+        "liquidity": view.liquidity,
+        "atm_spread_pct": view.atm_spread_pct,
+        "premium_state": view.premium_state,
+        "bias": bias,
+        "preferred": pick,
+        "summary": summary,
+        "candidates": candidates,
+        "warnings": warnings,
+    }
+
+
+def directional_spreads_all(rows: list[dict], views: dict[str, OptionView],
+                            recs: dict[str, dict] | None = None) -> dict[str, dict]:
+    """{ticker: near-term directional block} for every priced row."""
+    recs = recs or {}
+    out: dict[str, dict] = {}
+    for row in rows:
+        ticker = str(row.get("ticker", ""))
+        block = directional_spreads(row, views.get(ticker), recs.get(ticker)) if ticker else None
+        if block is not None:
+            out[ticker] = block
+    return out

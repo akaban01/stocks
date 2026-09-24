@@ -370,6 +370,18 @@ name's caveats.
 
 Set `options.long_dated.enabled: false` to skip the extra chain call per ticker.
 
+### Near-term, one direction
+
+The tab's second view lists the four **vertical spreads on the near expiry** —
+bull call, bull put, bear put, bear call — for every priced name, built by the
+same code the strategy engine trades them with (`strategy.directional_spreads`).
+Each is a bet on one direction. The **pick** is the strategy card's own trade when
+that trade is one of these verticals, so the two can never disagree; every other
+row is listed for comparison with **no position size**, because a vertical is only
+worth placing on a direction read the backtest has shown to work. The yearly
+return column is left out here: annualising a three-week trade gives a
+four-figure percentage that compares with nothing.
+
 ## The Charts tab — when in the year, not just how much
 
 The **Price history** view is the closing line for every screened name over the
