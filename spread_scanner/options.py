@@ -48,6 +48,11 @@ from .net import retry
 
 TRADING_DAYS = 252
 
+# Logged IV readings a name needs before its IV rank is taken against its own
+# implied-vol history instead of the realized-vol stand-in. About six months of
+# daily runs: enough for a range that is not one regime.
+MIN_IV_HISTORY = 120
+
 # Premium-state cutoffs on the 0..100 blended premium score (see `premium_score`).
 CHEAP_BELOW = 35.0
 RICH_ABOVE = 65.0
@@ -108,7 +113,7 @@ class OptionView:
     hv_annual: float | None     # realized vol, annualized %
     implied_move_pct: float     # implied move over the horizon, % of spot
     hist_move_pct: float        # historical expected move over the horizon, %
-    iv_rank: float | None       # 0..100, IV within its trailing range (proxy)
+    iv_rank: float | None       # 0..100, IV within its trailing range (see iv_rank_basis)
     iv_percentile: float | None # 0..100, % of trailing readings below IV (proxy)
     vrp: float | None           # IV − HV, vol points
     iv_hv_ratio: float | None   # IV / HV
@@ -138,6 +143,10 @@ class OptionView:
     long_spread_pct: float | None = None  # ATM bid/ask as % of mid, that expiry
     long_open_interest: int | None = None
     long_liquidity: str = "unknown"
+    # What iv_rank / iv_percentile were ranked against: "implied" (this name's
+    # own logged IV, once there is enough of it) or "realized" (the realized-vol
+    # stand-in used until then).
+    iv_rank_basis: str = "realized"
     expiries: list[dict] = field(default_factory=list)   # [{"date","dte"}]
     # {expiry: {"call": {strike: Quote}, "put": {strike: Quote}}} — in-memory
     # only; the strategy engine prices legs off it, it never reaches the JSON.
@@ -152,6 +161,7 @@ class OptionView:
             "hist_move_pct": self.hist_move_pct,
             "iv_rank": self.iv_rank,
             "iv_percentile": self.iv_percentile,
+            "iv_rank_basis": self.iv_rank_basis,
             "vrp": self.vrp,
             "iv_hv_ratio": self.iv_hv_ratio,
             "verdict": self.verdict,
@@ -482,6 +492,7 @@ def implied_view(
     margin: float = 0.15,
     hv_annual: float | None = None,
     hv_history: list[float] | None = None,
+    iv_history: list[float] | None = None,
     strike_window: float = 3.0,
     fetch_expiries: int = 2,
     long_dated: bool = True,
@@ -560,8 +571,15 @@ def implied_view(
     atm_spread = round(atm_q.spread_pct, 1) if atm_q and atm_q.spread_pct is not None else None
     atm_oi = atm_q.open_interest if atm_q else None
 
-    rank = iv_rank(iv, hv_history)
-    pctile = iv_percentile(iv, hv_history)
+    # Rank against the name's own logged implied vol once there is enough of
+    # it — the real thing — and against realized vol until then.
+    past_iv = [v for v in (iv_history or []) if v is not None and math.isfinite(v) and v > 0]
+    if len(past_iv) >= MIN_IV_HISTORY:
+        basis, yardstick = "implied", past_iv
+    else:
+        basis, yardstick = "realized", hv_history
+    rank = iv_rank(iv, yardstick)
+    pctile = iv_percentile(iv, yardstick)
     score = premium_score(rank, ratio, slope)
 
     # Trim the snapshot to strikes the strategy engine could plausibly use.
@@ -632,6 +650,7 @@ def implied_view(
         long_spread_pct=long_spread,
         long_open_interest=long_oi,
         long_liquidity=long_liq,
+        iv_rank_basis=basis,
         chain=trimmed,
     )
 
@@ -644,14 +663,17 @@ def screen_options(
     hv_history: dict[str, list[float]] | None = None,
     long_dated: bool = True,
     long_target_days: int = LONG_TARGET_DAYS,
+    iv_history: dict[str, list[float]] | None = None,
 ) -> dict[str, OptionView]:
-    """`rows` = [(ticker, spot, hist_move_pct)]. Returns {ticker: OptionView}."""
+    """`rows` = [(ticker, spot, hist_move_pct)]. Returns {ticker: OptionView}.
+    `iv_history` is each name's logged ATM IV (%), oldest first — see iv_rank_basis."""
     out: dict[str, OptionView] = {}
     for ticker, spot, hist in rows:
         view = implied_view(
             ticker, spot, hist, horizon_days, margin,
             hv_annual=(hv_annual or {}).get(ticker),
             hv_history=(hv_history or {}).get(ticker),
+            iv_history=(iv_history or {}).get(ticker),
             long_dated=long_dated,
             long_target_days=long_target_days,
         )

@@ -81,6 +81,10 @@ universe:
   # The list each scan actually ran on, after the halal screen. calibrate.py
   # and backtest.py measure these names, so all three agree on the universe.
   screened_file: data/screened.json
+  # Every scan appends the list it ran on here (date,ticker,rank), so a future
+  # backtest can use the universe as it was on each date instead of today's
+  # survivors run backwards. Committed; a few KB a day.
+  history_file: data/universe_history.csv
   # Issuer-published holdings files, tried before the third-party holdings page.
   # SPUS's is built in (spread_scanner/universe.py ISSUER_CSV); add one per fund
   # as `SYMBOL: https://…csv` when the issuer publishes it.

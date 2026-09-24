@@ -194,3 +194,20 @@ def implied_backtest(hist: pd.DataFrame, prices: dict[str, pd.DataFrame], horizo
                      f"{a['avg_straddle_return_pct']:+.0f}% on average." + vs + " Readings on "
                      "consecutive days overlap, so treat this as descriptive until the history is "
                      "long.")}
+
+
+def series_by_ticker(hist: pd.DataFrame, last: int = 252) -> dict[str, list[float]]:
+    """{ticker: its logged ATM IV readings, oldest first, at most `last` of them}.
+
+    What `options.implied_view` ranks today's IV against once a name has
+    `options.MIN_IV_HISTORY` readings. Top and control rows both count: a
+    reading is a reading of that name's option market whatever the reason it
+    was taken."""
+    if hist is None or hist.empty:
+        return {}
+    out: dict[str, list[float]] = {}
+    for ticker, g in hist.sort_values("date").groupby("ticker"):
+        vals = [float(v) for v in pd.to_numeric(g["iv_annual"], errors="coerce").dropna()]
+        if vals:
+            out[str(ticker)] = vals[-last:]
+    return out

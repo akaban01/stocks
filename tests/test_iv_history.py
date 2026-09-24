@@ -78,3 +78,12 @@ def test_implied_backtest_waits_for_enough_matured_rows():
     # A flat stock never beats a positive implied move; the straddle loses it all.
     assert out["buckets"]["all"]["beat_implied_pct"] == 0.0
     assert out["buckets"]["coiled_cheap"]["avg_straddle_return_pct"] == -100.0
+
+
+def test_series_by_ticker_is_oldest_first_and_capped():
+    hist = pd.DataFrame([{"date": f"2026-01-{d:02d}", "ticker": "A", "iv_annual": float(d)}
+                         for d in (3, 1, 2)] + [{"date": "2026-01-01", "ticker": "B",
+                                                 "iv_annual": None}])
+    assert iv_history.series_by_ticker(hist) == {"A": [1.0, 2.0, 3.0]}
+    assert iv_history.series_by_ticker(hist, last=2) == {"A": [2.0, 3.0]}
+    assert iv_history.series_by_ticker(pd.DataFrame(columns=iv_history.COLUMNS)) == {}

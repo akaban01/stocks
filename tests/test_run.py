@@ -45,7 +45,7 @@ def offline(monkeypatch):
 
     # AAA rich, BBB cheap, CCC never priced (outside top_n in the real thing).
     def fake_options(rows, horizon_days, margin=0.15, hv_annual=None, hv_history=None,
-                     long_dated=True, long_target_days=395):
+                     long_dated=True, long_target_days=395, **kw):
         spec = {"AAA": dict(iv=58, hv=28, iv_rank=88), "BBB": dict(iv=18, hv=30, iv_rank=8)}
         return {t: make_view(t, spot=float(spot), **spec[t])
                 for t, spot, _hist in rows if t in spec}
@@ -98,6 +98,8 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     # The screened list the backtest and calibration will measure.
     screened = json.loads((site / "data" / "screened.json").read_text(encoding="utf-8"))
     assert screened["tickers"] == TICKERS and screened["screen_mode"] == "filter"
+    log = pd.read_csv(site / "data" / "universe_history.csv")
+    assert list(log["ticker"]) == TICKERS and list(log["rank"]) == [1, 2, 3]
 
     by = {s["ticker"]: s for s in scan["signals"]}
     assert by["AAA"]["recommendation"]["action"] == "SELL_PREMIUM"
@@ -526,7 +528,7 @@ def test_no_straddles_without_evidence_that_they_pay(offline, config, tmp_path, 
 
 def test_low_score_control_names_are_logged_but_not_traded(offline, tmp_path, monkeypatch):
     def price_all(rows, horizon_days, margin=0.15, hv_annual=None, hv_history=None,
-                  long_dated=True, long_target_days=395):
+                  long_dated=True, long_target_days=395, **kw):
         return {t: make_view(t, spot=float(spot), iv=30, hv=28, iv_rank=50) for t, spot, _ in rows}
     monkeypatch.setattr(options, "screen_options", price_all)
     cfg = tmp_path / "config.yaml"

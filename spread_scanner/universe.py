@@ -308,3 +308,52 @@ def for_validation(cfg: dict, outdir: str | Path) -> tuple[list[str], str]:
         if tickers:
             return tickers, "fund holdings (unscreened — no scan has run yet)"
     return list(cfg.get("tickers") or []), "the config watchlist"
+
+
+# ------------------------------------------------------- dated membership log
+
+def append_history(path: str | Path, tickers: list[str], today: dt.date | None = None) -> int:
+    """Record which names the scan ran on today, one ``date,ticker,rank`` row each.
+
+    The backtest runs today's universe backwards, so it only ever tests the
+    names that survived into today's fund holdings (survivorship bias). This log
+    is what a later backtest needs to use the universe *as it was* on each date
+    (`members_on`). It only helps once it is long, so it is written from the
+    first run. A rerun on the same date replaces that date's rows."""
+    if not tickers:
+        return 0
+    path = Path(path)
+    day = (today or dt.date.today()).isoformat()
+    rows = []
+    if path.exists():
+        with path.open(encoding="utf-8", newline="") as fh:
+            rows = [r for r in csv.DictReader(fh) if r.get("date") != day]
+    rows += [{"date": day, "ticker": t, "rank": str(i)} for i, t in enumerate(tickers, 1)]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=["date", "ticker", "rank"])
+        w.writeheader()
+        w.writerows(sorted(rows, key=lambda r: (r["date"], int(r["rank"]))))
+    return len(tickers)
+
+
+def load_history(path: str | Path) -> dict[str, list[str]]:
+    """{ISO date: [tickers in rank order]} from the membership log."""
+    out: dict[str, list[tuple[int, str]]] = {}
+    try:
+        with Path(path).open(encoding="utf-8", newline="") as fh:
+            for r in csv.DictReader(fh):
+                try:
+                    out.setdefault(r["date"], []).append((int(r["rank"]), r["ticker"]))
+                except (KeyError, ValueError):
+                    continue
+    except OSError:
+        return {}
+    return {d: [t for _, t in sorted(v)] for d, v in sorted(out.items())}
+
+
+def members_on(history: dict[str, list[str]], day: str | dt.date) -> list[str] | None:
+    """The universe as last recorded on or before `day`, or None before the log began."""
+    day = day.isoformat() if isinstance(day, dt.date) else str(day)[:10]
+    known = [d for d in history if d <= day]
+    return history[max(known)] if known else None

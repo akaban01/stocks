@@ -237,3 +237,17 @@ def test_screen_options_maps_tickers_to_views_and_skips_the_unreadable(monkeypat
     assert set(out) == {"AAA"}
     assert out["AAA"].iv_rank is not None
     assert out["AAA"].premium_state in ("cheap", "fair", "rich")
+
+
+def test_iv_rank_moves_to_logged_implied_vol_once_there_is_enough(monkeypatch):
+    fake = FakeTicker(200.0, {_exp(21): 40.0, _exp(60): 44.0})
+    monkeypatch.setattr(options.yf, "Ticker", lambda t: fake)
+    hv = [20.0 + i * 0.1 for i in range(252)]            # realized 20..45: IV 40 ranks high
+    past = [50.0 + i * 0.1 for i in range(options.MIN_IV_HISTORY)]   # implied 50..62: 40 ranks at 0
+    short = options.implied_view("T", 200.0, 5.0, 10, hv_annual=30.0, hv_history=hv,
+                                 iv_history=past[:10], long_dated=False)
+    assert short.iv_rank_basis == "realized" and short.iv_rank > 50
+    full = options.implied_view("T", 200.0, 5.0, 10, hv_annual=30.0, hv_history=hv,
+                                iv_history=past, long_dated=False)
+    assert full.iv_rank_basis == "implied" and full.iv_rank == 0.0
+    assert full.as_dict()["iv_rank_basis"] == "implied"

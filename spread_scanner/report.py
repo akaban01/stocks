@@ -96,9 +96,11 @@ GLOSSARY = {
              "low realized-vol percentile, and an active TTM squeeze. It says a move is loading. It says "
              "nothing about direction.",
     "iv_rank": "IV Rank, 0–100: where today's implied volatility sits between the low and the high of the "
-               "trailing year. Under ~25 is cheap, over ~65 is rich. Free data has no implied-vol history, "
-               "so this is ranked against the name's own realized-volatility range — a proxy that reads a "
-               "little high, because implied vol carries a persistent premium over realized.",
+               "trailing year. Under ~25 is cheap, over ~65 is rich. Free data publishes no implied-vol "
+               "history, so the scan keeps its own: once a name has about six months of logged readings "
+               "it is ranked against those ('vs past IV'). Until then it is ranked against the name's "
+               "realized-volatility range ('vs realized vol') — a proxy that reads a little high, because "
+               "implied vol carries a persistent premium over realized.",
     "iv_percentile": "The share of the trailing year's volatility readings that sit below today's implied "
                      "volatility. Same proxy caveat as IV Rank.",
     "premium_score": "0–100 blend of IV rank (45%), the IV/HV risk premium (40%) and the term structure "
