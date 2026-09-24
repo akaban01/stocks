@@ -27,7 +27,7 @@
 
   <!-- Each tab names the panel it controls and each panel names its tab, so a
        screen reader announces the pair rather than a row of unlabelled regions.
-       Arrow keys move between them (see showTab in app.js). -->
+       Arrow keys move between them (see showTab in assets/app/core.js). -->
   <nav class="tabs" role="tablist" aria-label="Views">
     <button id="tab-playbook" data-tab="playbook" role="tab" aria-selected="true" aria-controls="panel-playbook">What to do</button>
     <button id="tab-spreads" data-tab="spreads" role="tab" aria-selected="false" aria-controls="panel-spreads">Spreads</button>
@@ -400,15 +400,25 @@
 
   </div>
 </div>
-<!-- The Repeat test's counting rules, ahead of app.js because it reads them off
+<!-- The Repeat test's counting rules, ahead of the page's own scripts because it reads them off
      the global. Its own file so tests/test_trial.py can run it under node. -->
 <script src="assets/trial.js"></script>
 <!-- The Backtest tab's rules, same arrangement and for the same reason: its own
      file so tests/test_backtest_js.py can run it under node. -->
 <script src="assets/backtest.js"></script>
-<!-- The pure payload-to-HTML helpers app.js builds the page with; its own file
+<!-- The pure payload-to-HTML helpers the page is built with; its own file
      so tests/test_render_js.py can feed it hostile payloads under node. -->
 <script src="assets/render.js"></script>
-<script src="assets/app.js"></script>
+<!-- The page itself, one file per part of it, in this order: core.js first
+     (shared helpers and state on window.SpreadApp), boot.js last (starts it). -->
+<script src="assets/app/core.js"></script>
+<script src="assets/app/playbook.js"></script>
+<script src="assets/app/scanner.js"></script>
+<script src="assets/app/spreads.js"></script>
+<script src="assets/app/charts.js"></script>
+<script src="assets/app/repeat.js"></script>
+<script src="assets/app/backtest-tab.js"></script>
+<script src="assets/app/validation.js"></script>
+<script src="assets/app/boot.js"></script>
 </body>
 </html>

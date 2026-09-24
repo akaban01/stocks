@@ -499,7 +499,7 @@ def test_pmcc_reports_the_horizon_its_maximum_actually_lands_on():
 
 
 def test_pmcc_legs_span_two_expiries_so_the_frontend_can_spot_it():
-    """`annualisedReturn` in app.js suppresses the yearly figure by asking
+    """`annualisedReturn` in assets/app/spreads.js suppresses the yearly figure by asking
     whether the legs share an expiry, rather than by naming the structure. That
     predicate has to hold for every diagonal this engine builds."""
     plan = plan_for("poor_mans_covered_call")

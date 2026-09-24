@@ -950,13 +950,16 @@ Read and write**, so the Action can commit. Trigger it once by hand from the
 > Change the cron to match your market. GitHub cron is always **UTC**, and
 > scheduled runs can be delayed during peak load — treat the timing as approximate.
 
-## GitHub Pages dashboard
+## The dashboard (Netlify)
 
-The workflow regenerates `public/data/*.json` and deploys the whole `public/`
-folder to Pages on every run — `index.html` and `assets/` are checked in and left
-alone. To turn it on: **Settings → Pages → Build and deployment → Source = GitHub
-Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
-workflow already requests the `pages`/`id-token` permissions it needs.
+The workflow regenerates `public/data/*.json` and commits it; Netlify deploys
+`public/` from the repository on every push to `master`
+([`netlify.toml`](netlify.toml)), downloading the two large files from the
+`site-data` branch (see the data-file table above). `index.html` and `assets/`
+are checked in and left alone. The workflow used to deploy the same folder to
+GitHub Pages as well; that second copy was dropped, since the site is served
+from Netlify. To host it elsewhere, publish `public/` after running
+`python scripts/fetch_site_data.py`.
 
 The page has eight tabs: **What to do** (the strategy cards), **Spreads** (the
 ≈13-month table), **Scanner** (the sortable ranked table), **Charts** (price
@@ -1008,9 +1011,19 @@ No build step, no dependencies, no external assets:
 public/index.html          the shell and the tab markup
 public/assets/trial.js     the Repeat test's counting rules and spread maths, on their own
 public/assets/backtest.js  the Backtest tab's rules: when a signal fires, what happened next, and the sweep
-public/assets/app.js       data loading + rendering (vanilla JS)
+public/assets/render.js    pure payload -> HTML helpers (tested under node with hostile input)
+public/assets/app/         the page itself, one file per part, loaded in order by index.html:
+  core.js                  shared helpers, tab wiring, the URL fragment
+  playbook.js scanner.js spreads.js charts.js repeat.js backtest-tab.js validation.js
+                           one per tab (validation.js also holds Reference)
+  boot.js                  loads the payloads and starts the page (last)
 public/assets/styles.css   the design system
 ```
+
+The page files share one object, `window.SpreadApp`: a name used by more than
+one file is read as `App.name`, and everything else stays private to its file.
+To add a tab, add a file between `core.js` and `boot.js` in `index.html` and
+export what `boot.js` or another tab needs onto `App`.
 
 `trial.js` also owns the option payoff arithmetic, which **both** tabs call —
 the Repeat test prices one trade per year, the Backtest tab prices every trade a
@@ -1025,7 +1038,7 @@ pinned to the code that ships rather than to a Python re-implementation that
 would drift from it. Tests skip themselves where node is missing; GitHub's
 runners all have it.
 
-Nothing generates these — edit and reload. `app.js` reads all of its trading copy
+Nothing generates these — edit and reload. The page reads all of its trading copy
 from `scan.json`'s `reference` block, so adding a strategy on the Python side
 surfaces in the UI without touching the frontend. The palette lives once, as
 custom properties in `styles.css`: the charts read `--up` / `--down` / `--wait`

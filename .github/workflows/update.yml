@@ -20,9 +20,7 @@ on:
   workflow_dispatch:          # lets you run it manually from the Actions tab
 
 permissions:
-  contents: write             # commit the refreshed report back to the repo
-  pages: write                # deploy the dashboard to GitHub Pages
-  id-token: write             # required by the Pages deploy action
+  contents: write             # commit the refreshed report (and push site-data)
 
 concurrency:
   group: spread-scanner
@@ -237,19 +235,3 @@ jobs:
           done
           echo "::error::could not push the refreshed scan after 4 attempts"
           exit 1
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: public           # index.html + assets/ (checked in) + data/ (generated)
-
-  deploy:
-    needs: scan
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5

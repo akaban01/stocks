@@ -2,7 +2,7 @@
  *
  * "Buy in week 37 every year, hold it eight weeks — how many of those years
  * *closed* at least 8% up?" This file is the whole of what *closed past*, *fell
- * short*, *still open* and *skipped* mean; app.js only draws what comes out of
+ * short*, *still open* and *skipped* mean; the page (assets/app/) only draws what comes out of
  * it.
  *
  * The verdict is the exit, not the best price on the way. A window that spiked
