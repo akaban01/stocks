@@ -950,13 +950,16 @@ Read and write**, so the Action can commit. Trigger it once by hand from the
 > Change the cron to match your market. GitHub cron is always **UTC**, and
 > scheduled runs can be delayed during peak load — treat the timing as approximate.
 
-## GitHub Pages dashboard
+## The dashboard (Netlify)
 
-The workflow regenerates `public/data/*.json` and deploys the whole `public/`
-folder to Pages on every run — `index.html` and `assets/` are checked in and left
-alone. To turn it on: **Settings → Pages → Build and deployment → Source = GitHub
-Actions**. Your dashboard will be live at `https://<you>.github.io/<repo>/`. The
-workflow already requests the `pages`/`id-token` permissions it needs.
+The workflow regenerates `public/data/*.json` and commits it; Netlify deploys
+`public/` from the repository on every push to `master`
+([`netlify.toml`](netlify.toml)), downloading the two large files from the
+`site-data` branch (see the data-file table above). `index.html` and `assets/`
+are checked in and left alone. The workflow used to deploy the same folder to
+GitHub Pages as well; that second copy was dropped, since the site is served
+from Netlify. To host it elsewhere, publish `public/` after running
+`python scripts/fetch_site_data.py`.
 
 The page has eight tabs: **What to do** (the strategy cards), **Spreads** (the
 ≈13-month table), **Scanner** (the sortable ranked table), **Charts** (price
