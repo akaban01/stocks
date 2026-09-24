@@ -215,6 +215,12 @@ def main(argv: list[str] | None = None) -> int:
         print("No halal-compliant tickers left to scan.", file=sys.stderr)
         return 2
 
+    # The list calibrate.py and backtest.py measure, so the three agree on which
+    # names are in. Ad-hoc `--tickers` runs are not the scan and do not write it.
+    if not args.tickers:
+        universe.save_screened(Path(outdir) / uni_cfg.get("screened_file", "data/screened.json"),
+                               tickers, screen_mode)
+
     # Snapshot previous scores (for "newly crossed" alert detection) before overwriting.
     prev_scores: dict[str, float] = {}
     prev_csv = Path(outdir) / "data" / "signals.csv"
@@ -285,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
     # risk premium, term structure, skew and liquidity. This is what decides
     # whether you should be buying or selling premium.
     views: dict[str, options.OptionView] = {}
+    control_views: dict[str, options.OptionView] = {}
     if opt_cfg.get("enabled") and not df.empty:
         head = df.head(top_n)
         rows = list(zip(head["ticker"], head["price"], head["em_pct"]))
@@ -297,6 +304,19 @@ def main(argv: list[str] | None = None) -> int:
                                        long_dated=bool(long_cfg.get("enabled", True)),
                                        long_target_days=int(long_cfg.get("target_days",
                                                                          options.LONG_TARGET_DAYS)))
+        # A control group: the lowest-scoring names, priced only for the implied-
+        # vol log. The test against implied vol compares coiled names with calm
+        # ones, and pricing only the top of the ranking left it no calm names.
+        # They are not traded, so they get no card and no long-dated chain.
+        control_n = int(opt_cfg.get("control_n", 5))
+        tail = df.iloc[len(head):].tail(control_n) if control_n > 0 else df.iloc[0:0]
+        if not tail.empty:
+            print(f"Pricing {len(tail)} low-score control name(s) for the implied-vol log...")
+            control_views = options.screen_options(
+                list(zip(tail["ticker"], tail["price"], tail["em_pct"])),
+                horizon_days=int(params["horizon_days"]),
+                margin=float(opt_cfg.get("margin", 0.15)),
+                hv_annual=hv_now, hv_history=hv_hist, long_dated=False)
         for col, attr in (("implied_move_pct", "implied_move_pct"), ("vol_verdict", "verdict"),
                           ("iv_annual", "iv_annual"), ("iv_rank", "iv_rank"),
                           ("premium_score", "premium_score"), ("premium_state", "premium_state"),
@@ -336,6 +356,11 @@ def main(argv: list[str] | None = None) -> int:
         allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
         long_vol=long_vol,
     )
+    # One cap on the day's total risk, on top of the per-trade budget.
+    portfolio = strategy.apply_portfolio_cap(
+        recs, float(strat_cfg.get("portfolio_risk_usd", risk_budget * 3)))
+    if portfolio["capped"]:
+        print(f"Portfolio cap ${portfolio['cap']:,.0f}: cut {', '.join(portfolio['capped'])}.")
     if recs:
         df["action"] = df["ticker"].map(lambda t: (recs.get(t) or {}).get("action"))
         df["strategy"] = df["ticker"].map(
@@ -411,21 +436,26 @@ def main(argv: list[str] | None = None) -> int:
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
         long_vol=long_vol,
+        portfolio=portfolio,
     )
     print(f"\nWrote {scan_path}")
 
     # Log today's implied vol for every priced name: the history the strategy
     # has to be tested against (see iv_history.py). Ad-hoc `--tickers` runs are
     # not the scan and do not write to it.
-    if views and not args.tickers:
+    if (views or control_views) and not args.tickers:
         dates = {t: pd.Timestamp(raw[t].index[-1]).date().isoformat()
-                 for t in views if t in raw and not raw[t].empty}
+                 for t in {**views, **control_views} if t in raw and not raw[t].empty}
         scores = dict(zip(df["ticker"], df["score"])) if not df.empty else {}
         ivh_path = Path(outdir) / (opt_cfg.get("iv_history_file") or "data/iv_history.csv")
         try:
-            n = iv_history.append(ivh_path, iv_history.rows_from_views(
-                dates, views, scores, min_iv=report.MIN_PLAUSIBLE_IV))
-            print(f"Logged implied vol for {n} name(s) to {ivh_path}")
+            rows = (iv_history.rows_from_views(dates, views, scores,
+                                               min_iv=report.MIN_PLAUSIBLE_IV)
+                    + iv_history.rows_from_views(dates, control_views, scores,
+                                                 min_iv=report.MIN_PLAUSIBLE_IV, role="control"))
+            n = iv_history.append(ivh_path, rows)
+            print(f"Logged implied vol for {n} name(s) to {ivh_path} "
+                  f"({len(control_views)} control)")
         except OSError as exc:
             print(f"IV history not written ({exc})", file=sys.stderr)
 

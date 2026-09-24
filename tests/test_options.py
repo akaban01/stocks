@@ -176,3 +176,31 @@ def test_quotes_record_whether_the_mid_is_live_or_the_last_trade():
     assert (q[100.0].mid_source, q[100.0].mid) == ("quote", 2.1)
     assert (q[105.0].mid_source, q[105.0].mid) == ("last", 0.9)
     assert (q[110.0].mid_source, q[110.0].mid) == ("none", None)
+
+
+def test_solve_iv_recovers_the_volatility_a_price_was_made_with():
+    from spread_scanner import options
+    for right in ("call", "put"):
+        for k in (80.0, 100.0, 125.0):
+            price = options.bs_price(100.0, k, 30 / 365, 0.35, right)
+            assert abs(options.solve_iv(price, 100.0, k, 30 / 365, right) - 0.35) < 1e-6
+
+
+def test_solve_iv_refuses_a_price_no_volatility_can_produce():
+    from spread_scanner import options
+    # A call quoted under its intrinsic value (spot 120, strike 100) is stale.
+    assert options.solve_iv(15.0, 120.0, 100.0, 30 / 365, "call") is None
+    assert options.solve_iv(0.0, 100.0, 100.0, 30 / 365, "call") is None
+
+
+def test_live_quotes_get_their_own_iv_and_stale_ones_keep_yahoos():
+    from spread_scanner import options
+    live_mid = options.bs_price(100.0, 100.0, 30 / 365, 0.30, "call")
+    live = options.Quote(strike=100.0, right="call", bid=live_mid - 0.05, ask=live_mid + 0.05,
+                         mid=live_mid, last=None, iv=0.001, open_interest=10, volume=1)
+    stale = options.Quote(strike=105.0, right="call", bid=None, ask=None, mid=1.2, last=1.2,
+                          iv=44.0, open_interest=10, volume=0, mid_source="last")
+    sides = {"call": {100.0: live, 105.0: stale}, "put": {}}
+    assert options.solve_chain_ivs(sides, 100.0, 30) == 1
+    assert (live.iv, live.iv_source) == (30.0, "mid")          # Yahoo's 0.001% floor replaced
+    assert (stale.iv, stale.iv_source) == (44.0, "yahoo")

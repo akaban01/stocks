@@ -78,6 +78,9 @@ universe:
   # Every live fetch is saved here (under output.dir) and committed; a day the
   # fetch fails scans this last good list before falling back to `tickers:`.
   cache_file: data/universe.json
+  # The list each scan actually ran on, after the halal screen. calibrate.py
+  # and backtest.py measure these names, so all three agree on the universe.
+  screened_file: data/screened.json
   # Issuer-published holdings files, tried before the third-party holdings page.
   # SPUS's is built in (spread_scanner/universe.py ISSUER_CSV); add one per fund
   # as `SYMBOL: https://…csv` when the issuer publishes it.
@@ -110,6 +113,10 @@ options:
   # It is the only record of what options actually charged, and backtest.py
   # tests forward moves against it — so it is committed, never regenerated.
   iv_history_file: data/iv_history.csv
+  # Also price this many of the lowest-scoring names each run, for the log only
+  # (no card, no trade). Without them the test against implied vol has no calm
+  # names to compare the coiled ones with. 0 turns it off.
+  control_n: 5
   top_n: 15                 # how many top-ranked names to price
   margin: 0.15              # ± band around the historical move for cheap/rich
 
@@ -126,6 +133,11 @@ strategy:
   # buy premium / sell premium / stand aside, with the exact legs, net price,
   # max loss, breakevens and management rules. See spread_scanner/strategy.py.
   risk_budget_usd: 1000     # max loss per position; sets the suggested contract count
+  portfolio_risk_usd: 3000  # max total loss across ALL of today's trades together. The
+                            # names are mostly large caps that move as one, so the
+                            # per-position budget alone lets five trades become one
+                            # bet five times the size. Funded by confidence, highest
+                            # first; later trades are cut to fit. 0 = no cap.
   long_risk_budget_usd: 2500
                             # the same, for the ≈13-month spreads. Separate because
                             # a LEAPS spread costs several times a monthly one and

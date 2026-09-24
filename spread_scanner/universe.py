@@ -42,6 +42,20 @@ _HEADERS = {"User-Agent": "Mozilla/5.0 (spread-scanner)"}
 ISSUER_CSV = {
     "SPUS": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPUS.csv",
 }
+# Share classes of one company. A fund holding both lists both, and two slots
+# of a 30-name universe then go to one business whose classes move together.
+# Secondary class -> the class kept (the one with the deeper option market).
+SAME_COMPANY = {
+    "GOOG": "GOOGL",
+    "BRK-A": "BRK-B",
+    "FOX": "FOXA",
+    "NWS": "NWSA",
+    "UA": "UAA",
+    "LEN-B": "LEN",
+    "BF-A": "BF-B",
+    "HEI-A": "HEI",
+}
+
 _CSV_TICKER_COLS = ("StockTicker", "Ticker", "Symbol", "ticker", "symbol")
 _CSV_WEIGHT_COLS = ("Weightings", "Weight", "% of Net Assets", "weight", "Weight (%)")
 
@@ -168,8 +182,21 @@ def fetch_halal_universe(symbols: list[str], max_holdings: int = 30,
         for ticker, weight in fetch_etf_holdings(sym, csv_url=url):
             weight_by_ticker[ticker] = max(weight_by_ticker.get(ticker, 0.0), weight)
 
+    weight_by_ticker = merge_share_classes(weight_by_ticker)
     ranked = sorted(weight_by_ticker, key=lambda t: weight_by_ticker[t], reverse=True)
     return ranked[:max_holdings] if max_holdings else ranked
+
+
+def merge_share_classes(weights: dict[str, float]) -> dict[str, float]:
+    """Fold each secondary share class into its primary, summing the weights.
+
+    The combined weight is the company's real weight in the fund, so it ranks
+    where the company belongs rather than as two half-weight entries."""
+    out: dict[str, float] = {}
+    for ticker, weight in weights.items():
+        key = SAME_COMPANY.get(ticker, ticker)
+        out[key] = out.get(key, 0.0) + weight
+    return out
 
 
 def _cache_key(symbols: list[str], max_holdings: int) -> dict:
@@ -236,3 +263,48 @@ def from_config(uni_cfg: dict, outdir: str | Path) -> tuple[list[str], str | Non
     csv_urls = {str(k).upper(): v for k, v in (uni_cfg.get("holdings_csv") or {}).items()}
     return resolve_universe(etfs, cap, cache_path=Path(outdir) / cache if cache else None,
                             csv_urls=csv_urls)
+
+
+# --------------------------------------------------- the screened list, shared
+
+def save_screened(path: str | Path, tickers: list[str], mode: str,
+                  today: dt.date | None = None) -> None:
+    """Record the list run.py actually scanned, after the halal screen.
+
+    calibrate.py and backtest.py read it (`load_screened`) so all three measure
+    the same names. Before this, the backtest skipped the screen and fetched the
+    fund holdings on its own, and tested names the scan had rejected."""
+    if not tickers:
+        return
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"as_of": (today or dt.date.today()).isoformat(),
+                                "screen_mode": mode, "tickers": list(tickers)},
+                               indent=2), encoding="utf-8")
+
+
+def load_screened(path: str | Path) -> tuple[list[str], str] | None:
+    """(tickers, as_of) of the last screened list, or None."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    tickers = [t for t in (data.get("tickers") or []) if isinstance(t, str) and _valid_ticker(t)] \
+        if isinstance(data, dict) else []
+    return (tickers, str(data.get("as_of") or "an earlier run")) if tickers else None
+
+
+def for_validation(cfg: dict, outdir: str | Path) -> tuple[list[str], str]:
+    """The names calibrate.py and backtest.py should measure, and where they came from.
+
+    The screened list the last scan ran on, when there is one; otherwise the
+    same sources run.py would start from (without its screen)."""
+    uni = cfg.get("universe") or {}
+    screened = load_screened(Path(outdir) / uni.get("screened_file", "data/screened.json"))
+    if screened:
+        return screened[0], f"the screened list scanned on {screened[1]}"
+    if uni.get("source") == "etf":
+        tickers = from_config(uni, outdir)[0]
+        if tickers:
+            return tickers, "fund holdings (unscreened — no scan has run yet)"
+    return list(cfg.get("tickers") or []), "the config watchlist"

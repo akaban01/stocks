@@ -95,6 +95,9 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     assert scan["counts"] == {"SELL_PREMIUM": 1, "BUY_PREMIUM": 1, "NO_DATA": 1}
     assert scan["universe"]["scanned"] == 3
     assert scan["long_vol"]["supported"] is True and scan["long_vol"]["source"] == "long_band"
+    # The screened list the backtest and calibration will measure.
+    screened = json.loads((site / "data" / "screened.json").read_text(encoding="utf-8"))
+    assert screened["tickers"] == TICKERS and screened["screen_mode"] == "filter"
 
     by = {s["ticker"]: s for s in scan["signals"]}
     assert by["AAA"]["recommendation"]["action"] == "SELL_PREMIUM"
@@ -519,3 +522,30 @@ def test_no_straddles_without_evidence_that_they_pay(offline, config, tmp_path, 
     keys = {rec["plan"]["key"], *(a["key"] for a in rec["alternatives"])}
     assert not keys & {"long_straddle", "long_strangle"}
     assert any("backtest" in a["reason"] for a in rec["avoid"])
+
+
+def test_low_score_control_names_are_logged_but_not_traded(offline, tmp_path, monkeypatch):
+    def price_all(rows, horizon_days, margin=0.15, hv_annual=None, hv_history=None,
+                  long_dated=True, long_target_days=395):
+        return {t: make_view(t, spot=float(spot), iv=30, hv=28, iv_rank=50) for t, spot, _ in rows}
+    monkeypatch.setattr(options, "screen_options", price_all)
+    cfg = tmp_path / "config.yaml"
+    cfg.write_text(
+        "params: {horizon_days: 10, history_period: 1y, percentile_lookback: 120}\n"
+        "universe: {source: config}\n"
+        "options: {enabled: true, top_n: 1, control_n: 1}\n"
+        "charts: {enabled: false}\nweekly: {enabled: false}\nalerts: {enabled: false}\n"
+        f"output: {{dir: '{tmp_path / 'site'}', top: 30}}\n"
+        f"tickers: [{', '.join(TICKERS)}]\n", encoding="utf-8")
+    assert run.main(["--config", str(cfg)]) == 0
+
+    site = tmp_path / "site" / "data"
+    log = pd.read_csv(site / "iv_history.csv")
+    assert sorted(log["role"]) == ["control", "top"]
+    scan = json.loads((site / "scan.json").read_text(encoding="utf-8"))
+    ranked = [s["ticker"] for s in sorted(scan["signals"], key=lambda s: -s["score"])]
+    control = log.loc[log["role"] == "control", "ticker"].item()
+    assert control == ranked[-1]
+    # Priced for the log only: no option read and no trade on its card.
+    card = {s["ticker"]: s for s in scan["signals"]}[control]
+    assert card["options"] is None and card["recommendation"]["action"] == "NO_DATA"

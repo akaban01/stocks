@@ -44,8 +44,28 @@ def _score_series(squeeze_on, squeeze_days, bw_pctile, hv_pctile, weights=None) 
     return (raw * 100).clip(0, 100)
 
 
+def _earnings_windows(index: pd.Index, days: list | None, horizon: int) -> np.ndarray:
+    """Bool per bar: does an earnings reaction day fall inside its forward window?
+
+    A bar's outcome runs from its close to the close `horizon` bars later, so a
+    reaction on bar j affects bars j-horizon .. j-1."""
+    flags = np.zeros(len(index), dtype=bool)
+    if not days or not len(index):
+        return flags
+    idx = pd.DatetimeIndex(index)
+    if idx.tz is not None:
+        idx = idx.tz_localize(None)
+    idx = idx.normalize()
+    for day in days:
+        j = idx.searchsorted(pd.Timestamp(day))
+        if j >= len(idx) or idx[j] - pd.Timestamp(day) > pd.Timedelta(days=4):
+            continue                                   # outside this history
+        flags[max(0, j - horizon):j] = True
+    return flags
+
+
 def _per_ticker_records(df: pd.DataFrame, p: dict, weights: dict | None = None,
-                        ticker: str = "") -> pd.DataFrame:
+                        ticker: str = "", earnings: list | None = None) -> pd.DataFrame:
     """One row per historical bar: score, squeeze, expected vs realized move."""
     df = df.dropna(subset=["Open", "High", "Low", "Close"]).copy()
     if len(df) < p["percentile_lookback"] + p["horizon_days"] + 5:
@@ -93,6 +113,8 @@ def _per_ticker_records(df: pd.DataFrame, p: dict, weights: dict | None = None,
         "em_long_pct": em_long_pct,
         "fwd_abs": fwd_abs,
     }).dropna()
+    out["earnings_in_window"] = _earnings_windows(df.index, earnings,
+                                                  p["horizon_days"])[out["pos"].to_numpy()]
     out = out[(out["em_pct"] > 0) & (out["em_long_pct"] > 0)]
     out["within_band"] = out["fwd_abs"] <= out["em_pct"]
     # Expansion = realized move as a multiple of its OWN expected (compressed)
@@ -157,14 +179,17 @@ def bootstrap_edge(recs: pd.DataFrame, hi_mask, lo_mask, col: str = "broke_band"
 
 
 def run_backtest(data: dict[str, pd.DataFrame], p: dict,
-                 weights: dict | None = None) -> tuple[pd.DataFrame, dict]:
+                 weights: dict | None = None,
+                 earnings: dict[str, list] | None = None) -> tuple[pd.DataFrame, dict]:
     """Aggregate per-bar records across the universe and compute summary stats.
 
     The bucket numbers are descriptive and use every bar. The statistics that
     claim anything — the independent-sample edge and its interval, and the
     comparison against the longer realized-vol band — use the non-overlapping
     sample (`non_overlapping`)."""
-    frames = [_per_ticker_records(df, p, weights=weights, ticker=t) for t, df in data.items()]
+    earnings = earnings or {}
+    frames = [_per_ticker_records(df, p, weights=weights, ticker=t, earnings=earnings.get(t))
+              for t, df in data.items()]
     frames = [f for f in frames if not f.empty]
     recs = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     if recs.empty:
@@ -204,6 +229,19 @@ def run_backtest(data: dict[str, pd.DataFrame], p: dict,
         "horizon": int(p["horizon_days"]),
         "own_band": bootstrap_edge(indep, hi_m, lo_m, "broke_band"),
         "long_band": bootstrap_edge(indep, hi_m, lo_m, "broke_long_band"),
+    }
+    # The same, with every window that holds an earnings report taken out. A
+    # report is a scheduled jump the option market prices in advance, so a
+    # "breakout" that is really an earnings gap is not the squeeze working.
+    quiet = indep[~indep["earnings_in_window"]]
+    qhi, qlo = quiet["score"] >= 60, quiet["score"] < 30
+    stats["ex_earnings"] = {
+        "n": len(quiet),
+        "names_with_dates": sum(1 for t in data if earnings.get(t)),
+        "names": len(data),
+        "share_of_bars_with_earnings": float(recs["earnings_in_window"].mean()),
+        "own_band": bootstrap_edge(quiet, qhi, qlo, "broke_band"),
+        "long_band": bootstrap_edge(quiet, qhi, qlo, "broke_long_band"),
     }
     return recs, stats
 
@@ -452,6 +490,7 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
             "own_band": interval(own),
             "long_band": interval(long_),
         },
+        "ex_earnings": _ex_earnings_block(stats.get("ex_earnings"), interval),
         "verdict": {
             "holds": bool(holds),
             "edge_pts": _round(edge),
@@ -481,6 +520,30 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
                    "relative expansion is likelier — never its direction. Past behaviour does not "
                    "guarantee future results."),
     }
+
+
+def _ex_earnings_block(ex: dict | None, interval) -> dict | None:
+    """The independent-sample edges with earnings windows removed, plus a sentence."""
+    if not ex:
+        return None
+    own, lb = interval(ex["own_band"]), interval(ex["long_band"])
+    if not ex["names_with_dates"]:
+        text = "No earnings dates were available, so earnings windows could not be removed."
+    elif own["edge_pts"] is None:
+        text = "Too few bars remain once earnings windows are removed to measure the edge."
+    else:
+        text = (f"With every window holding an earnings report removed "
+                f"({ex['share_of_bars_with_earnings'] * 100:.0f}% of bars; dates for "
+                f"{ex['names_with_dates']} of {ex['names']} names), the own-band edge is "
+                f"{own['edge_pts']:+.0f} pts (95% CI {own['ci95_pts'][0]:+.0f} to "
+                f"{own['ci95_pts'][1]:+.0f})"
+                + (f" and the 60-day-band edge {lb['edge_pts']:+.0f} pts (95% CI "
+                   f"{lb['ci95_pts'][0]:+.0f} to {lb['ci95_pts'][1]:+.0f})."
+                   if lb["edge_pts"] is not None else "."))
+    return {"bars": int(ex["n"]), "names_with_dates": int(ex["names_with_dates"]),
+            "names": int(ex["names"]),
+            "share_of_bars_with_earnings_pct": _round(ex["share_of_bars_with_earnings"] * 100),
+            "own_band": own, "long_band": lb, "text": text}
 
 
 def _round(v, nd: int = 1):

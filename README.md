@@ -138,6 +138,19 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > average; until then, the 60-day-band interval has to clear zero. When neither
 > holds, a cheap-premium name with a directional read gets a debit spread, and
 > one without stands aside. The card and the page summary say why.
+>
+> Two things keep that test honest. Each run also prices its **five
+> lowest-scoring names** (`options.control_n`) for the log only — no card, no
+> trade — so coiled names can be compared with calm ones. And every live
+> contract's implied vol is **solved from its own bid/ask mid** (Black–Scholes,
+> `options.solve_chain_ivs`) rather than taken from Yahoo's `impliedVolatility`,
+> which after the close is often worked off a stale last trade. Contracts with
+> no live quote keep Yahoo's number and are marked `iv_source: "yahoo"`.
+>
+> Earnings don't explain the edge. The backtest also reports both intervals with
+> every window that holds an earnings report removed (dates from Yahoo, about 16%
+> of bars): on one run the own-band edge stayed at +14 pts and the 60-day-band
+> edge at −2.
 
 ## Quick start (local)
 
@@ -805,7 +818,20 @@ list otherwise looks exactly like a scan of the funds' live holdings.
 The top 30 holdings of two large-cap Shariah funds are a small, closely
 correlated set, mostly large-cap tech. The backtest's intervals resample whole
 dates for that reason, so 30 names moving together on one day count as one
-observation rather than thirty.
+observation rather than thirty. For the same reason trades are capped **in total**
+as well as one by one (`strategy.portfolio_risk_usd`): five trades on names that
+move together are close to one bet five times the size, so the day's trades are
+funded in order of confidence and later ones are cut to fit.
+
+Share classes of one company count once (`universe.SAME_COMPANY`): the issuer
+file lists both GOOG and GOOGL, which took two of the thirty slots for one
+business. The weights are summed and the class with the deeper option market is
+kept.
+
+Every scan saves the list it actually ran on, after the halal screen, to
+`public/data/screened.json`. `calibrate.py` and `backtest.py` measure those names,
+so all three agree. Before this the backtest skipped the screen and fetched the
+fund holdings on its own, and tested names the scan had rejected.
 
 Tickers are normalized to Yahoo's spelling on the way in: the holdings page writes
 class shares as `BRK.B` and every Yahoo endpoint answers only to `BRK-B`, so a
@@ -857,8 +883,10 @@ halal_screen:
 options:
   enabled: true          # read option chains -> IV rank, term structure, skew
   top_n: 15              # how many top-ranked names to price (2-3 calls each)
+  control_n: 5           # + this many lowest-scoring names, for the IV log only
 strategy:
   risk_budget_usd: 1000  # max loss per position; sets the suggested contract count
+  portfolio_risk_usd: 3000  # max loss across all of today's trades together
   allow_undefined_risk: false   # true = offer naked short strangles as an alternative
 params:
   horizon_days: 10       # ~2 weeks of trading days — the short-term window

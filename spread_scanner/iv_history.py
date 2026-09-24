@@ -24,8 +24,11 @@ from pathlib import Path
 
 import pandas as pd
 
+# `role`: "top" for the names the scan prices to trade, "control" for the
+# lowest-scoring names priced only so the test has calm names to compare with.
+# Older rows predate the column and read as empty, which means "top".
 COLUMNS = ["date", "ticker", "spot", "expiry", "dte", "iv_annual", "implied_move_pct",
-           "hist_move_pct", "hv_annual", "premium_score", "premium_state", "score"]
+           "hist_move_pct", "hv_annual", "premium_score", "premium_state", "score", "role"]
 
 # Fewer matured observations than this and the implied test reports what it has
 # without a verdict. Thirty names a day reach it in about two weeks of history
@@ -46,7 +49,7 @@ def _num(v):
 
 
 def rows_from_views(dates: dict[str, str], views: dict, scores: dict[str, float] | None = None,
-                    min_iv: float = 0.0) -> list[dict]:
+                    min_iv: float = 0.0, role: str = "top") -> list[dict]:
     """One row per OptionView with a plausible ATM IV.
 
     `dates` is each ticker's last price bar (ISO date): the close the IV was
@@ -63,6 +66,7 @@ def rows_from_views(dates: dict[str, str], views: dict, scores: dict[str, float]
             "hist_move_pct": v.hist_move_pct, "hv_annual": v.hv_annual,
             "premium_score": v.premium_score, "premium_state": v.premium_state,
             "score": (scores or {}).get(ticker),
+            "role": role,
         })
     return out
 
@@ -174,9 +178,19 @@ def implied_backtest(hist: pd.DataFrame, prices: dict[str, pd.DataFrame], horizo
         "coiled_cheap": {"label": "Coiled and cheap (the buy-premium setup)",
                          **_group(m[(score >= 60) & (m["premium_state"] == "cheap")])},
     }
-    a = buckets["all"]
+    a, hi, lo = buckets["all"], buckets["coiled"], buckets["calm"]
+    # The comparison the score has to win: coiled against calm, both against
+    # what their own options charged. The calm side exists because the scan
+    # prices a control group of its lowest-scoring names (`role == "control"`).
+    if hi["n"] and lo["n"]:
+        vs = (f" Coiled names beat their implied move {hi['beat_implied_pct']:.0f}% of the time "
+              f"({hi['n']} readings) against {lo['beat_implied_pct']:.0f}% for calm ones "
+              f"({lo['n']}).")
+    else:
+        vs = " No calm-name readings have matured yet, so coiled cannot be compared with calm."
     return {**base, "ok": True, "matured": int(len(m)), "buckets": buckets,
             "text": (f"{a['beat_implied_pct']:.0f}% of {a['n']} matured readings moved more than the "
                      f"option market's implied move; a model straddle bought at that price returned "
-                     f"{a['avg_straddle_return_pct']:+.0f}% on average. Readings on consecutive days "
-                     "overlap, so treat this as descriptive until the history is long.")}
+                     f"{a['avg_straddle_return_pct']:+.0f}% on average." + vs + " Readings on "
+                     "consecutive days overlap, so treat this as descriptive until the history is "
+                     "long.")}

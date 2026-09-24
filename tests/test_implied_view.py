@@ -17,14 +17,21 @@ import pytest
 from spread_scanner import net, options
 
 
-def _chain_frame(spot, iv_pct, strikes, oi=1500, spread_frac=0.02, no_quotes=False):
+def _chain_frame(spot, iv_pct, strikes, right, dte, oi=1500, spread_frac=0.02, no_quotes=False):
+    """One side of a chain, every contract priced by Black–Scholes at `iv_pct`.
+
+    The mid has to be the price that volatility implies: options.py now solves
+    each live contract's IV from its own mid, so a fixture whose prices say one
+    volatility and whose `impliedVolatility` column says another would be
+    testing an inconsistent market. Bid and ask sit symmetrically around it and
+    are left unrounded so the solved IV comes back exact."""
     rows = []
     for k in strikes:
-        mid = max(0.05, spot - k) + spot * iv_pct / 100 * 0.05
+        mid = max(options.bs_price(spot, k, dte / 365, iv_pct / 100, right), 0.05)
         rows.append({
             "strike": float(k),
-            "bid": 0.0 if no_quotes else round(mid * (1 - spread_frac), 2),
-            "ask": 0.0 if no_quotes else round(mid * (1 + spread_frac), 2),
+            "bid": 0.0 if no_quotes else mid * (1 - spread_frac),
+            "ask": 0.0 if no_quotes else mid * (1 + spread_frac),
             "lastPrice": round(mid, 2),
             "impliedVolatility": iv_pct / 100,
             "openInterest": 0 if no_quotes else oi,
@@ -64,8 +71,10 @@ class FakeTicker:
             raise OSError("chain fetch failed")
         iv = self.ivs[expiry]
         quiet = expiry in self.no_quotes
-        side = _chain_frame(self.spot, iv, self.strikes, self.oi, self.spread_frac, quiet)
-        return FakeChain(side.copy(), side.copy())
+        dte = options._dte(expiry)
+        return FakeChain(
+            _chain_frame(self.spot, iv, self.strikes, "call", dte, self.oi, self.spread_frac, quiet),
+            _chain_frame(self.spot, iv, self.strikes, "put", dte, self.oi, self.spread_frac, quiet))
 
 
 @pytest.fixture(autouse=True)

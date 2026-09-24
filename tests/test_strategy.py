@@ -541,3 +541,37 @@ def test_cheap_premium_with_evidence_still_buys_the_straddle():
     r = rec({"iv": 18, "hv": 30, "iv_rank": 8}, long_vol={**NO, "supported": True})
     keys = {r.plan["key"], *(a["key"] for a in r.alternatives)}
     assert keys & {"long_straddle", "long_strangle"}
+
+
+# ------------------------------------------------------------ portfolio cap
+
+
+def _trade(conf, risk, n):
+    return {"action": "SELL_PREMIUM", "confidence": conf,
+            "plan": {"sizing": {"risk_per_spread": risk, "contracts": n,
+                                "total_risk": risk * n, "note": "orig"}}}
+
+
+def test_portfolio_cap_funds_the_most_confident_trades_first():
+    recs = {"A": _trade(0.9, 400, 2), "B": _trade(0.5, 300, 3), "C": _trade(0.7, 500, 1),
+            "W": {"action": "STAND_ASIDE", "plan": {"sizing": {"contracts": 0}}}}
+    out = strategy.apply_portfolio_cap(recs, 1500)
+    # A (800) then C (500) fit; B gets what is left: 200 -> 0 contracts.
+    assert recs["A"]["plan"]["sizing"]["contracts"] == 2
+    assert recs["C"]["plan"]["sizing"]["contracts"] == 1
+    b = recs["B"]["plan"]["sizing"]
+    assert b["contracts"] == 0 and b["portfolio_capped"] and "cap" in b["note"]
+    assert out == {"cap": 1500, "used": 1300.0, "capped": ["B"]}
+
+
+def test_portfolio_cap_trims_rather_than_drops_when_part_fits():
+    recs = {"A": _trade(0.9, 400, 2), "B": _trade(0.5, 300, 3)}
+    strategy.apply_portfolio_cap(recs, 1500)
+    assert recs["B"]["plan"]["sizing"]["contracts"] == 2
+    assert recs["B"]["plan"]["sizing"]["total_risk"] == 600
+
+
+def test_no_cap_changes_nothing():
+    recs = {"A": _trade(0.9, 400, 5)}
+    assert strategy.apply_portfolio_cap(recs, 0)["capped"] == []
+    assert recs["A"]["plan"]["sizing"]["contracts"] == 5

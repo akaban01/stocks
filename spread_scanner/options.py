@@ -85,6 +85,10 @@ class Quote:
     # old) or "none". A price off the last trade is not a price anyone is
     # offering now, and it has to say so wherever it is used.
     mid_source: str = "quote"
+    # Where `iv` came from: "mid" (solved here from the live mid, see
+    # `solve_chain_ivs`) or "yahoo" (the feed's own number, used only when no
+    # live mid exists or the mid cannot be inverted).
+    iv_source: str = "yahoo"
 
     @property
     def spread_pct(self) -> float | None:
@@ -260,6 +264,78 @@ def _atm_iv(calls: dict[float, Quote], puts: dict[float, Quote], spot: float) ->
         if iv and iv > 0:
             ivs.append(iv)
     return round(sum(ivs) / len(ivs), 2) if ivs else None
+
+
+# ------------------------------------------------- implied vol from the market
+
+# The rate the Black–Scholes inversion discounts at. Near-dated option prices
+# barely depend on it; a point either way moves a one-month ATM IV by well under
+# a tenth of a vol point. Dividends are ignored for the same reason.
+RISK_FREE_RATE = 0.04
+
+
+def bs_price(spot: float, strike: float, t: float, vol: float, right: str,
+             r: float = RISK_FREE_RATE) -> float:
+    """European Black–Scholes price. `t` in years, `vol` a fraction."""
+    if t <= 0 or vol <= 0:
+        intrinsic = spot - strike if right == "call" else strike - spot
+        return max(intrinsic, 0.0)
+    sd = vol * math.sqrt(t)
+    d1 = (math.log(spot / strike) + (r + vol * vol / 2) * t) / sd
+    d2 = d1 - sd
+    n = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))       # noqa: E731
+    disc = strike * math.exp(-r * t)
+    if right == "call":
+        return spot * n(d1) - disc * n(d2)
+    return disc * n(-d2) - spot * n(-d1)
+
+
+def solve_iv(price: float, spot: float, strike: float, t: float, right: str,
+             r: float = RISK_FREE_RATE) -> float | None:
+    """The volatility at which `bs_price` equals `price` (a fraction), or None.
+
+    None when the price sits outside what any volatility can produce — below the
+    discounted intrinsic value or above the no-arbitrage ceiling — which is what
+    a stale or crossed quote looks like. Bisection: the price is monotonic in
+    volatility, so it cannot miss, and 60 halvings of [0.1%, 500%] is far finer
+    than a quote's tick."""
+    if not (price and price > 0 and spot > 0 and strike > 0 and t > 0):
+        return None
+    lo, hi = 0.001, 5.0
+    if not (bs_price(spot, strike, t, lo, right, r) < price < bs_price(spot, strike, t, hi, right, r)):
+        return None
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        if bs_price(spot, strike, t, mid, right, r) < price:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def solve_chain_ivs(sides: dict[str, dict[float, Quote]], spot: float, dte: int | None) -> int:
+    """Replace each live-quoted contract's IV with the one its own mid implies.
+
+    Yahoo's `impliedVolatility` is computed on Yahoo's side, from inputs it does
+    not publish, and after the close it is often worked off a stale last trade:
+    floor values like 0.00001 and multi-hundred-percent spikes on liquid names
+    are both routine. Everything downstream — the cheap/rich call, probability
+    of profit, the implied-vol log — rests on this number, so it is solved here
+    from the mid the plan is priced off. Contracts with no live two-sided quote
+    keep Yahoo's number and say so (`iv_source`). Returns how many were solved."""
+    if not dte or dte <= 0 or spot <= 0:
+        return 0
+    t = dte / 365
+    solved = 0
+    for right, side in sides.items():
+        for q in side.values():
+            if q.mid_source != "quote" or not q.mid:
+                continue
+            iv = solve_iv(q.mid, spot, q.strike, t, right)
+            if iv is not None:
+                q.iv, q.iv_source = round(iv * 100, 2), "mid"
+                solved += 1
+    return solved
 
 
 # ------------------------------------------------------------- vol regime math
@@ -452,6 +528,7 @@ def implied_view(
         except Exception:
             continue
         chain[exp] = {"call": _quotes(ch.calls, "call"), "put": _quotes(ch.puts, "put")}
+        solve_chain_ivs(chain[exp], spot, _dte(exp))
 
     if expiry not in chain:
         return None

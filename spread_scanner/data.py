@@ -150,3 +150,32 @@ def download(tickers: list[str], period: str = "6mo", interval: str = "1d") -> d
         out.update(_download_once(missing, period, interval))
 
     return out
+
+
+def earnings_history(tickers: list[str], limit: int = 28) -> dict[str, list[pd.Timestamp]]:
+    """{ticker: [the trading day each past earnings report moved the stock]}, best-effort.
+
+    A report after the close moves the *next* session, so it is dated there;
+    one before the open moves the same day. `limit` quarters (28 ≈ 7 years)
+    covers the default 5-year backtest. A ticker that fails is left out — the
+    backtest then treats its bars as having no known earnings, and says how
+    many names it had dates for."""
+    out: dict[str, list[pd.Timestamp]] = {}
+    for t in tickers:
+        try:
+            frame = retry(lambda t=t: yf.Ticker(t).get_earnings_dates(limit=limit),
+                          label=f"{t} earnings dates")
+        except Exception as exc:                      # noqa: BLE001 — best-effort per name
+            print(f"  ! {t}: no earnings dates ({type(exc).__name__})")
+            continue
+        if frame is None or getattr(frame, "empty", True):
+            continue
+        days = []
+        for ts in frame.index:
+            ts = pd.Timestamp(ts)
+            day = ts.tz_localize(None).normalize() if ts.tzinfo else ts.normalize()
+            if ts.hour >= 12:                          # after the close -> next session
+                day = day + pd.offsets.BDay(1)
+            days.append(day)
+        out[t] = sorted(set(days))
+    return out
