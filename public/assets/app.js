@@ -341,7 +341,8 @@
     }
     var out = [];
     out.push(cell("IV rank", has(o.iv_rank) ? num(o.iv_rank, 0) : "—",
-      has(o.iv_percentile) ? num(o.iv_percentile, 0) + "th pctile" : "no history",
+      (has(o.iv_percentile) ? num(o.iv_percentile, 0) + "th pctile" : "no history") +
+        (o.iv_rank_basis === "implied" ? " · vs past IV" : has(o.iv_rank) ? " · vs realized vol" : ""),
       state, o.iv_rank));
     out.push(cell("Premium", num(o.premium_score, 0) + "/100",
       esc((ref("premium_states." + state) || {}).label || state), state, o.premium_score));

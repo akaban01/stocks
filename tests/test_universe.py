@@ -150,3 +150,17 @@ def test_validation_falls_back_without_a_screened_list(tmp_path, monkeypatch):
     monkeypatch.setattr(universe, "from_config", lambda uni, outdir: (["NVDA"], None))
     assert universe.for_validation({"universe": {"source": "etf"}}, tmp_path)[0] == ["NVDA"]
     assert universe.for_validation({"tickers": ["X"]}, tmp_path) == (["X"], "the config watchlist")
+
+
+def test_membership_log_records_each_day_and_answers_as_of_a_date(tmp_path):
+    import datetime as dt
+    path = tmp_path / "data" / "universe_history.csv"
+    universe.append_history(path, ["NVDA", "AAPL"], today=dt.date(2026, 9, 1))
+    universe.append_history(path, ["AAPL", "ORCL"], today=dt.date(2026, 9, 2))
+    universe.append_history(path, ["AAPL", "MSFT"], today=dt.date(2026, 9, 2))   # rerun replaces
+    hist = universe.load_history(path)
+    assert hist == {"2026-09-01": ["NVDA", "AAPL"], "2026-09-02": ["AAPL", "MSFT"]}
+    assert universe.members_on(hist, "2026-09-01") == ["NVDA", "AAPL"]
+    assert universe.members_on(hist, dt.date(2026, 9, 30)) == ["AAPL", "MSFT"]
+    assert universe.members_on(hist, "2026-08-31") is None
+    assert universe.load_history(tmp_path / "missing.csv") == {}

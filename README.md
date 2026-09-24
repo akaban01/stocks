@@ -49,6 +49,8 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set (and the fit reused between refits) |
 | `public/data/iv_history.csv` | `run.py` | each priced name's ATM implied vol, one row per day — **appended, never regenerated** |
 | `public/data/universe.json` | `run.py` | the last fund-holdings list fetched live, the fallback when a fetch fails |
+| `public/data/screened.json` | `run.py` | the list the last scan ran on after the halal screen — what `calibrate.py` and `backtest.py` measure |
+| `public/data/universe_history.csv` | `run.py` | that list for every day (`date,ticker,rank`), appended — for a future backtest without survivorship bias |
 | `public/data/site-data.json` | the workflow | which `site-data` commit carries this run's `charts.json` / `weekly.json` |
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
 | `alert.json` (repo root, gitignored) | `run.py` | the pending webhook message, posted later by `send_alerts.py` |
@@ -111,6 +113,13 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > comparing IV against that same short window would score every coiled name as
 > rich for mechanical reasons — the Premium Score would be measuring the
 > selection, not the market.
+>
+> That stand-in is temporary. Every run logs each priced name's implied vol
+> (`iv_history.csv`), and once a name has `options.MIN_IV_HISTORY` (120) readings,
+> about six months of runs, its IV rank and percentile are taken against its own
+> past implied vol instead. The switch is per name and automatic; the IV-rank
+> tile says which it used ("vs past IV" or "vs realized vol"), and `scan.json`
+> carries it as `options.iv_rank_basis`.
 
 > **Does the score actually work?** For what it measures, yes; for the trades,
 > not shown yet. On the held-out split (the calibration panel of the **Does it

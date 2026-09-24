@@ -220,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.tickers:
         universe.save_screened(Path(outdir) / uni_cfg.get("screened_file", "data/screened.json"),
                                tickers, screen_mode)
+        universe.append_history(
+            Path(outdir) / uni_cfg.get("history_file", "data/universe_history.csv"), tickers)
 
     # Snapshot previous scores (for "newly crossed" alert detection) before overwriting.
     prev_scores: dict[str, float] = {}
@@ -298,7 +300,12 @@ def main(argv: list[str] | None = None) -> int:
         hv_now, hv_hist = _hv_context(raw, params)
         print(f"Reading option chains for the top {len(rows)} names (IV rank, term structure, skew)...")
         long_cfg = opt_cfg.get("long_dated") or {}
+        # Each name's logged IV, so its IV rank moves from the realized-vol
+        # stand-in to its own implied-vol history once there is enough of it.
+        ivh_file = Path(outdir) / (opt_cfg.get("iv_history_file") or "data/iv_history.csv")
+        past_iv = iv_history.series_by_ticker(iv_history.load(ivh_file))
         views = options.screen_options(rows, horizon_days=int(params["horizon_days"]),
+                                       iv_history=past_iv,
                                        margin=float(opt_cfg.get("margin", 0.15)),
                                        hv_annual=hv_now, hv_history=hv_hist,
                                        long_dated=bool(long_cfg.get("enabled", True)),
@@ -316,7 +323,7 @@ def main(argv: list[str] | None = None) -> int:
                 list(zip(tail["ticker"], tail["price"], tail["em_pct"])),
                 horizon_days=int(params["horizon_days"]),
                 margin=float(opt_cfg.get("margin", 0.15)),
-                hv_annual=hv_now, hv_history=hv_hist, long_dated=False)
+                hv_annual=hv_now, hv_history=hv_hist, long_dated=False, iv_history=past_iv)
         for col, attr in (("implied_move_pct", "implied_move_pct"), ("vol_verdict", "verdict"),
                           ("iv_annual", "iv_annual"), ("iv_rank", "iv_rank"),
                           ("premium_score", "premium_score"), ("premium_state", "premium_state"),
