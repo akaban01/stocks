@@ -1,7 +1,7 @@
 {
-  "schema_version": "2.9.0",
-  "generated_at": "2026-09-24T20:47:01Z",
-  "generated_at_utc": "2026-09-24 20:47 UTC",
+  "schema_version": "2.10.0",
+  "generated_at": "2026-09-24T23:55:21Z",
+  "generated_at_utc": "2026-09-24 23:55 UTC",
   "horizon_days": 10,
   "params": {
     "horizon_days": 10,
@@ -68,25 +68,26 @@
   "near_term": {
     "tickers": 15,
     "candidates": 60,
-    "preferred": 1,
+    "preferred": 0,
     "expiries": [
       "2026-10-16"
     ]
   },
+  "quote_session": "closed",
   "top_actions": [
     {
       "ticker": "JNJ",
       "action": "SELL_PREMIUM",
-      "strategy": "Bear Call Spread",
-      "headline": "JNJ: SELL premium — IV rank 100, rich → Bear Call Spread",
-      "detail": "Sell 1× 2026-10-16 290 call; Buy 1× 2026-10-16 300 call — net credit $96.00 per spread (planned fill; $111.50 at mid, $65.00 at the natural price)",
-      "confidence": 0.6
+      "strategy": "Iron Condor",
+      "headline": "JNJ: SELL premium — IV rank 100, rich → Iron Condor",
+      "detail": "Sell 1× 2026-10-16 252.5 put; Buy 1× 2026-10-16 245 put; Sell 1× 2026-10-16 290 call; Buy 1× 2026-10-16 300 call — net credit $155.33 per spread (planned fill; $186.50 at mid, $93.00 at the natural price)",
+      "confidence": 0.72
     }
   ],
   "long_vol": {
     "supported": false,
     "source": "long_band",
-    "text": "Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+    "text": "Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
   },
   "short_vol": {
     "supported": null,
@@ -105,7 +106,7 @@
   },
   "portfolio": {
     "cap": 3000.0,
-    "used": 904.0,
+    "used": 844.67,
     "capped": []
   },
   "reference": {
@@ -326,13 +327,14 @@
         "long_iv": 20.87,
         "long_spread_pct": 8.3,
         "long_open_interest": 10,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "PG",
         "action": "STAND_ASIDE",
-        "headline": "PG: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~56% of mid and only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~56% of mid and only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "PG: stand aside — the options are too illiquid to trade: only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 34.5,
@@ -343,7 +345,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~56% of mid and only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: only 4 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -377,7 +379,7 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~56% of mid and only 4 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
+            "reason": "Only 4 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
@@ -389,7 +391,8 @@
           "Puts bid over calls by 12.8 vol points — the put side pays more to sell."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~56% of mid, OI 4) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market: only 4 contracts of open interest at the at-the-money strike (under 100) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -705,12 +708,13 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~8% of mid, OI 10). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 10 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 30 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 21%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "One of these credit spreads collects very little for the risk — the LEAPS Bear Call Spread takes only 10% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -1016,7 +1020,8 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~56% of mid and only 4 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "The chain is thin: only 4 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spread here collects little for the risk — the Bear Call Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -1061,7 +1066,7 @@
       "iv_rank": 31.6,
       "premium_score": 33.4,
       "premium_state": "cheap",
-      "liquidity": "poor",
+      "liquidity": "fair",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
@@ -1083,7 +1088,7 @@
         "skew_label": "balanced",
         "atm_spread_pct": 20.3,
         "atm_open_interest": 379,
-        "liquidity": "poor",
+        "liquidity": "fair",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -1141,13 +1146,14 @@
         "long_iv": 38.16,
         "long_spread_pct": 6.5,
         "long_open_interest": 38,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "LLY",
         "action": "STAND_ASIDE",
-        "headline": "LLY: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "LLY: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 33.4,
@@ -1158,7 +1164,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -1191,8 +1197,12 @@
         "alternatives": [],
         "avoid": [
           {
-            "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~20% of mid — slippage on entry and exit would cost more than the edge."
+            "name": "Selling premium (condors, credit spreads)",
+            "reason": "IV rank 32 — you'd collect too little for the risk."
+          },
+          {
+            "name": "Long straddles / strangles",
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -1203,7 +1213,7 @@
           "Term structure in contango (+19.7% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~20% of mid, OI 379) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -1593,19 +1603,20 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~6% of mid, OI 38). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 38 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 32 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 38%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "One of these credit spreads collects very little for the risk — the LEAPS Bull Put Spread takes only 18% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 31.84,
-        "liquidity": "poor",
+        "liquidity": "fair",
         "atm_spread_pct": 20.3,
         "premium_state": "cheap",
         "bias": "neutral",
@@ -1906,7 +1917,7 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~20% of mid. Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -1951,7 +1962,7 @@
       "iv_rank": 46.6,
       "premium_score": 34.5,
       "premium_state": "cheap",
-      "liquidity": "fair",
+      "liquidity": "good",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
@@ -1973,7 +1984,7 @@
         "skew_label": "balanced",
         "atm_spread_pct": 12.6,
         "atm_open_interest": 1204,
-        "liquidity": "fair",
+        "liquidity": "good",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -2031,13 +2042,14 @@
         "long_iv": 21.13,
         "long_spread_pct": 13.6,
         "long_open_interest": 53,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "KO",
         "action": "STAND_ASIDE",
-        "headline": "KO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "KO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 34.5,
@@ -2048,7 +2060,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2086,7 +2098,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -2096,7 +2108,9 @@
           "Setup score 88/100, no directional edge.",
           "Term structure in contango (+6.7% front→back)."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -2485,19 +2499,20 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~14% of mid, OI 53). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 53 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 47 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 21%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "Some of these credit spreads collect very little for the risk — the LEAPS Bull Put Spread takes only 7% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 19.77,
-        "liquidity": "fair",
+        "liquidity": "good",
         "atm_spread_pct": 12.6,
         "premium_state": "cheap",
         "bias": "neutral",
@@ -2798,6 +2813,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -2922,13 +2938,14 @@
         "long_iv": 31.38,
         "long_spread_pct": 5.2,
         "long_open_interest": 855,
-        "long_liquidity": "good"
+        "long_liquidity": "good",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "MSFT",
         "action": "STAND_ASIDE",
-        "headline": "MSFT: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "MSFT: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 13.8,
@@ -2939,7 +2956,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2977,7 +2994,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -2988,7 +3005,9 @@
           "Term structure in contango (+28.7% front→back).",
           "The bearish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -3381,7 +3400,8 @@
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "One of these credit spreads collects very little for the risk — the LEAPS Bull Put Spread takes only 20% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -3689,6 +3709,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bear Call Spread takes only 9% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -3733,9 +3754,9 @@
       "iv_rank": 100.0,
       "premium_score": 84.3,
       "premium_state": "rich",
-      "liquidity": "fair",
+      "liquidity": "good",
       "action": "SELL_PREMIUM",
-      "strategy": "Bear Call Spread",
+      "strategy": "Iron Condor",
       "options": {
         "iv_annual": 28.01,
         "hv_annual": 22.2,
@@ -3755,7 +3776,7 @@
         "skew_label": "balanced",
         "atm_spread_pct": 12.5,
         "atm_open_interest": 3743,
-        "liquidity": "fair",
+        "liquidity": "good",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -3813,29 +3834,58 @@
         "long_iv": 26.14,
         "long_spread_pct": 11.8,
         "long_open_interest": 30,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "JNJ",
         "action": "SELL_PREMIUM",
-        "headline": "JNJ: SELL premium — IV rank 100, rich → Bear Call Spread",
-        "detail": "Sell 1× 2026-10-16 290 call; Buy 1× 2026-10-16 300 call — net credit $96.00 per spread (planned fill; $111.50 at mid, $65.00 at the natural price)",
-        "confidence": 0.6,
+        "headline": "JNJ: SELL premium — IV rank 100, rich → Iron Condor",
+        "detail": "Sell 1× 2026-10-16 252.5 put; Buy 1× 2026-10-16 245 put; Sell 1× 2026-10-16 290 call; Buy 1× 2026-10-16 300 call — net credit $155.33 per spread (planned fill; $186.50 at mid, $93.00 at the natural price)",
+        "confidence": 0.72,
         "premium_state": "rich",
         "premium_score": 84.3,
         "bias": "neutral",
         "bias_strength": "none",
         "plan": {
-          "key": "bear_call_spread",
-          "name": "Bear Call Spread",
+          "key": "iron_condor",
+          "name": "Iron Condor",
           "action": "SELL_PREMIUM",
-          "bias": "bearish",
-          "thesis": "Premium is rich and the lean is down — get paid to be right about a direction you don't need to nail.",
-          "playbook": "Sell a call, buy a higher one. You collect credit and win if the stock stays below the short call.",
+          "bias": "neutral",
+          "thesis": "Premium is rich with no directional edge — collect it inside a defined-risk box.",
+          "playbook": "Sell an out-of-the-money call spread and an out-of-the-money put spread. You collect premium and keep it if price stays between them. Defined risk on both sides.",
           "vega": "short",
           "theta": "positive",
           "risk": "defined",
           "legs": [
+            {
+              "action": "sell",
+              "right": "put",
+              "strike": 252.5,
+              "expiry": "2026-10-16",
+              "qty": 1,
+              "mid": 1.485,
+              "bid": 1.26,
+              "ask": 1.71,
+              "iv": 28.78,
+              "open_interest": 12,
+              "label": "Sell 1× 2026-10-16 252.5 put",
+              "mid_source": "quote"
+            },
+            {
+              "action": "buy",
+              "right": "put",
+              "strike": 245.0,
+              "expiry": "2026-10-16",
+              "qty": 1,
+              "mid": 0.735,
+              "bid": 0.49,
+              "ask": 0.98,
+              "iv": 30.2,
+              "open_interest": 47,
+              "label": "Buy 1× 2026-10-16 245 put",
+              "mid_source": "quote"
+            },
             {
               "action": "sell",
               "right": "call",
@@ -3868,19 +3918,20 @@
           "expiry": "2026-10-16",
           "dte": 22,
           "profit_horizon_dte": null,
-          "net": -96.0,
-          "net_mid": -111.5,
-          "net_natural": -65.0,
+          "net": -155.33,
+          "net_mid": -186.5,
+          "net_natural": -93.0,
           "fill_basis": "mid + 33% of the half-spread toward the natural price",
-          "max_profit": 96.0,
-          "max_loss": 904.0,
+          "max_profit": 155.33,
+          "max_loss": 844.67,
           "breakevens": [
-            290.96
+            250.95,
+            291.55
           ],
-          "profit_zone": "below",
-          "pop": 0.857,
+          "profit_zone": "inside",
+          "pop": 0.711,
           "pop_basis": "held to expiry, lognormal with each breakeven at its own strike's implied vol; ignores the early exits in the management rules",
-          "credit_to_width": 0.096,
+          "credit_to_width": 0.155,
           "manage": {
             "profit_target": "buy it back at 50% of the credit received",
             "profit_target_pct": 50,
@@ -3892,10 +3943,10 @@
           "sizing": {
             "risk_budget": 1000.0,
             "contracts": 1,
-            "risk_per_spread": 904.0,
-            "total_risk": 904.0,
+            "risk_per_spread": 844.67,
+            "total_risk": 844.67,
             "over_budget": false,
-            "note": "1× risks $904 of a $1,000 budget."
+            "note": "1× risks $845 of a $1,000 budget."
           },
           "risk_form": {
             "tier": "short_premium",
@@ -3904,61 +3955,61 @@
         },
         "alternatives": [
           {
-            "key": "bull_put_spread",
-            "name": "Bull Put Spread",
+            "key": "bear_call_spread",
+            "name": "Bear Call Spread",
             "action": "SELL_PREMIUM",
-            "bias": "bullish",
-            "thesis": "Premium is rich and the lean is up — get paid to be right about a direction you don't need to nail.",
-            "playbook": "Sell a put, buy a lower one. You collect credit and win if the stock stays above the short put — a bullish way to be short rich premium.",
+            "bias": "bearish",
+            "thesis": "Premium is rich and there is no directional read, so this is one side of an iron condor — the call side. It still loses if the stock runs through the short strike, so it is a bet the stock does not move far up.",
+            "playbook": "Sell a call, buy a higher one. You collect credit and win if the stock stays below the short call.",
             "vega": "short",
             "theta": "positive",
             "risk": "defined",
             "legs": [
               {
                 "action": "sell",
-                "right": "put",
-                "strike": 252.5,
+                "right": "call",
+                "strike": 290.0,
                 "expiry": "2026-10-16",
                 "qty": 1,
-                "mid": 1.485,
-                "bid": 1.26,
-                "ask": 1.71,
-                "iv": 28.78,
-                "open_interest": 12,
-                "label": "Sell 1× 2026-10-16 252.5 put",
+                "mid": 1.79,
+                "bid": 1.5,
+                "ask": 2.08,
+                "iv": 28.51,
+                "open_interest": 3537,
+                "label": "Sell 1× 2026-10-16 290 call",
                 "mid_source": "quote"
               },
               {
                 "action": "buy",
-                "right": "put",
-                "strike": 245.0,
+                "right": "call",
+                "strike": 300.0,
                 "expiry": "2026-10-16",
                 "qty": 1,
-                "mid": 0.735,
-                "bid": 0.49,
-                "ask": 0.98,
-                "iv": 30.2,
-                "open_interest": 47,
-                "label": "Buy 1× 2026-10-16 245 put",
+                "mid": 0.675,
+                "bid": 0.5,
+                "ask": 0.85,
+                "iv": 28.5,
+                "open_interest": 2307,
+                "label": "Buy 1× 2026-10-16 300 call",
                 "mid_source": "quote"
               }
             ],
             "expiry": "2026-10-16",
             "dte": 22,
             "profit_horizon_dte": null,
-            "net": -59.33,
-            "net_mid": -75.0,
-            "net_natural": -28.0,
+            "net": -96.0,
+            "net_mid": -111.5,
+            "net_natural": -65.0,
             "fill_basis": "mid + 33% of the half-spread toward the natural price",
-            "max_profit": 59.33,
-            "max_loss": 690.67,
+            "max_profit": 96.0,
+            "max_loss": 904.0,
             "breakevens": [
-              251.91
+              290.96
             ],
-            "profit_zone": "above",
-            "pop": 0.837,
+            "profit_zone": "below",
+            "pop": 0.857,
             "pop_basis": "held to expiry, lognormal with each breakeven at its own strike's implied vol; ignores the early exits in the management rules",
-            "credit_to_width": 0.079,
+            "credit_to_width": 0.096,
             "manage": {
               "profit_target": "buy it back at 50% of the credit received",
               "profit_target_pct": 50,
@@ -3970,10 +4021,10 @@
             "sizing": {
               "risk_budget": 1000.0,
               "contracts": 1,
-              "risk_per_spread": 690.67,
-              "total_risk": 690.67,
+              "risk_per_spread": 904.0,
+              "total_risk": 904.0,
               "over_budget": false,
-              "note": "1× risks $691 of a $1,000 budget."
+              "note": "1× risks $904 of a $1,000 budget."
             },
             "risk_form": {
               "tier": "short_premium",
@@ -4064,10 +4115,6 @@
             "reason": "IV rank 100 and the market is pricing a 5.6% move vs 3.3% realized — you'd be paying up for the move you want."
           },
           {
-            "name": "Iron condor",
-            "reason": "Four legs in a thin market — you'd pay the spread four times. Take one side instead."
-          },
-          {
             "name": "Short strangle (naked)",
             "reason": "Open-ended risk into an earnings gap."
           }
@@ -4082,7 +4129,8 @@
         ],
         "warnings": [
           "Earnings in 18 days, inside this expiry: the IV crush is the trade, but a gap through your short strike is the risk. Keep the wings on and size small.",
-          "The credit is only 10% of the spread width, under the 20% this scanner treats as thin compensation. Bringing the long wing closer to the short strike collects a larger share of a smaller width; otherwise pass.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
+          "The credit is only 16% of the spread width, under the 20% this scanner treats as thin compensation. Bringing the long wing closer to the short strike collects a larger share of a smaller width; otherwise pass.",
           "Selling premium on names called rich has not been tested here yet — the implied-vol log needs more matured readings. The general tendency for option sellers to be paid is well documented; this engine's version of it is not."
         ]
       },
@@ -4473,24 +4521,25 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~12% of mid, OI 30). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 30 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 100 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 26%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "Some of these credit spreads collect very little for the risk — the LEAPS Bull Put Spread takes only 13% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 28.01,
-        "liquidity": "fair",
+        "liquidity": "good",
         "atm_spread_pct": 12.5,
         "premium_state": "rich",
         "bias": "neutral",
-        "preferred": "bear_call_spread",
-        "summary": "The Scanner's recommendation for this name is the Bear Call Spread — the other verticals are listed for comparison.",
+        "preferred": null,
+        "summary": "4 one-direction spreads price out on the 2026-10-16 expiry, but the scanner has no proven directional read on this name, so none is recommended. Each one is a bet the stock goes one way; listed for reference.",
         "candidates": [
           {
             "key": "bull_call_spread",
@@ -4776,12 +4825,8 @@
               "close_by_dte": 21
             },
             "sizing": {
-              "risk_budget": 1000.0,
-              "contracts": 1,
-              "risk_per_spread": 904.0,
-              "total_risk": 904.0,
-              "over_budget": false,
-              "note": "1× risks $904 of a $1,000 budget."
+              "contracts": null,
+              "note": "Not recommended — listed for reference, so no position size is suggested."
             },
             "risk_form": {
               "tier": "short_premium",
@@ -4791,6 +4836,7 @@
         ],
         "warnings": [
           "An earnings report falls inside this 22-day expiry. The gap on the day can jump straight past either strike.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -4835,7 +4881,7 @@
       "iv_rank": 26.9,
       "premium_score": 16.6,
       "premium_state": "cheap",
-      "liquidity": "poor",
+      "liquidity": "fair",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
@@ -4857,7 +4903,7 @@
         "skew_label": "put_skew",
         "atm_spread_pct": 19.8,
         "atm_open_interest": 353,
-        "liquidity": "poor",
+        "liquidity": "fair",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -4915,13 +4961,14 @@
         "long_iv": 36.25,
         "long_spread_pct": 7.3,
         "long_open_interest": 47,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "CSCO",
         "action": "STAND_ASIDE",
-        "headline": "CSCO: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "CSCO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 16.6,
@@ -4932,7 +4979,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~20% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -4965,8 +5012,12 @@
         "alternatives": [],
         "avoid": [
           {
-            "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~20% of mid — slippage on entry and exit would cost more than the edge."
+            "name": "Selling premium (condors, credit spreads)",
+            "reason": "IV rank 27 — you'd collect too little for the risk."
+          },
+          {
+            "name": "Long straddles / strangles",
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -4979,7 +5030,7 @@
           "The bearish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~20% of mid, OI 353) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -5369,19 +5420,20 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~7% of mid, OI 47). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 47 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 27 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 36%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "One of these credit spreads collects very little for the risk — the LEAPS Bull Put Spread takes only 20% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 27.66,
-        "liquidity": "poor",
+        "liquidity": "fair",
         "atm_spread_pct": 19.8,
         "premium_state": "cheap",
         "bias": "neutral",
@@ -5682,7 +5734,7 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~20% of mid. Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 7% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -5807,13 +5859,14 @@
         "long_iv": 46.52,
         "long_spread_pct": 3.4,
         "long_open_interest": 406,
-        "long_liquidity": "fair"
+        "long_liquidity": "fair",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "TSLA",
         "action": "STAND_ASIDE",
-        "headline": "TSLA: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "TSLA: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 17.5,
@@ -5824,7 +5877,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -5862,7 +5915,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -5873,7 +5926,9 @@
           "Term structure in contango (+8.3% front→back).",
           "The bullish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -6265,7 +6320,8 @@
           "IV rank 27 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 47%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -6573,6 +6629,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 9% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -6697,13 +6754,14 @@
         "long_iv": 28.84,
         "long_spread_pct": 7.7,
         "long_open_interest": 131,
-        "long_liquidity": "fair"
+        "long_liquidity": "fair",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "ABBV",
         "action": "STAND_ASIDE",
-        "headline": "ABBV: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~25% of mid and only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~25% of mid and only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
+        "headline": "ABBV: stand aside — the options are too illiquid to trade: only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
         "confidence": 0.0,
         "premium_state": "fair",
         "premium_score": 54.1,
@@ -6714,7 +6772,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~25% of mid and only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: only 18 contracts of open interest at the at-the-money strike (under 100). Premium looks fair, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -6748,7 +6806,7 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~25% of mid and only 18 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
+            "reason": "Only 18 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
@@ -6760,7 +6818,8 @@
           "The bullish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~25% of mid, OI 18) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market: only 18 contracts of open interest at the at-the-money strike (under 100) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -7154,7 +7213,8 @@
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "Some of these credit spreads collect very little for the risk — the LEAPS Bear Call Spread takes only 13% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -7462,7 +7522,8 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~25% of mid and only 18 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "The chain is thin: only 18 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 6% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -7587,13 +7648,14 @@
         "long_iv": 32.32,
         "long_spread_pct": 10.2,
         "long_open_interest": 132,
-        "long_liquidity": "fair"
+        "long_liquidity": "fair",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "MRK",
         "action": "STAND_ASIDE",
-        "headline": "MRK: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~48% of mid and only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~48% of mid and only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "MRK: stand aside — the options are too illiquid to trade: only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+        "detail": "The options are too illiquid to trade: only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 22.7,
@@ -7604,7 +7666,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~48% of mid and only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "The options are too illiquid to trade: only 5 contracts of open interest at the at-the-money strike (under 100). Premium looks cheap, but you would give the edge back on the fills.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -7638,7 +7700,7 @@
         "avoid": [
           {
             "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~48% of mid and only 5 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
+            "reason": "Only 5 contracts of open interest at the at-the-money strike (under 100) — slippage on entry and exit would cost more than the edge."
           }
         ],
         "why": [
@@ -7648,7 +7710,8 @@
           "Term structure in contango (+21.1% front→back)."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~48% of mid, OI 5) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market: only 5 contracts of open interest at the at-the-money strike (under 100) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -8042,7 +8105,8 @@
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "Some of these credit spreads collect very little for the risk — the LEAPS Bear Call Spread takes only 15% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -8350,7 +8414,8 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~48% of mid and only 5 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "The chain is thin: only 5 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 5% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -8475,7 +8540,8 @@
         "long_iv": 73.57,
         "long_spread_pct": 2.6,
         "long_open_interest": 46,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "SNDK",
@@ -8539,7 +8605,8 @@
           "The bullish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~1% of mid, OI 8) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "Thin options market: only 8 contracts of open interest at the at-the-money strike (under 100) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -8929,12 +8996,13 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~3% of mid, OI 46). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 46 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 74%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "One of these credit spreads collects very little for the risk — the LEAPS Bear Call Spread takes only 19% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -9243,6 +9311,7 @@
         ],
         "warnings": [
           "The chain is thin: only 8 contracts of open interest at the at-the-money strike (under 100). Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 12% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -9367,13 +9436,14 @@
         "long_iv": 61.14,
         "long_spread_pct": 4.6,
         "long_open_interest": 96,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "MU",
         "action": "STAND_ASIDE",
-        "headline": "MU: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "MU: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 12.9,
@@ -9384,7 +9454,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -9422,7 +9492,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -9434,7 +9504,8 @@
           "The bullish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
         "warnings": [
-          "Earnings in 5 days, inside this expiry — know the catalyst before entering."
+          "Earnings in 5 days, inside this expiry — know the catalyst before entering.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -9824,11 +9895,12 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~5% of mid, OI 96). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 96 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 61%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -10137,6 +10209,7 @@
         ],
         "warnings": [
           "An earnings report falls inside this 22-day expiry. The gap on the day can jump straight past either strike.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 9% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -10181,7 +10254,7 @@
       "iv_rank": 26.3,
       "premium_score": 33.7,
       "premium_state": "cheap",
-      "liquidity": "poor",
+      "liquidity": "good",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
@@ -10203,7 +10276,7 @@
         "skew_label": "put_skew",
         "atm_spread_pct": 16.2,
         "atm_open_interest": 1648,
-        "liquidity": "poor",
+        "liquidity": "good",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -10261,13 +10334,14 @@
         "long_iv": 41.6,
         "long_spread_pct": 6.3,
         "long_open_interest": 3,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "TXN",
         "action": "STAND_ASIDE",
-        "headline": "TXN: stand aside — the options are too illiquid to trade: the at-the-money bid/ask is ~16% of mid. Premium looks cheap, but you would give the edge back on the fills.",
-        "detail": "The options are too illiquid to trade: the at-the-money bid/ask is ~16% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+        "headline": "TXN: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 33.7,
@@ -10278,7 +10352,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "The options are too illiquid to trade: the at-the-money bid/ask is ~16% of mid. Premium looks cheap, but you would give the edge back on the fills.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -10311,8 +10385,12 @@
         "alternatives": [],
         "avoid": [
           {
-            "name": "Any multi-leg spread here",
-            "reason": "The at-the-money bid/ask is ~16% of mid — slippage on entry and exit would cost more than the edge."
+            "name": "Selling premium (condors, credit spreads)",
+            "reason": "IV rank 26 — you'd collect too little for the risk."
+          },
+          {
+            "name": "Long straddles / strangles",
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -10325,7 +10403,7 @@
           "The downward squeeze release is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
         "warnings": [
-          "Thin options market (ATM spread ~16% of mid, OI 1,648) — the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "long_dated": {
@@ -10715,18 +10793,19 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~6% of mid, OI 3). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 3 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 26 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 42%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 37.77,
-        "liquidity": "poor",
+        "liquidity": "good",
         "atm_spread_pct": 16.2,
         "premium_state": "cheap",
         "bias": "neutral",
@@ -11027,7 +11106,7 @@
           }
         ],
         "warnings": [
-          "The chain is thin: the at-the-money bid/ask is ~16% of mid. Expect to give up a lot of the edge on the way in and out.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -11152,13 +11231,14 @@
         "long_iv": 43.83,
         "long_spread_pct": 1.9,
         "long_open_interest": 746,
-        "long_liquidity": "good"
+        "long_liquidity": "good",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "AVGO",
         "action": "STAND_ASIDE",
-        "headline": "AVGO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "AVGO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 9.2,
@@ -11169,7 +11249,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -11207,7 +11287,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -11218,7 +11298,9 @@
           "Term structure in contango (+8.1% front→back).",
           "The bearish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -11535,7 +11617,8 @@
         "warnings": [
           "IV rank 0 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 44%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -11843,6 +11926,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 10% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -11967,13 +12051,14 @@
         "long_iv": 35.65,
         "long_spread_pct": 1.3,
         "long_open_interest": 2163,
-        "long_liquidity": "good"
+        "long_liquidity": "good",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "GOOGL",
         "action": "STAND_ASIDE",
-        "headline": "GOOGL: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+        "headline": "GOOGL: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 34.9,
@@ -11984,7 +12069,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -12022,7 +12107,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -7 to +5) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +8) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -12032,7 +12117,9 @@
           "Term structure in contango (+15.1% front→back).",
           "The bullish lean is not traded on: in the backtest it did not call direction better than the base rate, so this is treated as a name with no directional read."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -12349,7 +12436,8 @@
         "warnings": [
           "IV rank 56 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 36%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
@@ -12657,6 +12745,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 8% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
@@ -12701,7 +12790,7 @@
       "iv_rank": 88.9,
       "premium_score": 62.7,
       "premium_state": "fair",
-      "liquidity": "fair",
+      "liquidity": "good",
       "action": "STAND_ASIDE",
       "strategy": "Stand aside",
       "options": {
@@ -12723,7 +12812,7 @@
         "skew_label": "balanced",
         "atm_spread_pct": 9.1,
         "atm_open_interest": 502,
-        "liquidity": "fair",
+        "liquidity": "good",
         "expiry": "2026-10-16",
         "days_to_expiry": 22,
         "expiries": [
@@ -12781,7 +12870,8 @@
         "long_iv": 27.65,
         "long_spread_pct": 11.1,
         "long_open_interest": 94,
-        "long_liquidity": "poor"
+        "long_liquidity": "poor",
+        "quote_session": "closed"
       },
       "recommendation": {
         "ticker": "CVX",
@@ -12836,7 +12926,9 @@
           "Setup score 65/100, no directional edge.",
           "Term structure in contango (+7.4% front→back)."
         ],
-        "warnings": []
+        "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
+        ]
       },
       "long_dated": {
         "expiry": "2027-09-17",
@@ -13225,19 +13317,20 @@
           }
         ],
         "warnings": [
-          "The long-dated chain is thin (ATM spread ~11% of mid, OI 94). You pay that spread on the way in and again on the way out, a year apart. Work the order at mid and expect to wait.",
+          "The long-dated chain is thin: only 94 contracts of open interest at the money. You pay the spread on the way in and again on the way out, a year apart.",
           "IV rank 89 is a front-month reading. A 13-month contract is priced off a flatter part of the volatility surface, so 'cheap' or 'rich' here is a weaker signal than it is on the near expiry — this expiry's own ATM IV is 28%.",
           "About 4 earnings reports fall inside this 358-day expiry. A long-dated spread is priced through all of them; none of them is the trade.",
           "Some of these credit spreads collect very little for the risk — the LEAPS Bull Put Spread takes only 13% of its width, and holds the capital for 358 days to do it. Widen the wings or pass.",
           "The Poor Man's Covered Call's max profit below is the conservative case — assigned on the very first short call. Rolling that short leg out each month is where the structure actually earns, and no figure here counts those rolls.",
-          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one."
+          "The short legs can be assigned early — most often a short call the day before an ex-dividend date. Know the dividend calendar before you sell one.",
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything."
         ]
       },
       "near_term": {
         "expiry": "2026-10-16",
         "dte": 22,
         "iv_annual": 26.55,
-        "liquidity": "fair",
+        "liquidity": "good",
         "atm_spread_pct": 9.1,
         "premium_state": "fair",
         "bias": "neutral",
@@ -13538,6 +13631,7 @@
           }
         ],
         "warnings": [
+          "These quotes were read after the options market closed, when market makers widen or pull theirs. Liquidity was judged on open interest alone, and every price here is indicative: check a live quote during market hours before placing anything.",
           "The credit spreads here collect little for the risk — the Bull Put Spread takes only 6% of its width, under the 20% this scanner treats as thin compensation. A fill worse than the one assumed here collects less still."
         ]
       },
