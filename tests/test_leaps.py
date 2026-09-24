@@ -152,8 +152,10 @@ def test_probability_of_profit_uses_the_long_expiry_not_the_front_month():
 
 
 def test_sizing_runs_against_the_long_dated_budget():
-    small = plan_for("leaps_bull_call", risk_budget=400.0)
-    large = plan_for("leaps_bull_call", risk_budget=8000.0)
+    # With a direction, so a spread is picked and the candidates are sized; with
+    # none they are listed for reference and carry no size at all.
+    small = plan_for("leaps_bull_call", risk_budget=400.0, bias="bullish", bias_strength="strong")
+    large = plan_for("leaps_bull_call", risk_budget=8000.0, bias="bullish", bias_strength="strong")
     assert small["sizing"]["over_budget"] is True
     assert small["sizing"]["contracts"] == 0
     assert large["sizing"]["contracts"] > small["sizing"]["contracts"]
@@ -514,3 +516,18 @@ def test_single_expiry_structures_leave_the_horizon_unset():
         plan = plan_for(key)
         assert plan["profit_horizon_dte"] is None, key
         assert len({leg["expiry"] for leg in plan["legs"]}) == 1, key
+
+
+def test_unrecommended_long_dated_spreads_carry_no_position_size():
+    from conftest import make_row, make_view
+    from spread_scanner import leaps
+    block = leaps.long_spreads(make_row(), make_view(iv=58, hv=28, iv_rank=88),
+                               bias="neutral", bias_strength="none")
+    assert block is not None and block["preferred"] is None and block["candidates"]
+    for c in block["candidates"]:
+        assert c["sizing"]["contracts"] is None and "reference" in c["sizing"]["note"]
+    # With a direction there is a pick, and the candidates keep their sizes.
+    picked = leaps.long_spreads(make_row(), make_view(iv=58, hv=28, iv_rank=88),
+                                bias="bullish", bias_strength="strong")
+    assert picked["preferred"] and any(c["sizing"].get("contracts") is not None
+                                       for c in picked["candidates"])
