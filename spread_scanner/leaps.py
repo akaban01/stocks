@@ -419,6 +419,14 @@ def long_spreads(row: dict, view: OptionView | None, risk_budget: float = 2500.0
     preferred = preferred_key(view.premium_state, bias)
     if preferred is not None and not any(p.key == preferred for p in candidates):
         preferred = None
+    # With nothing preferred the candidates are listed for reference only, and a
+    # contract count on a spread the page does not recommend reads as one. Drop
+    # the size and say why; the risk figures stay, so each is still readable.
+    if preferred is None:
+        for plan in candidates:
+            plan.sizing = {"risk_budget": risk_budget, "contracts": None,
+                           "note": "Not recommended — listed for reference, so no position "
+                                   "size is suggested."}
 
     return {
         "expiry": view.long_expiry,
