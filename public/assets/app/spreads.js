@@ -135,8 +135,14 @@
       f: function (r) {
         if (!App.has(r.plan.net)) return "—";
         var d = r.plan.net > 0;
+        // Mirrors strategy.MIN_CREDIT_TO_WIDTH: a credit under a fifth of the
+        // width is thin pay for the risk, and the row should say so up front.
+        var thin = !d && App.has(r.plan.credit_to_width) && r.plan.credit_to_width < 0.2;
         return '<span class="net ' + (d ? "debit" : "credit") + '">' +
-          (d ? "debit " : "credit ") + App.money(r.plan.net, 0) + "</span>";
+          (d ? "debit " : "credit ") + App.money(r.plan.net, 0) + "</span>" +
+          (thin ? ' <span class="faint" title="Collects only ' +
+            App.num(r.plan.credit_to_width * 100, 0) + '% of the spread width — thin pay ' +
+            'for the risk">thin</span>' : "");
       } },
     // A leg with no two-sided market leaves these null. That is "not priced",
     // which must not be shown as an uncapped win or an undefined loss.

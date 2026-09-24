@@ -686,3 +686,33 @@ def test_directional_spreads_skip_unpriced_names_and_floor_iv():
 def test_directional_spreads_warn_about_earnings_inside_the_expiry():
     block = strategy.directional_spreads(make_row(earnings_in_days=5.0), make_view(dte=24))
     assert any("earnings" in w for w in block["warnings"])
+
+
+def test_illiquid_stand_aside_names_open_interest_when_the_market_is_tight():
+    v = make_view(liquidity="good")
+    v.atm_spread_pct, v.atm_open_interest, v.liquidity = 0.6, 10, "poor"
+    r = strategy.recommend(make_row(), v)
+    assert r.action == "STAND_ASIDE"
+    assert "open interest" in r.plan["thesis"] and "bid/ask" not in r.plan["thesis"]
+
+
+def test_illiquid_stand_aside_names_both_failures():
+    v = make_view(liquidity="poor")
+    v.atm_spread_pct, v.atm_open_interest = 24.0, 40
+    thesis = strategy.recommend(make_row(), v).plan["thesis"]
+    assert "bid/ask is ~24%" in thesis and "only 40 contracts" in thesis
+
+
+def test_realized_basis_rank_at_the_floor_is_explained():
+    v = make_view(iv=18, hv=30, iv_rank=0.0)
+    why = " ".join(strategy.recommend(make_row(), v).why)
+    assert "realized volatility" in why and "not 'cheap for this name'" in why
+    v.iv_rank_basis = "implied"
+    assert "not 'cheap for this name'" not in " ".join(strategy.recommend(make_row(), v).why)
+
+
+def test_directional_spreads_flag_thin_credits():
+    block = strategy.directional_spreads(make_row(), make_view())
+    ctw = {c["key"]: c.get("credit_to_width") for c in block["candidates"]}
+    assert ctw["bull_put_spread"] < strategy.MIN_CREDIT_TO_WIDTH
+    assert any("Bull Put Spread takes only 9%" in w for w in block["warnings"])
