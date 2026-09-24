@@ -716,3 +716,21 @@ def test_directional_spreads_flag_thin_credits():
     ctw = {c["key"]: c.get("credit_to_width") for c in block["candidates"]}
     assert ctw["bull_put_spread"] < strategy.MIN_CREDIT_TO_WIDTH
     assert any("Bull Put Spread takes only 9%" in w for w in block["warnings"])
+
+
+def test_half_condor_on_a_neutral_name_does_not_claim_a_lean():
+    r = rec({"iv": 58, "hv": 28, "iv_rank": 88, "liquidity": "fair"})
+    assert r.bias == "neutral"
+    assert r.plan["key"] in ("bull_put_spread", "bear_call_spread")
+    assert "lean" not in r.plan["thesis"]
+    assert "one side of an iron condor" in r.plan["thesis"]
+    for alt in r.alternatives:
+        if alt["key"] in ("bull_put_spread", "bear_call_spread"):
+            assert "lean" not in alt["thesis"]
+
+
+def test_directional_credit_spread_keeps_its_lean():
+    down = rec({"iv": 58, "hv": 28, "iv_rank": 88},
+               {"squeeze_on": False, "squeeze_fired": True, "fired_dir": "down"})
+    assert down.plan["key"] == "bear_call_spread"
+    assert "lean is down" in down.plan["thesis"]
