@@ -499,8 +499,10 @@
     }
     var middle = SpreadTrial.median(ranked.map(function (c) { return c.rate; }));
 
+    // How often the best of these weeks would be this good by luck alone.
+    var chance = best ? SpreadTrial.bestByChance(ranked, 2000, 7) : { p: null };
     rpSweepCache = { key: key, weeks: weeks, best: best, second: second,
-                     median: middle, ranked: ranked.length };
+                     median: middle, ranked: ranked.length, chance: chance };
     return rpSweepCache;
   }
 
@@ -566,13 +568,18 @@
         rpHeatColour(c.rate) + '" title="' + App.esc(note) + '"></i>';
     }).join("");
 
+    // Below 5%, the best week is unlikely to be luck; above it, it is named as
+    // the highest rather than the best, and the note says how often chance did
+    // as well.
+    var lucky = sweep.chance && App.has(sweep.chance.p) && sweep.chance.p >= 0.05;
     var pointer = "";
     if (sweep.best) {
       var when = rpWeekWhen(d, sweep.best.week);
       pointer = '<button type="button" class="bestweek" data-week="' + sweep.best.week +
         '" title="' + App.esc("set the slider to week " + sweep.best.week +
           (field ? " — the week that won, against a " + field : "")) + '">' +
-        "Best here: <b>week " + sweep.best.week + "</b>" + (when ? " · w/c " + App.esc(when) : "") +
+        (lucky ? "Highest here" : "Best here") + ": <b>week " + sweep.best.week + "</b>" +
+        (when ? " · w/c " + App.esc(when) : "") +
         " · " + App.num(sweep.best.rate, 0) + "% (" + sweep.best.hit + " of " + sweep.best.decided +
         ")</button>";
     }
@@ -581,7 +588,12 @@
       "</div>" + pointer +
       '<span class="heatnote">' + (sweep.best
         ? App.esc("best of 53 weeks tried" + (field ? " · " + field : "") +
-              " — and the best of 53 tries is a high bar to clear by luck")
+              (sweep.chance && App.has(sweep.chance.p)
+                ? " — with every week at the average rate (" + App.num(sweep.chance.pooled, 0) +
+                  "%), luck alone produces a best week this good in " +
+                  App.num(sweep.chance.p * 100, 0) + "% of runs" +
+                  (lucky ? ", so no week stands out" : "")
+                : " — and the best of 53 tries is a high bar to clear by luck"))
         : "no week here has enough judged years to rank") + "</span>";
 
     var jump = host.querySelector(".bestweek");
