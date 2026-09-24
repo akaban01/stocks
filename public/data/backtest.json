@@ -1,6 +1,6 @@
 {
   "schema_version": "2.8.0",
-  "generated_at": "2026-09-24T17:17:51Z",
+  "generated_at": "2026-09-24T17:58:20Z",
   "universe": 29,
   "history_years": 5,
   "horizon_days": 10,
@@ -117,6 +117,60 @@
       "dates": 166
     },
     "text": "With every window holding an earnings report removed (16% of bars; dates for 29 of 29 names), the own-band edge is +14 pts (95% CI +8 to +21) and the 60-day-band edge -2 pts (95% CI -8 to +5)."
+  },
+  "direction": {
+    "horizon_days": 10,
+    "reads": {
+      "lean_bullish": {
+        "label": "Bullish lean",
+        "n": 1534,
+        "hit_pct": 56.2,
+        "base_pct": 55.6,
+        "edge_pts": 0.5,
+        "ci95_pts": [
+          -1.9,
+          3.1
+        ],
+        "proven": false
+      },
+      "lean_bearish": {
+        "label": "Bearish lean",
+        "n": 1133,
+        "hit_pct": 45.5,
+        "base_pct": 44.3,
+        "edge_pts": 1.2,
+        "ci95_pts": [
+          -2.1,
+          5.0
+        ],
+        "proven": false
+      },
+      "fired_bullish": {
+        "label": "Squeeze fired up",
+        "n": 57,
+        "hit_pct": 56.1,
+        "base_pct": 55.6,
+        "edge_pts": 0.5,
+        "ci95_pts": [
+          -13.0,
+          14.9
+        ],
+        "proven": false
+      },
+      "fired_bearish": {
+        "label": "Squeeze fired down",
+        "n": 46,
+        "hit_pct": 30.4,
+        "base_pct": 44.3,
+        "edge_pts": -13.8,
+        "ci95_pts": [
+          -26.9,
+          0.1
+        ],
+        "proven": false
+      }
+    },
+    "text": "No direction read beats the base rate over 10 days: how often the move went the way the lean or the squeeze release pointed is within noise of how often it went that way anyway. Directional trades are withheld until one does."
   },
   "verdict": {
     "holds": true,
