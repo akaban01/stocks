@@ -256,3 +256,14 @@ def test_near_term_blocks_ship_per_signal_with_a_summary():
     assert by["BBB"]["near_term"] is None
     assert payload["near_term"] == {"tickers": 1, "candidates": 4, "preferred": 0,
                                     "expiries": [view.expiry]}
+
+
+def test_quote_session_is_closed_if_any_chain_was_read_after_hours():
+    df = pd.DataFrame([make_row("AAA"), make_row("BBB")])
+    a, b = make_view("AAA"), make_view("BBB")
+    assert report.build_scan(df, {"horizon_days": 10},
+                             option_views={"AAA": a, "BBB": b})["quote_session"] == "regular"
+    b.quote_session = "closed"
+    assert report.build_scan(df, {"horizon_days": 10},
+                             option_views={"AAA": a, "BBB": b})["quote_session"] == "closed"
+    assert report.build_scan(df, {"horizon_days": 10})["quote_session"] is None

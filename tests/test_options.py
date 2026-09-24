@@ -204,3 +204,27 @@ def test_live_quotes_get_their_own_iv_and_stale_ones_keep_yahoos():
     assert options.solve_chain_ivs(sides, 100.0, 30) == 1
     assert (live.iv, live.iv_source) == (30.0, "mid")          # Yahoo's 0.001% floor replaced
     assert (stale.iv, stale.iv_source) == (44.0, "yahoo")
+
+
+# ------------------------------------------------------ after-hours quotes
+
+def test_quote_session_follows_new_york_hours_across_daylight_saving():
+    utc = dt.timezone.utc
+    # Summer (EDT, UTC-4): 19:39 UTC is 15:39 in New York, 20:47 is after the close.
+    assert options.quote_session(dt.datetime(2026, 9, 24, 19, 39, tzinfo=utc)) == "regular"
+    assert options.quote_session(dt.datetime(2026, 9, 24, 20, 47, tzinfo=utc)) == "closed"
+    # Winter (EST, UTC-5): 20:47 UTC is 15:47, still open; 21:23 is not.
+    assert options.quote_session(dt.datetime(2026, 12, 3, 20, 47, tzinfo=utc)) == "regular"
+    assert options.quote_session(dt.datetime(2026, 12, 3, 21, 23, tzinfo=utc)) == "closed"
+    # Before the open, and a Saturday.
+    assert options.quote_session(dt.datetime(2026, 9, 24, 13, 0, tzinfo=utc)) == "closed"
+    assert options.quote_session(dt.datetime(2026, 9, 26, 16, 0, tzinfo=utc)) == "closed"
+
+
+def test_after_hours_liquidity_ignores_the_bid_ask():
+    # PG on the 20:47 UTC scan: a 56% bid/ask, and plenty of open interest.
+    assert options.classify_liquidity(56.0, 3000) == "poor"
+    assert options.classify_liquidity(56.0, 3000, "closed") == "good"
+    assert options.classify_liquidity(56.0, 300, "closed") == "fair"
+    assert options.classify_liquidity(1.0, 8, "closed") == "poor"
+    assert options.classify_liquidity(3.0, None, "closed") == "unknown"

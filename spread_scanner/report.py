@@ -28,7 +28,8 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.9.0"   # 2.9: near_term directional spreads per signal
+SCHEMA_VERSION = "2.10.0"  # 2.10: quote_session (after-hours chains)
+# 2.9: near_term directional spreads per signal
 # 2.8: fill prices, pop_basis, iv_history, independent-sample stats
 
 # An equity option quoted below this annualized implied volatility is not a
@@ -333,6 +334,16 @@ def _long_dated_summary(signals: list[dict]) -> dict:
     }
 
 
+def _quote_session(signals: list[dict]) -> str | None:
+    """"closed" if any chain in the run was read after hours, else "regular";
+    None when nothing was priced."""
+    sessions = {(s.get("options") or {}).get("quote_session") for s in signals if s.get("options")}
+    sessions.discard(None)
+    if not sessions:
+        return None
+    return "closed" if "closed" in sessions else "regular"
+
+
 def _near_term_summary(signals: list[dict]) -> dict:
     """Headline counts for the Spreads tab's near-term view."""
     blocks = [s["near_term"] for s in signals if s.get("near_term")]
@@ -427,6 +438,9 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         "screen": _screen_summary(signals, screen_meta),
         "long_dated": _long_dated_summary(signals),
         "near_term": _near_term_summary(signals),
+        # When the option chains were read: "regular" while options trade,
+        # "closed" after hours (liquidity then judged on open interest alone).
+        "quote_session": _quote_session(signals),
         "top_actions": _headline_actions(signals),
         # Whether straddles/strangles were allowed this run, and the evidence.
         # None when the gate is switched off in the config.

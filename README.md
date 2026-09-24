@@ -86,7 +86,7 @@ own UI — gets the same self-describing payload the dashboard reads.
 | **Risk premium** | **IV − HV** and IV/HV ratio | How much you're paid over what the stock actually does |
 | **Term structure** | Front-expiry IV vs ~60d IV | Backwardation = an event is priced in; favours selling the front / calendars |
 | **Skew** | OTM put IV − call IV | Which side pays more to sell |
-| **Liquidity** | ATM bid/ask + open interest | Whether a 4-leg spread is even fillable |
+| **Liquidity** | ATM bid/ask + open interest (open interest alone after hours) | Whether a 4-leg spread is even fillable |
 | Lean (weak) | Squeeze momentum | Faint directional hint only |
 
 Each ticker gets a **Setup Score (0–100)** — higher means more coiled — a
@@ -976,6 +976,14 @@ on:
 permissions:
   contents: write              # so it can commit the refreshed data
 ```
+
+The scheduled run reads its option chains **after the close**, when market makers
+have widened or pulled their quotes (PG's at-the-money bid/ask was 14% of mid during
+the session on 2026-09-24 and 56% forty-seven minutes after the close). So a chain
+read outside 09:30–16:00 New York time is judged on open interest alone, every card
+and spread says its prices are indicative, and the page shows a banner
+(`quote_session: "closed"` in `scan.json`). A manual run during market hours gets
+the full bid/ask test and live prices.
 
 To put this on GitHub:
 

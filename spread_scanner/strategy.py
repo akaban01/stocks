@@ -914,6 +914,13 @@ def long_vol_evidence(backtest: dict | None) -> dict:
             "text": "No backtest is available to show that buying premium on this setup pays."}
 
 
+# Said wherever a price or a liquidity call was made off after-hours quotes.
+AFTER_CLOSE_NOTE = (
+    "These quotes were read after the options market closed, when market makers widen or pull "
+    "theirs. Liquidity was judged on open interest alone, and every price here is indicative: "
+    "check a live quote during market hours before placing anything.")
+
+
 def _illiquid_reason(view: OptionView) -> str:
     """Why a chain was judged too thin to trade, naming whichever test failed.
 
@@ -922,7 +929,8 @@ def _illiquid_reason(view: OptionView) -> str:
     0.6%-wide market was too wide to trade."""
     sp, oi = view.atm_spread_pct, view.atm_open_interest
     parts = []
-    if sp is not None and sp > SPREAD_FAIR:
+    # After hours the bid/ask is not judged (options.classify_liquidity).
+    if view.quote_session == "regular" and sp is not None and sp > SPREAD_FAIR:
         parts.append(f"the at-the-money bid/ask is ~{sp:.0f}% of mid")
     if oi is not None and oi < OI_FAIR:
         parts.append(f"only {oi:,} contract{'s' if oi != 1 else ''} of open interest at the "
@@ -1134,13 +1142,12 @@ def _warnings(view: OptionView, row: dict, plan: Plan, earnings_inside: bool) ->
         else:
             out.append(f"Earnings in {int(days)} days, inside this expiry — know the catalyst before entering.")
     if view.liquidity == "poor":
-        out.append(f"Thin options market (ATM spread ~{view.atm_spread_pct:.0f}% of mid"
-                   f"{f', OI {view.atm_open_interest:,}' if view.atm_open_interest is not None else ''}) "
-                   "— the bid/ask will eat a multi-leg spread. Use limit orders at mid, or skip it."
-                   if view.atm_spread_pct is not None else
-                   "Thin options market — the bid/ask will eat a multi-leg spread.")
+        out.append(f"Thin options market: {_illiquid_reason(view)} — the bid/ask will eat a "
+                   "multi-leg spread. Use limit orders at mid, or skip it.")
     elif view.liquidity == "unknown":
         out.append("No bid/ask depth on the ATM contract — treat the pricing below as indicative.")
+    if view.quote_session != "regular":
+        out.append(AFTER_CLOSE_NOTE)
     if plan.risk == "undefined":
         out.append("Undefined risk: the loss on this structure is open-ended. Only trade it with a hard "
                    "mental stop and margin you can afford to lose.")
@@ -1429,6 +1436,8 @@ def directional_spreads(row: dict, view: OptionView | None, rec: dict | None = N
     if view.liquidity == "poor":
         warnings.append(f"The chain is thin: {_illiquid_reason(view)}. Expect to give up a lot "
                         "of the edge on the way in and out.")
+    if view.quote_session != "regular":
+        warnings.append(AFTER_CLOSE_NOTE)
     thin = [c for c in candidates if c.get("credit_to_width") is not None
             and c["credit_to_width"] < MIN_CREDIT_TO_WIDTH]
     if thin:

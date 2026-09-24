@@ -67,6 +67,8 @@
           d.schema_version +
           ". Some fields may not render.";
       }
+      // The chains were read after hours (report._quote_session).
+      App.$("#quotes-notice").hidden = d.quote_session !== "closed";
       App.$("#loading").hidden = true;
       App.$("#app").hidden = false;
       App.renderPlaybook();
