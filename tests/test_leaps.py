@@ -531,3 +531,10 @@ def test_unrecommended_long_dated_spreads_carry_no_position_size():
                                 bias="bullish", bias_strength="strong")
     assert picked["preferred"] and any(c["sizing"].get("contracts") is not None
                                        for c in picked["candidates"])
+
+
+def test_after_hours_long_dated_block_says_so():
+    v = make_view(spot=200.0)
+    v.quote_session = "closed"
+    block = leaps.long_spreads(make_row(), v, 2500.0, "bullish", "strong")
+    assert any("after the options market closed" in w for w in block["warnings"])

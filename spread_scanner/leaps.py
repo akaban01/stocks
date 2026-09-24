@@ -38,6 +38,7 @@ from __future__ import annotations
 
 from .options import LONG_TARGET_DAYS, OptionView
 from .strategy import (
+    AFTER_CLOSE_NOTE,
     POP_BASIS,
     Plan,
     chain_side,
@@ -318,7 +319,11 @@ def _warnings(view: OptionView, row: dict, candidates: list[Plan]) -> list[str]:
         out.append(f"The nearest listed expiry to 13 months is {dte} days out (~{months:.0f} months). "
                    "LEAPS are listed on January cycles, so the target rarely lands on a real expiry — "
                    "every number below is for that actual expiry.")
-    if view.long_liquidity == "poor":
+    if view.long_liquidity == "poor" and view.quote_session != "regular":
+        out.append(f"The long-dated chain is thin: only {view.long_open_interest or 0:,} contracts "
+                   "of open interest at the money. You pay the spread on the way in and again on the "
+                   "way out, a year apart.")
+    elif view.long_liquidity == "poor":
         out.append(f"The long-dated chain is thin (ATM spread ~{view.long_spread_pct:.0f}% of mid"
                    f"{f', OI {view.long_open_interest:,}' if view.long_open_interest is not None else ''}). "
                    "You pay that spread on the way in and again on the way out, a year apart. "
@@ -354,6 +359,8 @@ def _warnings(view: OptionView, row: dict, candidates: list[Plan]) -> list[str]:
            for p in candidates):
         out.append("The short legs can be assigned early — most often a short call the day before "
                    "an ex-dividend date. Know the dividend calendar before you sell one.")
+    if view.quote_session != "regular":
+        out.append(AFTER_CLOSE_NOTE)
     if row.get("note"):
         out.append(f"Data note: {row['note']}.")
     return out

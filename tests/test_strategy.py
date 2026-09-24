@@ -734,3 +734,17 @@ def test_directional_credit_spread_keeps_its_lean():
                {"squeeze_on": False, "squeeze_fired": True, "fired_dir": "down"})
     assert down.plan["key"] == "bear_call_spread"
     assert "lean is down" in down.plan["thesis"]
+
+
+def test_after_hours_cards_do_not_blame_the_bid_ask_and_say_why():
+    v = make_view(liquidity="good")
+    v.quote_session = "closed"
+    v.atm_spread_pct, v.atm_open_interest, v.liquidity = 56.0, 4, "poor"
+    r = strategy.recommend(make_row(), v)
+    assert r.action == "STAND_ASIDE"
+    assert "bid/ask" not in r.plan["thesis"] and "only 4 contracts" in r.plan["thesis"]
+    ok = make_view(liquidity="good")
+    ok.quote_session = "closed"
+    assert strategy.AFTER_CLOSE_NOTE in strategy.recommend(make_row(), ok).warnings
+    assert strategy.AFTER_CLOSE_NOTE in strategy.directional_spreads(make_row(), ok)["warnings"]
+    assert strategy.AFTER_CLOSE_NOTE not in strategy.recommend(make_row(), make_view()).warnings

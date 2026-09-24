@@ -41,6 +41,7 @@ from __future__ import annotations
 import datetime as dt
 import math
 from dataclasses import dataclass, field
+from zoneinfo import ZoneInfo
 
 import yfinance as yf
 
@@ -147,6 +148,9 @@ class OptionView:
     # own logged IV, once there is enough of it) or "realized" (the realized-vol
     # stand-in used until then).
     iv_rank_basis: str = "realized"
+    # "regular" when the chain was read while options trade, "closed" when it
+    # was read after hours (see quote_session): then the bid/ask is not judged.
+    quote_session: str = "regular"
     expiries: list[dict] = field(default_factory=list)   # [{"date","dte"}]
     # {expiry: {"call": {strike: Quote}, "put": {strike: Quote}}} — in-memory
     # only; the strategy engine prices legs off it, it never reaches the JSON.
@@ -183,6 +187,7 @@ class OptionView:
             "long_spread_pct": self.long_spread_pct,
             "long_open_interest": self.long_open_interest,
             "long_liquidity": self.long_liquidity,
+            "quote_session": self.quote_session,
         }
 
 
@@ -453,8 +458,37 @@ def classify_skew(skew: float | None) -> str:
     return "balanced"
 
 
-def classify_liquidity(spread_pct: float | None, open_interest: int | None) -> str:
-    """Can you actually trade this chain? Wide markets kill multi-leg spreads."""
+# US listed equity options trade 09:30-16:00 New York time. Outside that the
+# feed still returns quotes, but they are the ones left standing after market
+# makers widened or pulled theirs: on the 2026-09-24 scans PG's at-the-money
+# bid/ask was 14% of mid at 19:39 UTC and 56% at 20:47 UTC, forty-seven minutes
+# after the close. Exchange holidays are not modelled; a scan run on one reads
+# as "regular" and its spreads are judged as they are.
+_NEW_YORK = ZoneInfo("America/New_York")
+SESSION_OPEN = dt.time(9, 30)
+SESSION_CLOSE = dt.time(16, 0)
+
+
+def quote_session(now: dt.datetime | None = None) -> str:
+    """"regular" while US options trade, "closed" otherwise."""
+    now = (now or dt.datetime.now(dt.timezone.utc)).astimezone(_NEW_YORK)
+    if now.weekday() >= 5:
+        return "closed"
+    return "regular" if SESSION_OPEN <= now.time() < SESSION_CLOSE else "closed"
+
+
+def classify_liquidity(spread_pct: float | None, open_interest: int | None,
+                       session: str = "regular") -> str:
+    """Can you actually trade this chain? Wide markets kill multi-leg spreads.
+
+    Outside the session the bid/ask says what was left standing after the
+    close, not what the chain trades at, so only open interest — which does not
+    move after hours — is judged."""
+    if session != "regular":
+        if open_interest is None:
+            return "unknown"
+        return ("good" if open_interest >= OI_GOOD
+                else "fair" if open_interest >= OI_FAIR else "poor")
     if spread_pct is None and open_interest is None:
         return "unknown"
     sp = spread_pct if spread_pct is not None else SPREAD_FAIR
@@ -497,6 +531,7 @@ def implied_view(
     fetch_expiries: int = 2,
     long_dated: bool = True,
     long_target_days: int = LONG_TARGET_DAYS,
+    session: str | None = None,
 ) -> OptionView | None:
     """Read `ticker`'s option chain and build the full volatility picture.
 
@@ -504,7 +539,9 @@ def implied_view(
     year of readings) and drive the IV rank / percentile / VRP numbers.
     `strike_window` is how many expiry-sigmas of strikes to keep in the snapshot.
     `long_dated` adds a third chain ~13 months out for the LEAPS spread engine.
+    `session` is when the quotes were read (see quote_session); None reads the clock.
     """
+    session = session or quote_session()
     try:
         tk = yf.Ticker(ticker)
         listed = retry(lambda: tk.options or [], label=f"{ticker} expiries")
@@ -618,7 +655,7 @@ def implied_view(
         if lq is not None:
             long_spread = round(lq.spread_pct, 1) if lq.spread_pct is not None else None
             long_oi = lq.open_interest
-        long_liq = classify_liquidity(long_spread, long_oi)
+        long_liq = classify_liquidity(long_spread, long_oi, session)
 
     return OptionView(
         ticker=ticker,
@@ -640,7 +677,7 @@ def implied_view(
         skew_label=classify_skew(sk),
         atm_spread_pct=atm_spread,
         atm_open_interest=atm_oi,
-        liquidity=classify_liquidity(atm_spread, atm_oi),
+        liquidity=classify_liquidity(atm_spread, atm_oi, session),
         expiry=expiry,
         days_to_expiry=dte,
         expiries=[{"date": e, "dte": _dte(e)} for e in expiries[:12]],
@@ -651,6 +688,7 @@ def implied_view(
         long_open_interest=long_oi,
         long_liquidity=long_liq,
         iv_rank_basis=basis,
+        quote_session=session,
         chain=trimmed,
     )
 
