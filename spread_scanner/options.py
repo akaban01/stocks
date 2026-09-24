@@ -80,6 +80,11 @@ class Quote:
     iv: float | None          # annualized, %
     open_interest: int | None
     volume: int | None
+    # Where `mid` came from: "quote" (a live two-sided bid/ask), "last" (no
+    # two-sided market, so the last traded price — which can be hours or days
+    # old) or "none". A price off the last trade is not a price anyone is
+    # offering now, and it has to say so wherever it is used.
+    mid_source: str = "quote"
 
     @property
     def spread_pct(self) -> float | None:
@@ -223,15 +228,18 @@ def _quotes(leg, right: str) -> dict[float, Quote]:
         bid, ask = _f(row.get("bid")), _f(row.get("ask"))
         last = _f(row.get("lastPrice"))
         if bid is not None and ask is not None and ask >= bid > 0:
-            mid = round((bid + ask) / 2, 4)
+            mid, source = round((bid + ask) / 2, 4), "quote"
+        elif (last or 0) > 0:
+            mid, source = last, "last"
         else:
-            mid = last if (last or 0) > 0 else None
+            mid, source = None, "none"
         iv = _f(row.get("impliedVolatility"))
         out[strike] = Quote(
             strike=strike, right=right, bid=bid, ask=ask, mid=mid, last=last,
             iv=round(iv * 100, 2) if iv and iv > 0 else None,
             open_interest=_i(row.get("openInterest")),
             volume=_i(row.get("volume")),
+            mid_source=source,
         )
     return out
 

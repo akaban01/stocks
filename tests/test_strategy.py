@@ -333,8 +333,30 @@ def test_net_cost_ignores_shares_you_already_own():
     as a sale it subtracted 100 shares at spot from the net."""
     call = strategy.Leg("sell", "call", 230.0, "2026-01-16", 1, 2.97, 2.9, 3.0, 45.0, 100, "")
     shares = strategy.Leg("own", "share", None, None, 100, 200.0, None, None, None, None, "")
-    assert strategy.net_cost([call]) == -297.0
-    assert strategy.net_cost([shares, call]) == -297.0
+    assert strategy.net_cost([call], slip=0) == -297.0
+    assert strategy.net_cost([shares, call], slip=0) == -297.0
+    assert strategy.net_cost([shares, call]) == strategy.net_cost([call])
+
+
+def test_net_cost_prices_between_mid_and_natural():
+    """A plan's numbers are only as good as the fill it assumes. Mid is the best
+    case; the natural price (buy the ask, sell the bid) the worst."""
+    buy = strategy.Leg("buy", "put", 90.0, "2026-01-16", 1, 1.00, 0.90, 1.10, 40.0, 100, "")
+    sell = strategy.Leg("sell", "put", 100.0, "2026-01-16", 1, 3.00, 2.80, 3.20, 40.0, 100, "")
+    assert strategy.net_cost([sell, buy], slip=0) == -200.0
+    assert strategy.net_cost([sell, buy], slip=1) == -170.0          # 280 bid − 110 ask
+    planned = strategy.net_cost([sell, buy])
+    assert -200.0 < planned < -170.0
+    assert planned == pytest.approx(-190.0, abs=0.01)                # a third of the way
+
+
+def test_a_leg_priced_off_the_last_trade_is_flagged():
+    q = strategy.Quote(strike=100.0, right="call", bid=None, ask=None, mid=2.5, last=2.5,
+                       iv=30.0, open_interest=10, volume=0, mid_source="last")
+    leg = strategy.make_leg("sell", q, "2026-01-16")
+    assert leg.mid_source == "last"
+    assert strategy.stale_legs([leg]) == [leg]
+    assert strategy.net_cost([leg]) == -250.0          # no spread to cross — the mid
 
 
 def test_net_cost_returns_none_when_a_traded_leg_has_no_mid():
@@ -349,15 +371,16 @@ def test_covered_call_is_priced_as_the_credit_it_collects():
     shares = [leg for leg in plan["legs"] if leg["right"] == "share"][0]
     spot = 200.0
 
-    credit = round(call["mid"] * 100, 2)
-    assert plan["net"] == pytest.approx(-credit, abs=0.01)
+    credit = -plan["net"]
+    # The planned fill sits between the bid and the mid for a sale.
+    assert call["bid"] * 100 - 0.01 <= credit <= call["mid"] * 100 + 0.01
     assert -2000 < plan["net"] < 0, "a covered call collects a credit, not a fortune"
     assert shares["action"] == "own" and shares["qty"] == 100
     # The whole position: called away at the strike, plus the premium.
     assert plan["max_profit"] == pytest.approx((call["strike"] - spot) * 100 + credit, abs=0.01)
     # And the real risk is the stock going to zero, less the premium.
     assert plan["max_loss"] == pytest.approx(spot * 100 - credit, abs=0.01)
-    assert plan["breakevens"] == [pytest.approx(spot - call["mid"], abs=0.01)]
+    assert plan["breakevens"] == [pytest.approx(spot - credit / 100, abs=0.01)]
     assert plan["risk_form"]["tier"] == "covered"
 
 
@@ -450,3 +473,26 @@ def test_alternatives_never_repeat_the_primary_structure():
     r = strategy.recommend(make_row(), v)
     keys = [r.plan["key"]] + [a["key"] for a in r.alternatives]
     assert len(keys) == len(set(keys))
+
+
+def test_pop_reads_each_breakeven_at_its_own_strike_vol():
+    """A put skew prices more vol at the downside breakeven than at the money,
+    so an iron condor reaches that tail more often than a flat sigma says."""
+    flat = strategy.pop_estimate(100.0, [90.0, 110.0], "inside", 0.08)
+    skewed = strategy.pop_estimate(100.0, [90.0, 110.0], "inside", 0.08,
+                                   sigma_at=lambda k: 0.12 if k < 100 else 0.08)
+    assert skewed < flat
+    # No IV at the strike -> the ATM sigma, unchanged.
+    assert strategy.pop_estimate(100.0, [90.0, 110.0], "inside", 0.08,
+                                 sigma_at=lambda k: None) == flat
+
+
+def test_every_quoted_pop_says_it_assumes_holding_to_expiry():
+    r = rec({"iv": 58, "hv": 28, "iv_rank": 88})
+    for plan in [r.plan, *r.alternatives]:
+        if plan["pop"] is not None:
+            assert "held to expiry" in plan["pop_basis"]
+        # The planned fill always sits between the best case and the worst:
+        # a larger number is always worse for you, debit or credit.
+        if plan["net"] is not None and plan["net_natural"] is not None:
+            assert plan["net_mid"] - 0.01 <= plan["net"] <= plan["net_natural"] + 0.01

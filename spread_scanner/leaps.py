@@ -38,8 +38,10 @@ from __future__ import annotations
 
 from .options import LONG_TARGET_DAYS, OptionView
 from .strategy import (
+    POP_BASIS,
     Plan,
     chain_side,
+    fill_basis,
     make_leg,
     net_cost,
     pick_quote,
@@ -47,6 +49,7 @@ from .strategy import (
     resolve_risk_form,
     sigma_to_expiry,
     size_position,
+    strike_sigma,
     strike_step,
     wing_strike,
 )
@@ -398,11 +401,17 @@ def long_spreads(row: dict, view: OptionView | None, risk_budget: float = 2500.0
         if plan is None:
             continue
         plan.net = net_cost(plan.legs)
+        plan.net_mid = net_cost(plan.legs, slip=0)
+        plan.net_natural = net_cost(plan.legs, slip=1)
+        plan.fill_basis = fill_basis()
         # The diagonal's two legs expire at different times, so a single-sigma
         # probability would be quietly wrong. Only price POP where the whole
         # structure lands on one expiry.
         if plan.key != "poor_mans_covered_call":
-            plan.pop = pop_estimate(view.spot, plan.breakevens, plan.profit_zone, long_sigma)
+            plan.pop = pop_estimate(
+                view.spot, plan.breakevens, plan.profit_zone, long_sigma,
+                sigma_at=lambda k, pl=plan: strike_sigma(view, pl.expiry, pl.dte, k))
+            plan.pop_basis = POP_BASIS if plan.pop is not None else ""
         plan.sizing = size_position(plan, risk_budget)
         plan.risk_form = resolve_risk_form(plan.risk_form.get("basis", "none"))
         candidates.append(plan)

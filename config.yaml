@@ -75,6 +75,13 @@ universe:
     - HLAL                  #   Wahed FTSE USA Shariah
   max_holdings: 30          # cap the universe after merging the funds
   fallback_to_config: true  # if the fetch fails, fall back to the `tickers:` list
+  # Every live fetch is saved here (under output.dir) and committed; a day the
+  # fetch fails scans this last good list before falling back to `tickers:`.
+  cache_file: data/universe.json
+  # Issuer-published holdings files, tried before the third-party holdings page.
+  # SPUS's is built in (spread_scanner/universe.py ISSUER_CSV); add one per fund
+  # as `SYMBOL: https://…csv` when the issuer publishes it.
+  holdings_csv: {}
 
 halal_screen:
   # Industry-only safety net: drop any ticker whose Yahoo sector/industry matches
@@ -99,6 +106,10 @@ options:
   # the strategy engine can only say "not priced".
   # Costs 2-3 network calls per ticker, so it only prices the most coiled names.
   enabled: true
+  # Every run appends each priced name's ATM implied vol here (under output.dir).
+  # It is the only record of what options actually charged, and backtest.py
+  # tests forward moves against it — so it is committed, never regenerated.
+  iv_history_file: data/iv_history.csv
   top_n: 15                 # how many top-ranked names to price
   margin: 0.15              # ± band around the historical move for cheap/rich
 
@@ -138,6 +149,11 @@ calibration:
   weights_file: weights.json
   years: 5                  # history the fit runs on
   train_frac: 0.7           # the rest is the held-out split the "Does it work?" tab reports
+  # Refit at most this often. Between refits calibrate.py rewrites weights.json
+  # from the committed data/calibration.json instead of fitting again, so the
+  # score is one fixed function for a month rather than a new one every day
+  # tuned to yesterday's bars. `python calibrate.py --force` refits now.
+  refit_days: 30
 
 alerts:
   # POST a summary to a Slack/Discord webhook when a ticker's Setup Score

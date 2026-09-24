@@ -45,8 +45,15 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
 | `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
 | `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
-| `public/data/backtest.json` | `backtest.py` | does the score work? |
-| `public/data/calibration.json` | `calibrate.py` | how the score weights were set |
+| `public/data/backtest.json` | `backtest.py` | does the score work — and does the move beat what options charged? |
+| `public/data/calibration.json` | `calibrate.py` | how the score weights were set (and the fit reused between refits) |
+| `public/data/iv_history.csv` | `run.py` | each priced name's ATM implied vol, one row per day — **appended, never regenerated** |
+| `public/data/universe.json` | `run.py` | the last fund-holdings list fetched live, the fallback when a fetch fails |
+
+Everything in `public/data/` is committed, because the Netlify site deploys
+`public/` straight from the repository. `iv_history.csv`, `universe.json` and
+`calibration.json` are also the state the next run builds on, so they must be
+committed regardless.
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
 | `alert.json` (repo root, gitignored) | `run.py` | the pending webhook message, posted later by `send_alerts.py` |
 
@@ -97,24 +104,38 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > rich for mechanical reasons — the Premium Score would be measuring the
 > selection, not the market.
 
-> **Does the score actually work?** Yes, in the way that matters. The backtest
-> (5y, the live universe — see the **Does it work?** tab, or
-> `public/data/backtest.json`) shows coiled names break out of their *own*
-> compressed ±1σ band **~44%** of the time vs **~30%** for calm names — an
-> *expansion* edge, described rather than proven: the score being measured was
-> fitted on this same history, and the universe is whatever passes the screen
-> *today*, measured backwards. The out-of-sample split is the calibration panel
-> next to it. (They don't move more in raw % — the score targets low-vol
-> names — so the edge is relative, which is exactly what a both-ways straddle
-> trader wants.) Re-runs each day.
+> **Does the score actually work?** For what it measures, yes; for the trades,
+> not shown yet. On the held-out split (the calibration panel of the **Does it
+> work?** tab), the top fifth of the score broke its *own* ±1σ band **~44%** of
+> the time against **~25%** for the bottom fifth. On non-overlapping windows the
+> gap is about **+16 pts, 95% CI roughly +10 to +22** (`backtest.json` →
+> `verdict`). Those are one run's figures, and the universe is whatever passes the
+> screen *today*, measured backwards.
+>
+> That band is the name's own *compressed* 20-day volatility, and the score picks
+> names for having a small one. Coiled names actually move *less* in raw terms,
+> so the edge is mostly quiet volatility returning to normal. An option is not
+> priced off that shrunken window. Measured against the **60-day** realized band
+> instead, the edge is about **+1 pt, CI roughly −5 to +6**: no evidence that
+> coiled names out-move a longer-run estimate, so **buying premium on the score
+> alone is not supported by this backtest.** The test that settles it — the
+> forward move against the *implied* move logged each day in
+> `public/data/iv_history.csv` — reports on the same tab once 60 readings have
+> matured.
 
 ## Quick start (local)
+
+Needs **Python 3.12+** (numpy 2.5 requires it; `.python-version` pins it for
+pyenv / uv, and CI uses the same file). On 3.11 the install fails to resolve
+numpy.
 
 ```bash
 pip install -r requirements-dev.txt     # runtime deps + pytest + ruff
                                         # (requirements.txt alone is runtime only)
 
 python calibrate.py                    # fit the score weights -> weights.json
+                                       # (reuses the committed fit if < 30 days old;
+                                       #  --force refits now)
 python run.py                          # scan + IV read + strategies -> public/data/
 python run.py --tickers AAPL,MSFT,NVDA # ad-hoc one-off scan
 python send_alerts.py                  # post the alert run.py staged, if any
@@ -144,7 +165,7 @@ Every ticker in `scan.json` carries a `recommendation` block:
   "action": "SELL_PREMIUM",          // BUY_PREMIUM | SELL_PREMIUM | NEUTRAL_INCOME
                                      // | STAND_ASIDE | NO_DATA
   "headline": "NVDA: SELL premium — IV rank 88, rich → Iron Condor",
-  "detail":   "Sell 1× 2026-09-19 100 put; Buy 1× ... — net credit $208.00 per spread",
+  "detail":   "Sell 1× 2026-09-19 100 put; Buy 1× ... — net credit $208.00 per spread (planned fill; ...)",
   "confidence": 0.65,                // how much the inputs agree, not odds of winning
   "premium_state": "rich",           // cheap / fair / rich
   "premium_score": 92.0,
@@ -154,11 +175,15 @@ Every ticker in `scan.json` carries a `recommendation` block:
     "vega": "short", "theta": "positive", "risk": "defined",
     "legs": [ { "action": "sell", "right": "put", "strike": 100.0,
                 "expiry": "2026-09-19", "mid": 1.18, "bid": 1.17, "ask": 1.19,
-                "iv": 61.0, "open_interest": 2400, "label": "Sell 1× ..." } ],
-    "net": -208.0,                   // + = debit paid, − = credit received
-    "max_profit": 208.0, "max_loss": 792.0,
+                "iv": 61.0, "open_interest": 2400, "label": "Sell 1× ...",
+                "mid_source": "quote" } ],   // "last" = no live bid/ask, priced off the last trade
+    "net": -208.0,                   // + = debit paid, − = credit received — at the planned
+                                     //   fill: a third of the way from mid toward natural
+    "net_mid": -214.0, "net_natural": -196.0,   // the best and worst fills around it
+    "max_profit": 208.0, "max_loss": 792.0,     // both priced at `net`, as are size and POP
     "breakevens": [97.92, 137.08], "profit_zone": "inside",
-    "pop": 0.74,                     // N(d₂): lognormal with E[S_T] = spot
+    "pop": 0.74,                     // N(d₂) held to expiry, each breakeven at its own
+                                     //   strike's IV; ignores the early exits in `manage`
     "credit_to_width": 0.21,
     "manage":   { "profit_target_pct": 50, "stop_loss_multiple": 2.0, "close_by_dte": 21 },
     "sizing":   { "risk_budget": 1000, "contracts": 1, "over_budget": false },
@@ -744,13 +769,27 @@ turns that from silent bad data into a visible failed run.
 The scanner builds its universe in two automated stages, so you never hand-pick
 tickers:
 
-**1. Fetch — pre-screened ETF holdings.** Each run pulls the current top holdings
+**1. Fetch — pre-screened ETF holdings.** Each run pulls the current holdings
 of the ETFs in `universe.etfs` (default **SPUS** + **HLAL**) and unions them by
 weight ([`spread_scanner/universe.py`](spread_scanner/universe.py)). Starting from
-a fund's published holdings means the list is maintained by someone else. If the
-fetch fails, it falls back to the curated `tickers:` list in the config — and the
-substitution reaches the page as a banner, because a scan of the fallback list
-otherwise looks exactly like a scan of the funds' live holdings.
+a fund's published holdings means the list is maintained by someone else. Sources,
+in order:
+
+1. the **issuer's own daily holdings CSV** — built in for SPUS, and addable per
+   fund under `universe.holdings_csv`;
+2. a third-party **holdings page**, parsed from its HTML (it broke once already,
+   and the CSV is there so it is no longer the only source);
+3. the **last list fetched live**, saved to `public/data/universe.json` on every
+   successful fetch and committed;
+4. the curated `tickers:` list in the config.
+
+Falling back to 3 or 4 reaches the page as a banner, because a scan of a fallback
+list otherwise looks exactly like a scan of the funds' live holdings.
+
+The top 30 holdings of two large-cap Shariah funds are a small, closely
+correlated set, mostly large-cap tech. The backtest's intervals resample whole
+dates for that reason, so 30 names moving together on one day count as one
+observation rather than thirty.
 
 Tickers are normalized to Yahoo's spelling on the way in: the holdings page writes
 class shares as `BRK.B` and every Yahoo endpoint answers only to `BRK-B`, so a
@@ -987,8 +1026,13 @@ score = 100 × [ w_compression × (1 − bandwidth_percentile)
 
 The weights are **data-calibrated**, not hand-picked. [`calibrate.py`](calibrate.py)
 sets each weight ∝ how much that feature lifts the band-break (expansion) rate,
-measured on a **train** split and validated **out-of-sample**. It runs as the first
-step of the daily workflow, writing `weights.json` — the model both `run.py` and
+measured on a **train** split and validated **out-of-sample** (a gap of one
+horizon is dropped between the two, so no training outcome reaches into the test
+period, and the check compares the top and bottom fifth of each score so the two
+weight sets are judged on equal-sized groups). It refits every
+`calibration.refit_days` (30 by default) and reuses the committed fit in between,
+so the score is one fixed function for a month rather than a new one each day. It
+runs as the first step of the daily workflow, writing `weights.json` — the model both `run.py` and
 `backtest.py` load, so the live score and the backtested score cannot be two
 different functions — plus `public/data/calibration.json`, which is the
 calibration half of the **Does it work?** tab.
@@ -1099,10 +1143,12 @@ spread_scanner/
   charts.py                  the price history payload
   seasonality.py             the same closes grouped by calendar month
   weekly.py                  the same closes as ISO weeks -> the Repeat test and Backtest tabs
-  backtest.py                the validation payload
+  backtest.py                the validation payload (non-overlapping sample, date bootstrap)
+  iv_history.py              the daily implied-vol log, and the backtest against it
   alerts.py                  Slack / Discord webhook (staged, then sent)
   net.py                     retry with backoff, for every network edge
 public/                      the frontend (hand-written) + data/ (generated)
+  assets/render.js           pure payload -> HTML helpers, tested under node with hostile input
 ```
 
 ## License

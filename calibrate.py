@@ -22,6 +22,37 @@ from run import DEFAULT_PARAMS, load_config
 from spread_scanner import backtest, data, report, universe
 
 
+def reuse_recent_fit(cal_file: Path, weights_file: Path, refit_days: int,
+                     today) -> dict | None:
+    """Rewrite `weights_file` from the committed calibration when it is recent.
+
+    weights.json is gitignored, so on a fresh CI checkout it never exists — but
+    data/calibration.json is committed and carries the same weights and stamp.
+    Returns {"weights", "as_of"} when it reused the fit, None when a refit is due
+    (no calibration, a failed one, or one older than `refit_days`)."""
+    import datetime as dt
+    import json
+
+    if refit_days <= 0:
+        return None
+    try:
+        cal = json.loads(cal_file.read_text(encoding="utf-8"))
+        as_of = dt.date.fromisoformat(str(cal["as_of"]))
+        weights = cal["weights"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    if (not cal.get("ok") or not isinstance(weights, dict)
+            or cal.get("method_version") != backtest.CALIBRATION_METHOD
+            or (today - as_of).days >= refit_days):
+        return None
+    weights_file.write_text(json.dumps({
+        "weights": weights, "as_of": as_of.isoformat(),
+        "history_years": cal.get("history_years"), "universe": cal.get("universe"),
+        "reused": True,
+    }, indent=2), encoding="utf-8")
+    return {"weights": weights, "as_of": as_of.isoformat()}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Calibrate Setup-Score weights")
     ap.add_argument("--config", default="config.yaml")
@@ -29,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--train-frac", type=float, default=None)
     ap.add_argument("--weights-file", default=None)
     ap.add_argument("--tickers")
+    ap.add_argument("--force", action="store_true",
+                    help="refit even if the last fit is younger than calibration.refit_days")
     args = ap.parse_args(argv)
 
     cfg = load_config(args.config)
@@ -43,13 +76,24 @@ def main(argv: list[str] | None = None) -> int:
     args.train_frac = float(args.train_frac if args.train_frac is not None
                             else cal_cfg.get("train_frac", 0.7))
     args.weights_file = args.weights_file or cal_cfg.get("weights_file", "weights.json")
+    refit_days = int(cal_cfg.get("refit_days", 30))
+
+    import datetime as dt
+    import json
+
+    cal_file = outdir / "data" / "calibration.json"
+    if not (args.force or args.tickers):
+        reused = reuse_recent_fit(cal_file, Path(args.weights_file), refit_days, dt.date.today())
+        if reused:
+            print(f"Reusing the fit from {reused['as_of']} (refit every {refit_days} days; "
+                  f"--force to refit now) -> {reused['weights']}")
+            return 0
 
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
     elif (cfg.get("universe") or {}).get("source") == "etf":
         uni = cfg["universe"]
-        tickers = universe.fetch_halal_universe(uni.get("etfs") or ["SPUS"],
-                                                 int(uni.get("max_holdings", 30))) or (cfg.get("tickers") or [])
+        tickers = universe.from_config(uni, outdir)[0] or (cfg.get("tickers") or [])
     else:
         tickers = cfg.get("tickers") or []
 
@@ -60,13 +104,12 @@ def main(argv: list[str] | None = None) -> int:
         print("Not enough data to calibrate.", file=sys.stderr)
         return 2
 
-    c = backtest.calibrate_weights(recs, train_frac=args.train_frac)
+    c = backtest.calibrate_weights(recs, train_frac=args.train_frac,
+                                   embargo=int(params["horizon_days"]))
 
     # weights.json is the live "model" the scanner loads each run. The same
     # stamp goes into the published calibration, so the dashboard can say
     # whether the scan beside it actually used this fit.
-    import datetime as dt
-    import json
     as_of = dt.date.today().isoformat()
     payload = backtest.calibration_payload(c, years=args.years, universe=len(raw),
                                            as_of=as_of)
@@ -79,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
         "universe": len(raw),
     }, indent=2), encoding="utf-8")
 
-    cal_path = report.write_json(outdir / "data" / "calibration.json", payload)
+    cal_path = report.write_json(cal_file, payload)
     print(f"Wrote {weights_path} and {cal_path}")
     if payload.get("ok"):
         sep = payload["separation"]
