@@ -348,10 +348,19 @@
   function seasonHeadline(pooled, minYears) {
     function tile(row, cls, label) {
       if (!row) {
-        // The ranking gate is years per name, not months — say which one bit.
-        return '<div class="rule"><span class="k">' + label + '</span>' +
-          '<div class="v">No month yet has ' + minYears +
-          " years behind the typical name, so none is called best or worst.</div></div>";
+        // Two reasons a month is not named: too little history to rank (the
+        // gate is years per name, not months), or ranked and the extreme did
+        // not pass the calendar-shuffle test (seasonality.extreme_p).
+        var p = cls === "cheap" ? pooled.best_p : pooled.worst_p;
+        var enough = typicalYears(pooled) >= minYears;
+        return '<div class="rule"><span class="k">' + label + '</span><div class="v">' +
+          (enough && App.has(p)
+            ? "No month stands out from chance: with the calendar months shuffled, a " +
+              (cls === "cheap" ? "best" : "worst") + " month this extreme turns up in " +
+              App.num(p * 100, 0) + "% of histories, so none is named."
+            : "No month yet has " + minYears +
+              " years behind the typical name, so none is called best or worst.") +
+          "</div></div>";
       }
       return '<div class="rule ' + cls + '"><span class="k">' + label + " — " +
         MONTH_NAMES[row.month - 1] + "</span><div class=\"v\">" +

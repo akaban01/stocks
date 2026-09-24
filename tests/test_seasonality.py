@@ -189,3 +189,22 @@ def test_pooled_ignores_tickers_with_no_usable_history():
 def test_pooled_of_nothing_is_none():
     assert se.pooled({}) is None
     assert se.pooled({"X": pd.Series(dtype="float64")}) is None
+
+
+def test_noise_names_no_month_however_the_averages_fall():
+    """Twelve averages always have a highest and a lowest; on a history with no
+    seasonality in it, the shuffle test declines to call either one a pattern."""
+    idx = pd.bdate_range("2013-12-02", "2023-12-29")
+    walk = pd.Series(100 * np.exp(np.cumsum(np.random.RandomState(3).normal(0.0004, 0.015, len(idx)))),
+                     index=idx)
+    s = se.summarize(se.monthly_returns(walk))
+    assert s["best_month"] is None and s["worst_month"] is None
+    assert s["best_p"] >= se.ALPHA and s["worst_p"] >= se.ALPHA
+
+
+def test_excess_is_each_month_against_the_average_month():
+    s = se.summarize(se.monthly_returns(_seasonal(up_month=4, down_month=9)))
+    avg = s["avg_month_pct"]
+    april = s["months"][3]
+    assert april["excess_pct"] == pytest.approx(april["avg_pct"] - avg, abs=0.02)
+    assert s["best_p"] < se.ALPHA            # the planted month is real, and passes

@@ -81,8 +81,12 @@ def test_each_series_carries_its_calendar_month_record(tmp_path):
     seas = payload["series"][0]["seasonality"]
     assert [m["month"] for m in seas["months"]] == list(range(1, 13))
     assert seas["years"]["start"] < seas["years"]["end"]
-    assert seas["best_month"] in range(1, 13)
-    assert seas["worst_month"] in range(1, 13)
+    # A random walk has no seasonality, so the shuffle test names no month —
+    # and says how close it came.
+    assert seas["best_p"] is not None and seas["worst_p"] is not None
+    assert (seas["best_month"] is None) == (seas["best_p"] >= 0.05)
+    assert (seas["worst_month"] is None) == (seas["worst_p"] >= 0.05)
+    assert all("excess_pct" in m for m in seas["months"])
 
 
 def test_seasonality_is_also_pooled_across_tickers(tmp_path):
