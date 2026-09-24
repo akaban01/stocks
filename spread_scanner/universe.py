@@ -1,18 +1,30 @@
 """Build the scan universe from Shariah-compliant ETF holdings.
 
 Pulls each fund's published holdings (top names by weight) and unions them into
-a deduplicated ticker list. The source page lists the top 25 holdings per fund,
-which is plenty for a short-term scanner and keeps the downstream per-ticker
-fundamentals screen fast.
+a deduplicated ticker list. Sources, in order:
+
+1. **The issuer's own holdings file** where one is known (`ISSUER_CSV`, or
+   `universe.holdings_csv` in the config) — a plain CSV the fund publishes daily
+   for its own disclosure, so it is the least likely to change shape.
+2. **A third-party holdings page**, parsed from its HTML. This already broke
+   once, when its JSON endpoint went away, and it will break again whenever the
+   markup moves; it is the fallback, not the source.
+3. **The last list that worked** (`load_last_good`), committed beside the scan,
+   so one bad fetch day scans yesterday's fund rather than the config watchlist.
 
 Always fail-safe: on any network/parse error it returns an empty list so the
-caller can fall back to the curated config watchlist.
+caller can fall back further.
 """
 
 from __future__ import annotations
 
+import csv
+import datetime as dt
+import io
+import json
 import re
 import urllib.request
+from pathlib import Path
 
 from .net import retry
 
@@ -24,6 +36,14 @@ from .net import retry
 # actually still serves.
 _ENDPOINT = "https://stockanalysis.com/etf/{sym}/holdings/"
 _HEADERS = {"User-Agent": "Mozilla/5.0 (spread-scanner)"}
+
+# Issuer-published daily holdings files. Only files that have been checked to
+# exist and parse belong here; add others through `universe.holdings_csv`.
+ISSUER_CSV = {
+    "SPUS": "https://www.sp-funds.com/wp-content/uploads/data/TidalFG_Holdings_SPUS.csv",
+}
+_CSV_TICKER_COLS = ("StockTicker", "Ticker", "Symbol", "ticker", "symbol")
+_CSV_WEIGHT_COLS = ("Weightings", "Weight", "% of Net Assets", "weight", "Weight (%)")
 
 _ROW = re.compile(r"<tr\b.*?</tr>", re.S | re.I)
 # The symbol is the row's link to the stock's own page; the weight is the first
@@ -71,16 +91,61 @@ def _parse_holdings(html: str) -> list[tuple[str, float]]:
     return out
 
 
-def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]]:
-    """Return [(ticker, weight_pct)] for one ETF — best-effort, [] on failure."""
-    url = _ENDPOINT.format(sym=symbol.strip().lower())
-    def _get() -> str:
-        req = urllib.request.Request(url, headers=_HEADERS)
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read().decode("utf-8", "replace")
+def _parse_issuer_csv(text: str) -> list[tuple[str, float]]:
+    """[(ticker, weight_pct)] from an issuer holdings CSV, in Yahoo's spelling.
 
+    Column names differ between issuers, so the ticker and weight columns are
+    looked up from a short list. Cash lines and anything else without a valid
+    ticker are dropped."""
     try:
-        html = retry(_get, label=f"{symbol} holdings")
+        reader = csv.DictReader(io.StringIO(text or ""))
+        fields = reader.fieldnames or []
+    except csv.Error:
+        return []
+    tcol = next((c for c in _CSV_TICKER_COLS if c in fields), None)
+    wcol = next((c for c in _CSV_WEIGHT_COLS if c in fields), None)
+    if tcol is None:
+        return []
+    out: list[tuple[str, float]] = []
+    for row in reader:
+        ticker = (row.get(tcol) or "").strip().upper()
+        if not _valid_ticker(ticker):
+            continue
+        try:
+            weight = float(str(row.get(wcol) or "0").replace("%", "").replace(",", "").strip())
+        except ValueError:
+            weight = 0.0
+        out.append((to_yahoo(ticker), weight))
+    return out
+
+
+def _get(url: str, timeout: int) -> str:
+    req = urllib.request.Request(url, headers=_HEADERS)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def fetch_etf_holdings(symbol: str, timeout: int = 20,
+                       csv_url: str | None = None) -> list[tuple[str, float]]:
+    """Return [(ticker, weight_pct)] for one ETF — best-effort, [] on failure.
+
+    The issuer's CSV first (`csv_url`, else `ISSUER_CSV`), then the holdings
+    page."""
+    csv_url = csv_url or ISSUER_CSV.get(symbol.strip().upper())
+    if csv_url:
+        try:
+            rows = _parse_issuer_csv(retry(lambda: _get(csv_url, timeout),
+                                           label=f"{symbol} issuer holdings"))
+        except Exception as exc:
+            print(f"  ! could not fetch {symbol} issuer holdings: {type(exc).__name__}")
+            rows = []
+        if rows:
+            return rows
+        print(f"  ! {symbol} issuer holdings file gave no rows — trying the holdings page")
+
+    url = _ENDPOINT.format(sym=symbol.strip().lower())
+    try:
+        html = retry(lambda: _get(url, timeout), label=f"{symbol} holdings")
     except Exception as exc:
         print(f"  ! could not fetch {symbol} holdings: {type(exc).__name__}")
         return []
@@ -93,13 +158,81 @@ def fetch_etf_holdings(symbol: str, timeout: int = 20) -> list[tuple[str, float]
     return holdings
 
 
-def fetch_halal_universe(symbols: list[str], max_holdings: int = 30) -> list[str]:
+def fetch_halal_universe(symbols: list[str], max_holdings: int = 30,
+                         csv_urls: dict[str, str] | None = None) -> list[str]:
     """Union holdings across one or more Shariah ETFs, keep the highest-weight
     names first, dedup, and cap at `max_holdings`. [] if every fetch failed."""
     weight_by_ticker: dict[str, float] = {}
     for sym in symbols:
-        for ticker, weight in fetch_etf_holdings(sym):
+        url = (csv_urls or {}).get(sym.strip().upper())
+        for ticker, weight in fetch_etf_holdings(sym, csv_url=url):
             weight_by_ticker[ticker] = max(weight_by_ticker.get(ticker, 0.0), weight)
 
     ranked = sorted(weight_by_ticker, key=lambda t: weight_by_ticker[t], reverse=True)
     return ranked[:max_holdings] if max_holdings else ranked
+
+
+def _cache_key(symbols: list[str], max_holdings: int) -> dict:
+    return {"etfs": sorted(s.strip().upper() for s in symbols), "max_holdings": int(max_holdings)}
+
+
+def save_last_good(path: str | Path, symbols: list[str], max_holdings: int,
+                   tickers: list[str], today: dt.date | None = None) -> None:
+    """Record a list that was fetched live, for `load_last_good` to fall back to."""
+    if not tickers:
+        return
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({**_cache_key(symbols, max_holdings),
+                                "as_of": (today or dt.date.today()).isoformat(),
+                                "tickers": list(tickers)}, indent=2), encoding="utf-8")
+
+
+def load_last_good(path: str | Path, symbols: list[str],
+                   max_holdings: int) -> tuple[list[str], str] | None:
+    """(tickers, as_of) from the last live fetch *of the same funds and cap*, or
+    None. A list saved for other funds is not this universe and is ignored."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or {k: data.get(k) for k in ("etfs", "max_holdings")} \
+            != _cache_key(symbols, max_holdings):
+        return None
+    tickers = [t for t in data.get("tickers") or [] if isinstance(t, str) and _valid_ticker(t)]
+    return (tickers, str(data.get("as_of") or "an earlier run")) if tickers else None
+
+
+def resolve_universe(symbols: list[str], max_holdings: int, cache_path: str | Path | None = None,
+                     csv_urls: dict[str, str] | None = None) -> tuple[list[str], str | None]:
+    """The fund universe, live if possible, else the last good list.
+
+    Returns (tickers, as_of_of_cache). The second element is None for a live
+    fetch and the cached list's date when it fell back, so callers can say which
+    one they scanned. ([], None) when neither is available."""
+    tickers = fetch_halal_universe(symbols, max_holdings, csv_urls=csv_urls)
+    if tickers:
+        if cache_path:
+            try:
+                save_last_good(cache_path, symbols, max_holdings, tickers)
+            except OSError as exc:
+                print(f"  ! could not save the universe cache ({exc})")
+        return tickers, None
+    if cache_path:
+        cached = load_last_good(cache_path, symbols, max_holdings)
+        if cached:
+            print(f"  live holdings unavailable — using the last good list from {cached[1]}")
+            return cached
+    return [], None
+
+
+def from_config(uni_cfg: dict, outdir: str | Path) -> tuple[list[str], str | None]:
+    """`resolve_universe` with the settings from config.yaml's `universe:` block.
+    Shared by run.py, calibrate.py and backtest.py so all three scan the same
+    names from the same sources."""
+    etfs = uni_cfg.get("etfs") or ["SPUS"]
+    cap = int(uni_cfg.get("max_holdings", 30))
+    cache = uni_cfg.get("cache_file", "data/universe.json")
+    csv_urls = {str(k).upper(): v for k, v in (uni_cfg.get("holdings_csv") or {}).items()}
+    return resolve_universe(etfs, cap, cache_path=Path(outdir) / cache if cache else None,
+                            csv_urls=csv_urls)

@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-SCHEMA_VERSION = "2.7.0"
+SCHEMA_VERSION = "2.8.0"   # 2.8: fill prices, pop_basis, iv_history, independent-sample stats
 
 # An equity option quoted below this annualized implied volatility is not a
 # quote. Outside US market hours the feed returns every contract with a floor
@@ -118,12 +118,18 @@ GLOSSARY = {
     "liquidity": "How tradable the chain is, from the at-the-money bid/ask spread and open interest. Wide "
                  "markets quietly cost more than the edge is worth, so thin names get simpler structures "
                  "or none at all.",
-    "pop": "Model probability of finishing in the profit zone: N(d₂) under a lognormal whose expected "
-           "price is today's, at the chain's own implied volatility. Because the price rather than its "
-           "logarithm is held flat, the median outcome sits slightly below spot — so the chance of "
-           "finishing above spot is a little under half, and more so the longer the expiry. An estimate, "
-           "not a guarantee; it also reads the volatility at the money rather than at each strike, and a "
+    "pop": "Model probability of being in the profit zone if the position is held to expiry: N(d₂) "
+           "under a lognormal whose expected price is today's, with each breakeven read at its own "
+           "strike's implied volatility, so a put skew fattens the downside tail. Because the price "
+           "rather than its logarithm is held flat, the median outcome sits slightly below spot. It "
+           "does not model the management rules — closing at a profit target, a stop or a days-left "
+           "cut changes the odds of the trade you actually run. An estimate, not a guarantee, and a "
            "high probability of a small win is not the same as a good trade.",
+    "fill": "Every net price, max loss, breakeven, probability and size is computed at a planned fill: "
+            "each leg a third of the way from its mid toward the side you would pay. The mid is the "
+            "best case, the natural price (buying every ask, selling every bid) the worst; both are "
+            "shown beside the order. A leg marked 'last' had no live bid/ask and is priced off its "
+            "last trade.",
     "credit_to_width": "Credit collected divided by the width of the spread. Under ~20% you are being paid "
                        "too little for the risk.",
     "em_pct": "One-sigma expected move over the horizon from realized volatility. Roughly 68% of outcomes "

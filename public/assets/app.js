@@ -11,6 +11,26 @@
 (function () {
   "use strict";
 
+  // Pure data -> HTML string helpers live in render.js, so the node tests can
+  // run the exact code that escapes what the payload says (see
+  // tests/test_render_js.py). Aliased here to keep every call site unchanged.
+  var R = window.SpreadRender;
+  var esc = R.esc;
+  var has = R.has;
+  var num = R.num;
+  var money = R.money;
+  var cash = R.cash;
+  var pct = R.pct;
+  var multiExpiry = R.multiExpiry;
+  var sizeCell = R.sizeCell;
+  var legsTable = R.legsTable;
+  var noteList = R.noteList;
+  var manageBlock = R.manageBlock;
+  var altBlock = R.altBlock;
+  var riskFormNote = R.riskFormNote;
+  var statsTable = R.statsTable;
+  var impliedSection = R.impliedSection;
+
   var DATA_DIR = "data/";
   // The payload shape this page was written against. Every file the backend
   // writes carries the same `schema_version`, so one constant checks them all —
@@ -24,25 +44,6 @@
   // ------------------------------------------------------------- utilities
 
   function $(sel, root) { return (root || document).querySelector(sel); }
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
-    });
-  }
-  function has(v) { return v !== null && v !== undefined && v !== ""; }
-  function num(v, digits, fallback) {
-    if (!has(v) || isNaN(v)) return fallback === undefined ? "—" : fallback;
-    return Number(v).toLocaleString(undefined, {
-      minimumFractionDigits: digits || 0, maximumFractionDigits: digits || 0
-    });
-  }
-  function money(v, digits) { return has(v) && !isNaN(v) ? "$" + num(Math.abs(v), digits === undefined ? 2 : digits) : "—"; }
-  // money() drops the sign, which is right for a price and wrong for a P&L.
-  function cash(v, digits) {
-    if (!has(v) || isNaN(v)) return "—";
-    return (v < 0 ? "−$" : "$") + num(Math.abs(v), digits === undefined ? 0 : digits);
-  }
-  function pct(v, digits) { return has(v) && !isNaN(v) ? num(v, digits === undefined ? 1 : digits) + "%" : "—"; }
 
   // The actions that mean "there is a trade here" — as opposed to standing
   // aside or having no chain to read. The headline counts these and the sizing
@@ -357,106 +358,11 @@
     return '<div class="ivstrip">' + out.join("") + "</div>";
   }
 
-  function sizeCell(sizing) {
-    if (!sizing || !has(sizing.contracts)) return "—";
-    if (sizing.over_budget) {
-      return '<span class="warncell" title="' + esc(sizing.note || "") + '">over budget</span>';
-    }
-    return '<span title="' + esc(sizing.note || "") + '">' + num(sizing.contracts, 0) + "×</span>";
-  }
 
-  function legsTable(plan) {
-    if (!plan.legs || !plan.legs.length) return "";
-    // A diagonal's legs sit in different expiries, so the single expiry in the
-    // header would be wrong for one of them. Show it per leg when they differ.
-    var mixed = multiExpiry(plan);
-    var rows = plan.legs.map(function (l) {
-      var side = String(l.action || "").toLowerCase();
-      var what = l.right === "share"
-        ? num(l.qty, 0) + " shares"
-        : num(l.qty, 0) + "× " + num(l.strike, 2) + " " + esc(l.right);
-      return "<tr>" +
-        '<td class="side ' + esc(side) + '">' + esc(side) + "</td>" +
-        "<td>" + what + (mixed && l.expiry ? ' <span class="dim">' + esc(l.expiry) + "</span>" : "") + "</td>" +
-        '<td class="r">' + (has(l.mid) ? money(l.mid) : "—") + "</td>" +
-        '<td class="r dim">' + (has(l.bid) && has(l.ask) ? money(l.bid) + " / " + money(l.ask) : "—") + "</td>" +
-        '<td class="r dim">' + (has(l.iv) ? pct(l.iv, 0) : "—") + "</td>" +
-        '<td class="r dim">' + (has(l.open_interest) ? num(l.open_interest, 0) : "—") + "</td>" +
-        "</tr>";
-    }).join("");
 
-    var netTxt = "—", netCls = "";
-    if (has(plan.net)) {
-      netCls = plan.net > 0 ? "debit" : "credit";
-      netTxt = (plan.net > 0 ? "Debit " : "Credit ") + money(plan.net);
-    }
-    var risk = [
-      // "Uncapped" is a property of the payoff, not of missing data: a long
-      // straddle has no max profit but still has a max loss (the debit). A plan
-      // whose legs could not be priced has neither, and must not claim uncapped.
-      ["Max profit", has(plan.max_profit) ? money(plan.max_profit, 0) : (has(plan.max_loss) ? "uncapped" : "—")],
-      ["Max loss", has(plan.max_loss) ? money(plan.max_loss, 0) : (plan.risk === "undefined" ? "undefined" : "—")],
-      ["Breakeven", plan.breakevens && plan.breakevens.length
-        ? plan.breakevens.map(function (b) { return num(b, 2); }).join(" / ") : "—"],
-      ["Prob. of profit", has(plan.pop) ? pct(plan.pop * 100, 0) : "—"],
-      ["Credit / width", has(plan.credit_to_width) ? pct(plan.credit_to_width * 100, 0) : "—"],
-      ["Size", sizeCell(plan.sizing)]
-    ].map(function (kv) {
-      return "<div><span class=\"k\">" + esc(kv[0]) + "</span><span class=\"v\">" + kv[1] + "</span></div>";
-    }).join("");
 
-    return '<div class="order">' +
-      '<div class="order-head"><span class="t">The order</span>' +
-      '<span class="exp">' + (mixed ? "two expiries" : esc(plan.expiry || "")) +
-      (has(plan.dte) ? " · " + num(plan.dte, 0) + " DTE" : "") + "</span>" +
-      '<span class="net ' + netCls + '">' + netTxt + " per spread</span></div>" +
-      '<table class="legs"><thead><tr><th>Side</th><th>Contract</th>' +
-      '<th class="r">Mid</th><th class="r">Bid / Ask</th><th class="r">IV</th><th class="r">OI</th>' +
-      "</tr></thead><tbody>" + rows + "</tbody></table>" +
-      '<div class="riskrow">' + risk + "</div></div>";
-  }
 
-  function noteList(title, items, cls) {
-    if (!items || !items.length) return "";
-    return '<div class="notes ' + (cls || "") + '"><div class="t">' + esc(title) + "</div><ul>" +
-      items.map(function (t) { return "<li>" + t + "</li>"; }).join("") + "</ul></div>";
-  }
 
-  function manageBlock(plan) {
-    var m = plan.manage || {};
-    var rows = [["Target", m.profit_target], ["Stop", m.stop], ["Time", m.time_stop]]
-      .filter(function (r) { return r[1]; })
-      .map(function (r) {
-        return '<div class="row"><span>' + esc(r[0]) + "</span><span>" + esc(r[1]) + "</span></div>";
-      }).join("");
-    if (!rows) return "";
-    return '<div class="notes"><div class="t">How to manage it</div><div class="manage">' + rows + "</div></div>";
-  }
-
-  function altBlock(alts) {
-    if (!alts || !alts.length) return "";
-    var body = alts.map(function (a) {
-      var netTxt = has(a.net) ? (a.net > 0 ? "debit " : "credit ") + money(a.net) : "not priced";
-      var legs = (a.legs || []).map(function (l) {
-        return l.right === "share" ? "own shares"
-          : l.action + " " + num(l.strike, 2) + " " + l.right;
-      }).join(", ");
-      return '<div class="alt"><div class="n">' + esc(a.name) + "</div>" +
-        '<div class="d">' + esc(legs) + " — " + netTxt +
-        (has(a.max_loss) ? " · max loss " + money(a.max_loss, 0) : "") +
-        (has(a.pop) ? " · POP " + pct(a.pop * 100, 0) : "") + "</div>" +
-        '<div class="d">' + esc(a.playbook || a.thesis || "") + "</div></div>";
-    }).join("");
-    return '<details class="alts"><summary>Other ways to express this (' + alts.length + ")</summary>" +
-      body + "</details>";
-  }
-
-  function riskFormNote(plan) {
-    var rf = plan.risk_form;
-    if (!rf || !rf.note) return "";
-    return '<div class="riskform"><b>What secures it (' +
-      esc(String(rf.tier || "").replace(/_/g, " ")) + ")</b> — " + esc(rf.note) + "</div>";
-  }
 
   // The compliance verdict, where a reader will actually see it. `filter` mode
   // never publishes a failing name, so this is silent unless `annotate` is on.
@@ -806,11 +712,6 @@
   var SPREAD_SORT = { key: "pick", dir: 1 };
   var spreadFilters = { keys: new Set(), preferredOnly: false };
 
-  function multiExpiry(plan) {
-    var seen = {};
-    (plan.legs || []).forEach(function (l) { if (l.expiry) seen[l.expiry] = 1; });
-    return Object.keys(seen).length > 1;
-  }
 
   function legSummary(plan) {
     var txt = (plan.legs || []).map(function (l) {
@@ -3941,18 +3842,6 @@
 
   // ----------------------------------------------------------- validation
 
-  function statsTable(rows, labelHead) {
-    return '<table class="stats"><thead><tr><th>' + esc(labelHead) + "</th>" +
-      '<th class="r">bars</th><th class="r">avg |move|</th><th class="r">expand</th>' +
-      '<th class="r">broke band</th></tr></thead><tbody>' +
-      rows.map(function (b) {
-        return "<tr><td>" + esc(b.label) + "</td>" +
-          '<td class="r">' + num(b.bars, 0) + "</td>" +
-          '<td class="r">' + pct(b.avg_abs_move_pct) + "</td>" +
-          '<td class="r">' + (has(b.expansion) ? num(b.expansion, 2) + "×" : "—") + "</td>" +
-          '<td class="r">' + pct(b.broke_band_pct, 0) + "</td></tr>";
-      }).join("") + "</tbody></table>";
-  }
 
   function renderValidation() {
     var host = $("#validation-body");
@@ -3965,6 +3854,7 @@
     if (!host.dataset.calibrationDone) renderCalibrationPanel(host);
   }
 
+
   function renderBacktestPanel(host) {
     load("backtest").then(function (d) {
       host.dataset.backtestDone = "1";
@@ -3975,14 +3865,25 @@
         "y history · horizon " + esc(d.horizon_days) + " trading days · " + num(d.bars, 0) + " signal-bars</p>" +
         '<div class="panelcard"><p>' + esc(d.explainer) + "</p></div>" +
         "<h3 style=\"margin-top:18px\">By Setup Score</h3>" +
-        statsTable([b.high, b.mid, b.low], "Score bucket") +
+        statsTable([b.high, b.mid, b.low], "Score bucket", d.long_band_days) +
         '<div class="verdict ' + (d.verdict.holds ? "good" : "bad") + '">' + esc(d.verdict.text) + "</div>" +
-        "<h3>Squeeze on vs off</h3>" + statsTable([s.on, s.off], "State") +
+        (d.verdict.long_band_text
+          ? '<div class="verdict ' + (d.independent && d.independent.long_band &&
+              d.independent.long_band.ci95_pts[0] > 0 ? "good" : "bad") + '">' +
+            esc(d.verdict.long_band_text) + "</div>"
+          : "") +
+        (d.independent
+          ? '<p class="faint" style="font-size:.82rem">Verdicts use ' + num(d.independent.bars, 0) +
+            " non-overlapping bars (one every " + esc(d.independent.step_days) +
+            " trading days per name), with 95% intervals from resampling whole dates.</p>"
+          : "") +
+        "<h3>Squeeze on vs off</h3>" + statsTable([s.on, s.off], "State", d.long_band_days) +
         "<h3>Expected-move calibration</h3>" +
         "<p>Realized moves landed inside the ±1σ band <b>" + pct(d.coverage_pct, 0) +
         "</b> of the time against a theoretical 68%. " +
         (d.coverage_ok ? "The bands are well calibrated." : "The bands look mis-calibrated — consider tuning <code>vol_lookback</code>.") +
-        "</p><p class=\"faint\" style=\"font-size:.82rem\">" + esc(d.caveat) + "</p>";
+        "</p>" + impliedSection(d.implied) +
+        "<p class=\"faint\" style=\"font-size:.82rem\">" + esc(d.caveat) + "</p>";
     }).catch(function (e) {
       $("#score-backtest").innerHTML = loadError(e, "backtest", "python backtest.py --years 5");
     });
@@ -4013,10 +3914,14 @@
       host.dataset.calibrationDone = "1";
       if (!d.ok) { $("#calibration").innerHTML = '<p class="empty">' + esc(d.note || "Not calibrated yet.") + "</p>"; return; }
       var sep = d.separation;
+      var quint = d.separation_basis === "quintile";
       $("#calibration").innerHTML = calibrationMismatch(d) +
         '<div class="panelcard"><p>' + esc(d.method) + "</p></div>" +
         '<table class="stats" style="margin-top:14px"><thead><tr><th>Weights (from the train split)</th>' +
-        '<th class="r">score ≥ 60</th><th class="r">score &lt; 30</th><th class="r">separation</th>' +
+        (quint
+          ? '<th class="r">top 20% of score</th><th class="r">bottom 20%</th>'
+          : '<th class="r">score ≥ 60</th><th class="r">score &lt; 30</th>') +
+        '<th class="r">separation</th>' +
         "</tr></thead><tbody>" +
         ["heuristic", "calibrated"].map(function (k) {
           var r = sep[k];
@@ -4044,7 +3949,7 @@
       premium_score: "Premium score", iv_hv_ratio: "IV / HV", vrp: "Volatility risk premium",
       implied_move_pct: "Implied move", hist_move_pct: "Realized (historical) move",
       term_structure: "Term structure", skew: "Skew", liquidity: "Liquidity",
-      pop: "Probability of profit", credit_to_width: "Credit to width",
+      pop: "Probability of profit", fill: "Fill price", credit_to_width: "Credit to width",
       em_pct: "Expected move (±1σ)", squeeze: "TTM squeeze", lean: "Lean",
       earnings: "Earnings", debt_cash_ratio: "Debt % / Cash %",
       long_dated: "The long-dated expiry", leaps_vega: "Vega over a year",

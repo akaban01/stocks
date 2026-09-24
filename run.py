@@ -30,6 +30,7 @@ from spread_scanner import (
     data,
     halal,
     indicators,
+    iv_history,
     leaps,
     options,
     report,
@@ -129,9 +130,10 @@ def main(argv: list[str] | None = None) -> int:
     # Load daily-calibrated score weights (written by calibrate.py); falls back
     # to the hardcoded scanner.SCORE_WEIGHTS if the file is missing/invalid.
     cal_cfg = cfg.get("calibration") or {}
-    weights_meta = scanner.apply_weights_file(cal_cfg.get("weights_file", "weights.json"))
+    loaded = scanner.load_weights_file(cal_cfg.get("weights_file", "weights.json"))
+    weights, weights_meta = loaded if loaded else (dict(scanner.SCORE_WEIGHTS), None)
     if weights_meta:
-        print(f"Score weights (calibrated {weights_meta.get('as_of', '?')}): {scanner.SCORE_WEIGHTS}")
+        print(f"Score weights (calibrated {weights_meta.get('as_of', '?')}): {weights}")
 
     # ---- Determine the scan universe ----------------------------------------
     uni_cfg = cfg.get("universe") or {}
@@ -142,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     # a scan silently running on the config fallback looks exactly like one
     # running on live ETF holdings, and did so for weeks.
     universe_fallback = None
+    universe_cached = None          # as-of date when the ETF list came from the last-good cache
 
     if args.tickers:
         tickers = [t.strip() for t in args.tickers.split(",") if t.strip()]
@@ -149,8 +152,12 @@ def main(argv: list[str] | None = None) -> int:
         etfs = uni_cfg.get("etfs") or ["SPUS"]
         cap = int(uni_cfg.get("max_holdings", 30))
         print(f"Fetching halal universe from {', '.join(etfs)} (top {cap})...")
-        tickers = universe.fetch_halal_universe(etfs, max_holdings=cap)
+        tickers, universe_cached = universe.from_config(uni_cfg, outdir)
         print(f"  got {len(tickers)} holdings: {', '.join(tickers) or '(none)'}")
+        if universe_cached:
+            universe_fallback = (
+                f"Could not read live holdings from {', '.join(etfs)}, so this scan ran on "
+                f"the funds' holdings as last fetched on {universe_cached}.")
         if not tickers and uni_cfg.get("fallback_to_config", True):
             print("  fetch empty — falling back to config tickers.")
             universe_fallback = (
@@ -249,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
     if missing:
         print(f"No data for: {', '.join(missing)}")
 
-    df = scanner.scan(raw, params)
+    df = scanner.scan(raw, params, weights)
 
     # Attach the halal financial-ratio columns from the screen (if it ran).
     if not df.empty and screen_details:
@@ -371,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
 
     scan_path = report.write_scan(
         df, outdir, params,
-        weights=scanner.SCORE_WEIGHTS,
+        weights=weights,
         weights_as_of=(weights_meta or {}).get("as_of"),
         recommendations=recs,
         option_views=views,
@@ -386,6 +393,7 @@ def main(argv: list[str] | None = None) -> int:
                      "earnings_names": len(earnings)},
         universe={"scanned": int(len(df)), "requested": len(tickers),
                   "source": ("cli" if args.tickers
+                             else "cache" if universe_cached
                              else "config" if universe_fallback
                              else uni_cfg.get("source")),
                   "requested_source": (uni_cfg.get("source") if not args.tickers else "cli"),
@@ -394,6 +402,21 @@ def main(argv: list[str] | None = None) -> int:
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
     )
     print(f"\nWrote {scan_path}")
+
+    # Log today's implied vol for every priced name: the history the strategy
+    # has to be tested against (see iv_history.py). Ad-hoc `--tickers` runs are
+    # not the scan and do not write to it.
+    if views and not args.tickers:
+        dates = {t: pd.Timestamp(raw[t].index[-1]).date().isoformat()
+                 for t in views if t in raw and not raw[t].empty}
+        scores = dict(zip(df["ticker"], df["score"])) if not df.empty else {}
+        ivh_path = Path(outdir) / (opt_cfg.get("iv_history_file") or "data/iv_history.csv")
+        try:
+            n = iv_history.append(ivh_path, iv_history.rows_from_views(
+                dates, views, scores, min_iv=report.MIN_PLAUSIBLE_IV))
+            print(f"Logged implied vol for {n} name(s) to {ivh_path}")
+        except OSError as exc:
+            print(f"IV history not written ({exc})", file=sys.stderr)
 
     if not df.empty:
         print("\nWhat to do:")

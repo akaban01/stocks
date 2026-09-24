@@ -406,6 +406,9 @@
 <!-- The Backtest tab's rules, same arrangement and for the same reason: its own
      file so tests/test_backtest_js.py can run it under node. -->
 <script src="assets/backtest.js"></script>
+<!-- The pure payload-to-HTML helpers app.js builds the page with; its own file
+     so tests/test_render_js.py can feed it hostile payloads under node. -->
+<script src="assets/render.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>
