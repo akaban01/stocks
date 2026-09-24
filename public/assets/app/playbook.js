@@ -274,6 +274,10 @@
           App.esc(d.direction.text) + "</span>";
       }
     }
+    if (d.short_vol && d.short_vol.supported === false) {
+      App.$("#summary").innerHTML += ' <span class="dim">Premium selling is withheld: ' +
+        App.esc(d.short_vol.text) + "</span>";
+    }
     if (d.long_vol && d.long_vol.supported === false) {
       App.$("#summary").innerHTML += ' <span class="dim">Straddles and strangles are withheld: ' +
         App.esc(d.long_vol.text) + "</span>";

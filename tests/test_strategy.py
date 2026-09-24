@@ -607,3 +607,38 @@ def test_a_rich_name_with_an_unproven_lean_gets_a_non_directional_structure():
     assert r.bias == "neutral"
     assert r.plan["key"] in ("iron_condor", "bull_put_spread", "bear_call_spread")
     assert any("not traded on" in w for w in r.why)
+
+
+# ------------------------------------------------- selling premium needs evidence
+
+
+def _rich_bt(n, ret):
+    return {"implied": {"ok": True, "buckets": {"rich": {"n": n, "avg_straddle_return_pct": ret}}}}
+
+
+def test_short_vol_evidence_is_three_valued():
+    assert strategy.short_vol_evidence(_rich_bt(40, -12.0))["supported"] is True
+    assert strategy.short_vol_evidence(_rich_bt(40, 8.0))["supported"] is False
+    assert strategy.short_vol_evidence(_rich_bt(10, -50.0))["supported"] is None   # too few
+    assert strategy.short_vol_evidence(None)["supported"] is None
+
+
+RICH = {"iv": 58, "hv": 28, "iv_rank": 88}
+
+
+def test_selling_premium_is_withheld_once_it_is_shown_to_lose():
+    r = rec(RICH, short_vol=strategy.short_vol_evidence(_rich_bt(40, 8.0)))
+    assert r.action == "STAND_ASIDE"
+    keys = {a["key"] for a in r.alternatives}
+    assert not keys & {"iron_condor", "bull_put_spread", "bear_call_spread", "covered_call"}
+    assert any("Selling premium" in a["name"] for a in r.avoid)
+
+
+def test_untested_selling_goes_ahead_with_a_warning():
+    ev = strategy.short_vol_evidence(None)
+    r = rec(RICH, short_vol=ev)
+    assert r.action == "SELL_PREMIUM"
+    assert ev["text"] in r.warnings
+    # Tested and paid: no warning.
+    paid = rec(RICH, short_vol=strategy.short_vol_evidence(_rich_bt(40, -12.0)))
+    assert paid.action == "SELL_PREMIUM" and not any("not been tested" in w for w in paid.warnings)

@@ -157,6 +157,12 @@ strategy:
                             #        exactly what an open-ended loss means for you.
   long_vol_requires_evidence: true
   direction_requires_evidence: true
+  short_vol_requires_evidence: true
+                            # Selling premium on names called rich (condors, credit
+                            # spreads, covered calls) is withheld once the implied-vol
+                            # test shows rich names' straddles *gained* on average —
+                            # i.e. sellers lost. Until that test has enough readings it
+                            # is allowed, and each such card says it is untested.
                             # Trade on a direction read (the momentum lean, or the
                             # way a squeeze released) only when the last backtest
                             # shows that read calling direction better than the

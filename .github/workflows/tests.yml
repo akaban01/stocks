@@ -42,6 +42,15 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Fetch the published weekly bars for the real-data test
+        # charts.json / weekly.json live on the site-data branch, not in this
+        # checkout, so the smoke test that runs the Backtest rules over the real
+        # weekly.json skipped on every run. This downloads the published copy
+        # (read-only, public). Best-effort: without it that one test skips, as
+        # before; the rest of the suite stays network-free.
+        continue-on-error: true
+        run: python scripts/fetch_site_data.py
+
       # The suite is network-free by design, so it needs no secrets and no
       # market data — a pull request from a fork runs it exactly as master does.
       - name: Run tests

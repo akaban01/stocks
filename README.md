@@ -172,6 +172,14 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > direction: no directional debit or credit spreads, and no preferred 13-month
 > spread. Most days that means most cards stand aside, which is what the evidence
 > supports.
+>
+> **Selling premium is held to the same test** (`strategy.short_vol_requires_evidence`).
+> A model straddle's return is what its seller loses, so once enough implied-vol
+> readings have matured, rich names' straddles must have *lost* money on average
+> for condors and credit spreads to keep being offered. If they gained, selling
+> is withheld. Until the test has enough readings, selling stays allowed, because
+> the general tendency for option sellers to be paid is well documented, and
+> every short-premium card says this engine's version is untested.
 
 ## Quick start (local)
 
