@@ -365,6 +365,7 @@ def build_scan(df: pd.DataFrame, params: dict, *,
                universe: dict | None = None,
                playbook: dict | None = None,
                long_vol: dict | None = None,
+               short_vol: dict | None = None,
                direction: dict | None = None,
                portfolio: dict | None = None) -> dict:
     """Assemble the full scan payload (no I/O — handy to test and to reuse)."""
@@ -413,6 +414,9 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         # Whether straddles/strangles were allowed this run, and the evidence.
         # None when the gate is switched off in the config.
         "long_vol": _clean(long_vol),
+        # Whether selling premium on rich names is tested and paying (True),
+        # tested and losing (False, withheld) or not yet tested (None).
+        "short_vol": _clean(short_vol),
         # Which direction reads were traded on this run (strategy.direction_evidence).
         "direction": _clean(direction),
         # The cap on total risk across the day's trades, what it used, and the

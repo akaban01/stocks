@@ -364,6 +364,13 @@ def main(argv: list[str] | None = None) -> int:
         direction = strategy.direction_evidence(last_backtest)
         proven = [k for k, v in direction["proven"].items() if v]
         print(f"Direction reads traded on: {', '.join(proven) or 'none'} ({direction['source']})")
+    # Selling premium on rich names: withheld only once tested and shown to lose;
+    # untested, it goes ahead and every short-premium card says so.
+    short_vol = None
+    if strat_cfg.get("short_vol_requires_evidence", True):
+        short_vol = strategy.short_vol_evidence(last_backtest)
+        state = {True: "tested, paid", False: "tested, lost — withheld", None: "untested"}
+        print(f"Selling premium: {state[short_vol['supported']]}")
     recs = strategy.recommend_all(
         scan_rows,
         views,
@@ -371,6 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
         long_vol=long_vol,
         direction=direction,
+        short_vol=short_vol,
     )
     # One cap on the day's total risk, on top of the per-trade budget.
     portfolio = strategy.apply_portfolio_cap(
@@ -454,6 +462,7 @@ def main(argv: list[str] | None = None) -> int:
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
         long_vol=long_vol,
+        short_vol=short_vol,
         direction=direction,
         portfolio=portfolio,
     )
