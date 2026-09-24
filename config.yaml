@@ -136,6 +136,13 @@ strategy:
                             #        when the chain is deep and there's no earnings
                             #        inside the expiry. Leave false unless you know
                             #        exactly what an open-ended loss means for you.
+  long_vol_requires_evidence: true
+                            # Offer long straddles / strangles only when the last
+                            # backtest shows buying premium on the setup pays:
+                            # first the move against logged implied vol, until
+                            # that matures the 60-day realized-vol band. When it
+                            # does not, cheap-premium names get a directional debit
+                            # spread if there is a read, else stand aside.
 
 calibration:
   # Setup-Score weights, fitted against the expansion outcome by calibrate.py:

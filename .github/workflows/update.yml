@@ -173,10 +173,47 @@ jobs:
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
         run: python send_alerts.py
 
+      - name: Publish the large data files to the site-data branch
+        # charts.json and weekly.json are gitignored on master: ~1.3 MB rebuilt
+        # from scratch every run, which used to add that much to master's history
+        # daily. They go to `site-data` as a single parentless commit, force-
+        # pushed, so that branch never grows. The small pointer written below is
+        # committed to master with the rest; Netlify's build
+        # (scripts/fetch_site_data.py) downloads the files at the commit it names.
+        # Both are best-effort in run.py, so publish whichever exist; with none,
+        # the old pointer stays and the site keeps the last good files.
+        run: |
+          set -euo pipefail
+          files=()
+          entries=""
+          for f in charts.json weekly.json; do
+            if [ -f "public/data/$f" ]; then
+              files+=("$f")
+              entries+="100644 blob $(git hash-object -w "public/data/$f")	$f"$'\n'
+            fi
+          done
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::warning::no charts.json or weekly.json this run — site-data left as it was"
+            exit 0
+          fi
+          tree=$(printf '%s' "$entries" | git mktree)
+          commit=$(git -c user.name="github-actions[bot]" \
+                       -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+                       commit-tree "$tree" -m "Site data ($(date -u +'%Y-%m-%d %H:%M UTC'))")
+          for attempt in 1 2 3 4; do
+            if git push --force origin "$commit:refs/heads/site-data"; then
+              python scripts/fetch_site_data.py --record "$commit" "${files[@]}"
+              exit 0
+            fi
+            sleep $((2 ** attempt))
+          done
+          echo "::error::could not push the site-data branch"
+          exit 1
+
       - name: Commit refreshed data
         # iv_history.csv, universe.json and calibration.json are the state the
-        # next run builds on. Everything under public/ is committed because the
-        # Netlify site deploys straight from the repo, not from the artifact.
+        # next run builds on. The Netlify site deploys from this commit, fetching
+        # charts.json / weekly.json from site-data via the pointer above.
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

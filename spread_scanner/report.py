@@ -226,6 +226,15 @@ def _clean(obj):
     return str(obj)
 
 
+def read_json(path: str | Path) -> dict | None:
+    """A JSON file as a dict, or None when it is missing or unreadable."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def write_json(path: Path, payload: dict, compact: bool = False) -> Path:
     """Write a payload as JSON. Indented by default, because these files are
     read by people as often as by the page.
@@ -352,7 +361,8 @@ def build_scan(df: pd.DataFrame, params: dict, *,
                screens: dict[str, dict] | None = None,
                screen_meta: dict | None = None,
                universe: dict | None = None,
-               playbook: dict | None = None) -> dict:
+               playbook: dict | None = None,
+               long_vol: dict | None = None) -> dict:
     """Assemble the full scan payload (no I/O — handy to test and to reuse)."""
     now_iso, now_utc = _now()
     recommendations = recommendations or {}
@@ -396,6 +406,9 @@ def build_scan(df: pd.DataFrame, params: dict, *,
         "screen": _screen_summary(signals, screen_meta),
         "long_dated": _long_dated_summary(signals),
         "top_actions": _headline_actions(signals),
+        # Whether straddles/strangles were allowed this run, and the evidence.
+        # None when the gate is switched off in the config.
+        "long_vol": _clean(long_vol),
         "reference": {
             "actions": ACTIONS,
             "premium_states": PREMIUM_STATES,

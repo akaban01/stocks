@@ -73,7 +73,19 @@ def config(tmp_path):
     return cfg
 
 
+SUPPORTIVE_BACKTEST = {"independent": {"long_band": {"edge_pts": 8.0, "ci95_pts": [3.0, 13.0]}},
+                       "long_band_days": 60}
+
+
+def _publish_backtest(tmp_path, payload):
+    path = tmp_path / "site" / "data" / "backtest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
 def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
+    # A backtest that supports buying premium, so the cheap name gets a straddle.
+    _publish_backtest(tmp_path, SUPPORTIVE_BACKTEST)
     assert run.main(["--config", str(config)]) == 0
     site = tmp_path / "site"
 
@@ -82,6 +94,7 @@ def test_full_run_writes_the_whole_payload(offline, config, tmp_path, capsys):
     assert {s["ticker"] for s in scan["signals"]} == set(TICKERS)
     assert scan["counts"] == {"SELL_PREMIUM": 1, "BUY_PREMIUM": 1, "NO_DATA": 1}
     assert scan["universe"]["scanned"] == 3
+    assert scan["long_vol"]["supported"] is True and scan["long_vol"]["source"] == "long_band"
 
     by = {s["ticker"]: s for s in scan["signals"]}
     assert by["AAA"]["recommendation"]["action"] == "SELL_PREMIUM"
@@ -490,3 +503,19 @@ def test_a_run_with_nothing_crossing_stages_no_alert(offline, config, tmp_path):
     # Yesterday's staged message is cleared at the start of the run, so a later
     # send can never post a scan that no longer exists.
     assert not staged.exists()
+
+
+@pytest.mark.parametrize("backtest", [None, {"independent": {"long_band": {
+    "edge_pts": 1.0, "ci95_pts": [-5.0, 6.0]}}, "long_band_days": 60}])
+def test_no_straddles_without_evidence_that_they_pay(offline, config, tmp_path, backtest):
+    """No backtest, or one whose interval includes zero: the cheap name is not
+    sold a straddle or strangle, and the card says why."""
+    if backtest is not None:
+        _publish_backtest(tmp_path, backtest)
+    assert run.main(["--config", str(config)]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    assert scan["long_vol"]["supported"] is False
+    rec = {s["ticker"]: s for s in scan["signals"]}["BBB"]["recommendation"]
+    keys = {rec["plan"]["key"], *(a["key"] for a in rec["alternatives"])}
+    assert not keys & {"long_straddle", "long_strangle"}
+    assert any("backtest" in a["reason"] for a in rec["avoid"])

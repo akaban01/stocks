@@ -570,6 +570,13 @@
         : lead + ", but <b>none</b> fit " + withBudget +
           (cheapest === null ? "" : " — the cheapest single spread risks " + money(cheapest, 0)) +
           ". The cards below show each trade and what it would cost.";
+    // Whether straddles and strangles were on the menu this run, and the
+    // evidence that decided it. Withheld is the default until the record says
+    // buying premium on the setup pays.
+    if (d.long_vol && d.long_vol.supported === false) {
+      $("#summary").innerHTML += ' <span class="dim">Straddles and strangles are withheld: ' +
+        esc(d.long_vol.text) + "</span>";
+    }
 
     if (!(d.signals || []).length) {
       $("#cards").innerHTML = '<p class="empty">No signals in the last run — no tickers returned usable data.</p>';
