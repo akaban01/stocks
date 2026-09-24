@@ -105,6 +105,9 @@ halal_screen:
     max_debt_ratio: 0.33    # interest-bearing debt / market cap
     max_cash_ratio: 0.33    # cash & equivalents / market cap
     max_receivables_ratio: null   # accounts receivable / market cap; null = skip (saves a call/ticker)
+    unscreened: keep        # a name whose fundamentals Yahoo could not supply:
+                            # 'keep' = publish it marked "not screened" (never as a pass);
+                            # 'drop' = leave it out of the scan
 
 options:
   # Read the option chain for the top-ranked names: ATM implied volatility, IV

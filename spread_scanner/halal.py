@@ -29,9 +29,19 @@ import yfinance as yf
 from .net import retry
 
 # Substrings matched (case-insensitive) against Yahoo's `sector` / `industry`.
+#
+# ⚠️ Yahoo's industry taxonomy has no category for pork, adult content or
+# pornography: a pork producer is listed as "Packaged Foods" or "Farm Products".
+# Those keywords are kept in case a label ever carries them, but they match
+# nothing today, so those activities are screened only by the Shariah ETFs the
+# universe is drawn from — not by this code. The config `tickers:` fallback list
+# is hand-curated for the same reason.
 HARAM_KEYWORDS = (
     "bank", "insurance", "capital markets", "mortgage", "credit services",
     "financial conglomerates", "savings", "reinsurance",
+    # Conventional fund managers earn fees on interest-bearing and other
+    # impermissible holdings; Yahoo files them as "Asset Management".
+    "asset management",
     # NB: avoid bare "alcohol" — it substring-matches the halal "Non-Alcoholic".
     # The producer industries below already cover actual alcohol businesses.
     "brewer", "winer", "distiller",
@@ -46,8 +56,11 @@ HARAM_KEYWORDS = (
 @dataclass
 class ScreenResult:
     ticker: str
-    compliant: bool
-    industry_ok: bool
+    # True = checked and passed; False = checked and failed; None = could not be
+    # checked (no fundamentals, or a ratio's inputs missing). None is published
+    # as "not screened" — never as a pass.
+    compliant: bool | None
+    industry_ok: bool | None
     debt_ratio: float | None        # interest-bearing debt / market cap
     cash_ratio: float | None        # cash & equivalents / market cap
     receivables_ratio: float | None # accounts receivable / market cap (optional)
@@ -153,14 +166,24 @@ def financial_screen(
     """Full screen (industry + financial ratios) with ONE fundamentals fetch.
 
     `max_receivables=None` skips the receivables ratio (it needs an extra
-    balance-sheet call). Fails OPEN on a fetch error — we don't reject a name
-    just because Yahoo hiccupped; we only reject on a clear ratio breach."""
+    balance-sheet call).
+
+    Three outcomes, not two. A clear breach fails (False). Every required ratio
+    present and inside its limit passes (True). Anything else — the
+    fundamentals call failed, or market cap, debt or cash is missing — is
+    *unknown* (None): the name is not rejected over a Yahoo hiccup, but it is not
+    called compliant either. It used to be: a failed fetch came back
+    ``compliant=True`` with a "no screen" note, and a missing ratio was simply
+    skipped, so both published exactly like a checked pass."""
     try:
         tk = yf.Ticker(ticker)
         info = _fetch_info(ticker)
     except Exception as exc:
-        return ScreenResult(ticker, True, True, None, None, None, "",
-                            [f"no screen (info error: {type(exc).__name__})"])
+        return ScreenResult(ticker, None, None, None, None, None, "",
+                            [f"not screened: no fundamentals from Yahoo ({type(exc).__name__})"])
+    if not info:
+        return ScreenResult(ticker, None, None, None, None, None, "",
+                            ["not screened: Yahoo returned no fundamentals"])
 
     reasons: list[str] = []
     industry_ok, industry = _industry_check(info)
@@ -179,11 +202,20 @@ def financial_screen(
     if recv_ratio is not None and recv_ratio > max_receivables:
         reasons.append(f"receivables/mktcap {recv_ratio:.0%} > {max_receivables:.0%}")
 
-    compliant = industry_ok and not any(
-        r is not None and r > lim
-        for r, lim in [(debt_ratio, max_debt), (cash_ratio, max_cash),
-                       (recv_ratio, max_receivables if max_receivables is not None else 1.0)]
-    )
+    breach = any(r is not None and r > lim for r, lim in [
+        (debt_ratio, max_debt), (cash_ratio, max_cash),
+        (recv_ratio, max_receivables if max_receivables is not None else 1.0)])
+    missing = [name for name, r in [("debt", debt_ratio), ("cash", cash_ratio)] if r is None]
+    if max_receivables is not None and recv_ratio is None:
+        missing.append("receivables")
+    if not industry_ok or breach:
+        compliant: bool | None = False
+    elif missing:
+        compliant = None
+        reasons.append(f"not screened: no {', '.join(missing)} ratio "
+                       f"({'no market cap' if not mktcap else 'figure missing from Yahoo'})")
+    else:
+        compliant = True
     return ScreenResult(ticker, compliant, industry_ok, debt_ratio, cash_ratio,
                         recv_ratio, industry, reasons or ["ok"],
                         earnings_in_days=_days_to_earnings(info))
@@ -211,14 +243,19 @@ def screen_universe(
     max_debt: float = 0.33,
     max_cash: float = 0.33,
     max_receivables: float | None = None,
+    unscreened: str = "keep",
 ) -> tuple[list[str], list[tuple[str, str]], dict[str, ScreenResult]]:
-    """Run `financial_screen` over a list. Returns (kept, dropped, details)."""
+    """Run `financial_screen` over a list. Returns (kept, dropped, details).
+
+    A name the screen could not check (compliant None) is kept and published as
+    "not screened" when `unscreened` is "keep", and dropped with the others when
+    it is "drop"."""
     details: dict[str, ScreenResult] = {}
     kept, dropped = [], []
     for t in tickers:
         res = financial_screen(t, max_debt, max_cash, max_receivables)
         details[t] = res
-        if res.compliant:
+        if res.compliant or (res.compliant is None and unscreened != "drop"):
             kept.append(t)
         else:
             dropped.append((t, "; ".join(res.reasons)))

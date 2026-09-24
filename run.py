@@ -190,6 +190,7 @@ def main(argv: list[str] | None = None) -> int:
             max_debt=float(formula.get("max_debt_ratio", 0.33)),
             max_cash=float(formula.get("max_cash_ratio", 0.33)),
             max_receivables=(float(recv) if recv is not None else None),
+            unscreened=str(formula.get("unscreened", "keep")),
         )
         for t, reason in dropped:
             print(f"  rejected {t}: {reason}")
@@ -398,8 +399,10 @@ def main(argv: list[str] | None = None) -> int:
     # The compliance screen's own verdict, per name. In `filter` mode this is
     # every survivor saying why it survived; in `annotate` mode it is the only
     # thing distinguishing a name that failed from one that passed.
-    screens = {t: {"compliant": bool(res.compliant),
-                   "industry_ok": bool(res.industry_ok),
+    # compliant / industry_ok stay three-valued: None is "not screened", and
+    # bool() here would publish it as a failure (or, before, a pass).
+    screens = {t: {"compliant": res.compliant,
+                   "industry_ok": res.industry_ok,
                    "industry": res.industry,
                    "debt_ratio": res.debt_ratio,
                    "cash_ratio": res.cash_ratio,

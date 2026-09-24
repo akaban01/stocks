@@ -566,3 +566,20 @@ def test_unproven_direction_reads_leave_no_preferred_long_dated_spread(offline, 
             assert rec["bias"] == "neutral"
         if s.get("long_dated"):
             assert s["long_dated"]["preferred"] is None
+
+
+def test_a_name_the_screen_could_not_check_is_published_as_not_screened(offline, config,
+                                                                      tmp_path, monkeypatch):
+    def partial(tickers, **kw):
+        details = {t: halal.ScreenResult(ticker=t, compliant=(None if t == "BBB" else True),
+                                         industry_ok=(None if t == "BBB" else True),
+                                         debt_ratio=None, cash_ratio=None, receivables_ratio=None,
+                                         industry="", reasons=["not screened: test"])
+                   for t in tickers}
+        return list(tickers), [], details
+    monkeypatch.setattr(halal, "screen_universe", partial)
+    assert run.main(["--config", str(config)]) == 0
+    scan = json.loads((tmp_path / "site" / "data" / "scan.json").read_text(encoding="utf-8"))
+    by = {s["ticker"]: s for s in scan["signals"]}
+    assert by["BBB"]["screen"]["compliant"] is None          # not True, not False
+    assert scan["screen"]["unknown"] == ["BBB"]

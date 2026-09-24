@@ -106,13 +106,18 @@ def test_a_prohibited_industry_fails_whatever_the_balance_sheet_says(monkeypatch
     assert "prohibited industry" in res.reasons[0]
 
 
-def test_the_screen_fails_open_on_a_fetch_error(monkeypatch):
-    """A name is not rejected because Yahoo hiccupped — only on a clear breach."""
+def test_a_fetch_error_is_not_screened_rather_than_a_pass(monkeypatch):
+    """A name is not rejected because Yahoo hiccupped — but it is not called
+    compliant either. It is published as "not screened" (compliant None)."""
     _patch(monkeypatch, {"AAA": FakeTicker(CLEAN, raises=99)})
     res = halal.financial_screen("AAA")
-    assert res.compliant is True
+    assert res.compliant is None
     assert res.debt_ratio is None
-    assert "info error" in res.reasons[0]
+    assert res.reasons[0].startswith("not screened")
+    kept, dropped, _ = halal.screen_universe(["AAA"])
+    assert kept == ["AAA"] and dropped == []                  # kept, not rejected
+    kept, dropped, _ = halal.screen_universe(["AAA"], unscreened="drop")
+    assert kept == [] and dropped[0][0] == "AAA"
 
 
 def test_a_transient_error_is_retried_rather_than_failing_open(monkeypatch):
@@ -127,8 +132,9 @@ def test_missing_market_cap_leaves_the_ratios_unknown(monkeypatch):
     _patch(monkeypatch, {"AAA": FakeTicker({"sector": "Technology",
                                             "industry": "Semiconductors"})})
     res = halal.financial_screen("AAA")
-    assert res.compliant is True                      # unknown is not a breach
+    assert res.compliant is None             # unknown: neither a breach nor a pass
     assert res.debt_ratio is None and res.cash_ratio is None
+    assert "no market cap" in res.reasons[-1]
 
 
 def test_receivables_are_only_read_when_a_limit_is_set(monkeypatch):
@@ -142,10 +148,11 @@ def test_receivables_are_only_read_when_a_limit_is_set(monkeypatch):
     assert "receivables/mktcap 40%" in res.reasons[-1]
 
 
-def test_a_balance_sheet_without_receivables_is_not_a_failure(monkeypatch):
+def test_a_balance_sheet_without_receivables_is_not_a_failure_or_a_pass(monkeypatch):
     _patch(monkeypatch, {"AAA": FakeTicker(CLEAN)})
     res = halal.financial_screen("AAA", max_receivables=0.33)
-    assert res.receivables_ratio is None and res.compliant is True
+    assert res.receivables_ratio is None and res.compliant is None
+    assert "receivables" in res.reasons[-1]
 
 
 def test_screen_universe_splits_kept_from_dropped_and_keeps_every_verdict(monkeypatch):
@@ -181,7 +188,7 @@ def test_a_none_from_get_info_fails_open_like_an_exception(monkeypatch):
     absorb, arriving in the one shape it did not expect."""
     _patch(monkeypatch, {"AAA": FakeTicker(None)})
     res = halal.financial_screen("AAA")
-    assert res.compliant is True and res.debt_ratio is None
+    assert res.compliant is None and res.debt_ratio is None
     assert res.earnings_in_days is None
     assert halal.classify("AAA")[0] is True
     assert halal.earnings_calendar(["AAA"]) == {"AAA": None}
@@ -193,3 +200,15 @@ def test_filter_tickers_keeps_the_clean_and_reports_the_reason(monkeypatch):
     kept, dropped = halal.filter_tickers(["AAA", "BBB"])
     assert kept == ["AAA"]
     assert dropped == [("BBB", "prohibited industry: Tobacco")]
+
+
+def test_a_clear_breach_still_fails_even_with_another_ratio_missing(monkeypatch):
+    _patch(monkeypatch, {"AAA": FakeTicker({**CLEAN, "totalCash": None, "totalDebt": 900_000})})
+    assert halal.financial_screen("AAA").compliant is False
+
+
+def test_asset_managers_are_screened_out(monkeypatch):
+    _patch(monkeypatch, {"AAA": FakeTicker({**CLEAN, "sector": "Financial Services",
+                                            "industry": "Asset Management"})})
+    res = halal.financial_screen("AAA")
+    assert res.compliant is False and "Asset Management" in res.reasons[0]
