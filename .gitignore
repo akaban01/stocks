@@ -16,10 +16,3 @@ env/
 weights.json
 alert.json
 
-# The two large reductions of the price history. They are rebuilt from scratch
-# every run and deployed to Pages from the build, so committing them only grew
-# the history by ~1.3 MB a day of near-identical JSON. Everything the pipeline
-# needs to *remember* between runs (iv_history.csv, universe.json,
-# calibration.json) and the scan itself stay committed.
-public/data/charts.json
-public/data/weekly.json

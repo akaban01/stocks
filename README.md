@@ -43,19 +43,17 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 |---|---|---|
 | `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
-| `public/data/charts.json` (gitignored) | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
-| `public/data/weekly.json` (gitignored) | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
+| `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
+| `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
 | `public/data/backtest.json` | `backtest.py` | does the score work — and does the move beat what options charged? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set (and the fit reused between refits) |
 | `public/data/iv_history.csv` | `run.py` | each priced name's ATM implied vol, one row per day — **appended, never regenerated** |
 | `public/data/universe.json` | `run.py` | the last fund-holdings list fetched live, the fallback when a fetch fails |
 
-`charts.json` and `weekly.json` are rebuilt from scratch every run and reach
-the Pages site through the deploy artifact, so they are not committed (they
-added ~1.3 MB of near-identical JSON to the history per day). A fresh clone
-has neither until you run `python run.py`. The three files the next run
-*builds on* — `iv_history.csv`, `universe.json`, `calibration.json` — are
-committed.
+Everything in `public/data/` is committed, because the Netlify site deploys
+`public/` straight from the repository. `iv_history.csv`, `universe.json` and
+`calibration.json` are also the state the next run builds on, so they must be
+committed regardless.
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
 | `alert.json` (repo root, gitignored) | `run.py` | the pending webhook message, posted later by `send_alerts.py` |
 

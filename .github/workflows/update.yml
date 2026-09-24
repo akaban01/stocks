@@ -174,10 +174,9 @@ jobs:
         run: python send_alerts.py
 
       - name: Commit refreshed data
-        # charts.json and weekly.json are gitignored: they are rebuilt every run
-        # and reach Pages through the artifact below, not through the repo.
-        # iv_history.csv, universe.json and calibration.json *are* committed —
-        # they are the state the next run builds on.
+        # iv_history.csv, universe.json and calibration.json are the state the
+        # next run builds on. Everything under public/ is committed because the
+        # Netlify site deploys straight from the repo, not from the artifact.
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
