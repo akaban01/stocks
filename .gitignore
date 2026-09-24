@@ -16,3 +16,11 @@ env/
 weights.json
 alert.json
 
+
+# The two large reductions of the price history. Rebuilt from scratch every run
+# and published to the `site-data` branch (one force-pushed commit) instead of
+# master, so they stop adding ~1.3 MB a day to the history. Netlify's build
+# downloads them via public/data/site-data.json; `python
+# scripts/fetch_site_data.py` does the same for a local checkout.
+public/data/charts.json
+public/data/weekly.json

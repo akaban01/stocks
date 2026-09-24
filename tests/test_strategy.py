@@ -496,3 +496,48 @@ def test_every_quoted_pop_says_it_assumes_holding_to_expiry():
         # a larger number is always worse for you, debit or credit.
         if plan["net"] is not None and plan["net_natural"] is not None:
             assert plan["net_mid"] - 0.01 <= plan["net"] <= plan["net_natural"] + 0.01
+
+
+# ------------------------------------------------ long vol needs evidence
+
+
+def _implied(n, ret, key="coiled_cheap"):
+    return {"implied": {"ok": True, "buckets": {key: {"label": "Coiled and cheap", "n": n,
+                                                        "avg_straddle_return_pct": ret}}}}
+
+
+def test_long_vol_evidence_prefers_the_implied_test_once_it_has_matured():
+    lb = {"independent": {"long_band": {"edge_pts": 8.0, "ci95_pts": [3.0, 13.0]}}}
+    # Implied says no, long band says yes: the implied test wins.
+    ev = strategy.long_vol_evidence({**lb, **_implied(40, -12.0)})
+    assert ev["supported"] is False and ev["source"] == "implied"
+    assert strategy.long_vol_evidence(_implied(40, 5.0))["supported"] is True
+    # Too few readings: fall back to the long band.
+    ev = strategy.long_vol_evidence({**lb, **_implied(10, -50.0)})
+    assert ev["supported"] is True and ev["source"] == "long_band"
+
+
+def test_long_vol_evidence_needs_the_interval_to_clear_zero():
+    bt = {"independent": {"long_band": {"edge_pts": 1.0, "ci95_pts": [-5.0, 6.0]}}}
+    assert strategy.long_vol_evidence(bt)["supported"] is False
+    assert strategy.long_vol_evidence(None) == {
+        "supported": False, "source": "none",
+        "text": "No backtest is available to show that buying premium on this setup pays."}
+    old = strategy.long_vol_evidence({"ok": True, "verdict": {"holds": True}})
+    assert old["supported"] is False and "predates" in old["text"]
+
+
+NO = {"supported": False, "source": "long_band", "text": "no edge"}
+
+
+def test_cheap_premium_without_evidence_offers_no_straddle():
+    r = rec({"iv": 18, "hv": 30, "iv_rank": 8}, long_vol=NO)
+    keys = {r.plan["key"], *(a["key"] for a in r.alternatives)}
+    assert not keys & {"long_straddle", "long_strangle"}
+    assert any("no edge" in a["reason"] for a in r.avoid)
+
+
+def test_cheap_premium_with_evidence_still_buys_the_straddle():
+    r = rec({"iv": 18, "hv": 30, "iv_rank": 8}, long_vol={**NO, "supported": True})
+    keys = {r.plan["key"], *(a["key"] for a in r.alternatives)}
+    assert keys & {"long_straddle", "long_strangle"}

@@ -15,7 +15,7 @@ The second question is the one that picks the trade:
 
 | Volatility | What it means | What to do |
 |---|---|---|
-| **Low IV** (rank ≲ 25) | The market is underpricing the move | **BUY premium** — long straddle / strangle / debit spread |
+| **Low IV** (rank ≲ 25) | The market is underpricing the move | **BUY premium** — debit spread with a directional read; long straddle / strangle only when the backtest supports it (see below) |
 | **Mid IV** | No volatility edge | Stand aside, or trade the chart / term structure |
 | **High IV** (rank ≳ 65) | The market is overpaying for the move | **SELL premium** — credit spread / iron condor |
 
@@ -43,19 +43,27 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 |---|---|---|
 | `public/data/scan.json` | `run.py` | signals, the IV read, one recommendation per ticker, the ≈13-month spread candidates, **and the UI copy** (action labels, premium-state rules, strategy playbook, glossary) |
 | `public/data/signals.csv` | `run.py` | the same rows, flat, for spreadsheets |
-| `public/data/charts.json` | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
-| `public/data/weekly.json` | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
+| `public/data/charts.json` (on `site-data`) | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
+| `public/data/weekly.json` (on `site-data`) | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
 | `public/data/backtest.json` | `backtest.py` | does the score work — and does the move beat what options charged? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set (and the fit reused between refits) |
 | `public/data/iv_history.csv` | `run.py` | each priced name's ATM implied vol, one row per day — **appended, never regenerated** |
 | `public/data/universe.json` | `run.py` | the last fund-holdings list fetched live, the fallback when a fetch fails |
-
-Everything in `public/data/` is committed, because the Netlify site deploys
-`public/` straight from the repository. `iv_history.csv`, `universe.json` and
-`calibration.json` are also the state the next run builds on, so they must be
-committed regardless.
+| `public/data/site-data.json` | the workflow | which `site-data` commit carries this run's `charts.json` / `weekly.json` |
 | `weights.json` (repo root, gitignored) | `calibrate.py` | the fitted weights `run.py` and `backtest.py` both load |
 | `alert.json` (repo root, gitignored) | `run.py` | the pending webhook message, posted later by `send_alerts.py` |
+
+`charts.json` and `weekly.json` are ~1.3 MB rebuilt from scratch every run, so
+they are gitignored on `master`. The workflow force-pushes them to the
+**`site-data`** branch as a single commit (that branch never grows) and commits
+only the small `site-data.json` pointer. Netlify's build
+([`netlify.toml`](netlify.toml) → [`scripts/fetch_site_data.py`](scripts/fetch_site_data.py))
+downloads them at that exact commit; if the download fails, the build fails and
+the last good deploy stays live. **Do not delete the `site-data` branch.** In a
+fresh clone, `python scripts/fetch_site_data.py` fetches the published copies,
+or `python run.py` rebuilds them. Everything else in `public/data/` is committed,
+and `iv_history.csv`, `universe.json` and `calibration.json` are the state the
+next run builds on.
 
 Shipping the *copy* inside `scan.json` is deliberate: an explanation can never
 drift from the field it explains, and any other client — a notebook, a bot, your
@@ -122,6 +130,14 @@ the term structure (15%). Premium score is what decides buy vs sell.
 > forward move against the *implied* move logged each day in
 > `public/data/iv_history.csv` — reports on the same tab once 60 readings have
 > matured.
+>
+> **So the engine does not recommend straddles or strangles until that evidence
+> exists** (`strategy.long_vol_requires_evidence`, on by default). Each run reads
+> the last published backtest: once enough implied-vol readings have matured, a
+> model straddle on coiled, cheap names has to have returned more than zero on
+> average; until then, the 60-day-band interval has to clear zero. When neither
+> holds, a cheap-premium name with a directional read gets a debit spread, and
+> one without stands aside. The card and the page summary say why.
 
 ## Quick start (local)
 
@@ -1131,6 +1147,8 @@ disappears for the day over a single 429.
 ```
 run.py                       scan -> screen -> IV read -> strategies -> JSON
 send_alerts.py               posts what run.py staged, after CI validates it
+scripts/fetch_site_data.py   Netlify's build step: pulls charts/weekly.json from site-data
+netlify.toml                 the Netlify build (publish public/, run the script above)
 backtest.py / calibrate.py   validation + weight fitting -> JSON
 spread_scanner/
   universe.py  halal.py      building and screening the watchlist

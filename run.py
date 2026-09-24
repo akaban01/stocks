@@ -320,11 +320,21 @@ def main(argv: list[str] | None = None) -> int:
     strat_cfg = cfg.get("strategy") or {}
     scan_rows = df.to_dict("records") if not df.empty else []
     risk_budget = float(strat_cfg.get("risk_budget_usd", 500))
+    # Straddles and strangles only where the record says buying premium on
+    # this setup pays. The evidence is the last published backtest — the one
+    # the daily workflow committed after yesterday's scan.
+    long_vol = None
+    if strat_cfg.get("long_vol_requires_evidence", True):
+        long_vol = strategy.long_vol_evidence(
+            report.read_json(Path(outdir) / "data" / "backtest.json"))
+        print(f"Long volatility {'allowed' if long_vol['supported'] else 'withheld'} "
+              f"({long_vol['source']}): {long_vol['text']}")
     recs = strategy.recommend_all(
         scan_rows,
         views,
         risk_budget=risk_budget,
         allow_undefined_risk=bool(strat_cfg.get("allow_undefined_risk", False)),
+        long_vol=long_vol,
     )
     if recs:
         df["action"] = df["ticker"].map(lambda t: (recs.get(t) or {}).get("action"))
@@ -400,6 +410,7 @@ def main(argv: list[str] | None = None) -> int:
                   "fallback": universe_fallback,
                   "etfs": uni_cfg.get("etfs") or [], "top": top},
         playbook={**strategy.PLAYBOOK, **leaps.PLAYBOOK},
+        long_vol=long_vol,
     )
     print(f"\nWrote {scan_path}")
 

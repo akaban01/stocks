@@ -1,0 +1,9 @@
+# The site is the hand-written frontend in public/ plus the JSON the scheduled
+# workflow generates. Most of that JSON is committed to master, but the two
+# large files (charts.json, weekly.json) live on the `site-data` branch so they
+# do not add ~1.3 MB to master's history every day. This build step downloads
+# them at the commit public/data/site-data.json names. If it fails, the build
+# fails and Netlify keeps the last good deploy live.
+[build]
+  publish = "public"
+  command = "python3 scripts/fetch_site_data.py"

@@ -790,8 +790,67 @@ def _earnings_inside(row: dict, dte: int | None) -> bool:
     return float(days) <= window
 
 
+# --------------------------------------------------- is long volatility earned?
+
+# A bucket of matured implied-vol readings needs at least this many before its
+# straddle return is allowed to decide anything.
+MIN_EVIDENCE_READINGS = 30
+
+
+def long_vol_evidence(backtest: dict | None) -> dict:
+    """Does the record support buying premium on the setups this engine buys it on?
+
+    Reads ``data/backtest.json`` and answers ``{"supported", "source", "text"}``:
+
+    1. **implied** — the forward move against the implied move the scan logged
+       (`iv_history`). A model straddle bought on coiled, cheap names has to
+       have returned more than zero on average. This is the test that matters;
+       it takes over as soon as enough readings have matured.
+    2. **long_band** — until then, the 60-day realized-vol band: coiled names
+       must break it reliably more often than calm ones (95% interval above
+       zero). The name's own 20-day band does not count: the score picks names
+       for having a small one, so breaking it is mostly volatility returning to
+       normal, which the option market already prices.
+    3. **none** — no backtest to read. Not supported: an unproven rule does not
+       get to spend money by default.
+    """
+    bt = backtest or {}
+    imp = bt.get("implied") or {}
+    if imp.get("ok"):
+        buckets = imp.get("buckets") or {}
+        for key in ("coiled_cheap", "coiled"):
+            b = buckets.get(key) or {}
+            ret = b.get("avg_straddle_return_pct")
+            if (b.get("n") or 0) >= MIN_EVIDENCE_READINGS and ret is not None:
+                ok = ret > 0
+                return {"supported": ok, "source": "implied",
+                        "text": (f"A model straddle on {b.get('label', key).lower()} names returned "
+                                 f"{ret:+.0f}% on average over {b['n']} matured readings, bought at "
+                                 "the implied move the scan logged"
+                                 + (" — buying premium on this setup has paid." if ok else
+                                    " — buying premium on this setup has not paid."))}
+    lb = ((bt.get("independent") or {}).get("long_band")) or {}
+    ci = lb.get("ci95_pts") or [None, None]
+    if lb.get("edge_pts") is not None and ci[0] is not None:
+        ok = ci[0] > 0
+        return {"supported": ok, "source": "long_band",
+                "text": (f"Against the {bt.get('long_band_days', 60)}-day realized-vol band, coiled "
+                         f"names out-moved calm ones by {lb['edge_pts']:+.0f} pts (95% CI "
+                         f"{ci[0]:+.0f} to {ci[1]:+.0f})"
+                         + (" — a real expansion edge." if ok else
+                            " — no evidence that the move beats what options charge."))}
+    if bt:
+        return {"supported": False, "source": "none",
+                "text": ("The last published backtest predates the test this check reads (the "
+                         "60-day band or implied vol), so buying premium stays withheld until the "
+                         "next one is published.")}
+    return {"supported": False, "source": "none",
+            "text": "No backtest is available to show that buying premium on this setup pays."}
+
+
 def _choose(view: OptionView, row: dict, bias: str, strength: str,
-            earnings_inside: bool, allow_undefined: bool
+            earnings_inside: bool, allow_undefined: bool,
+            long_vol_ok: bool = True, long_vol_note: str = ""
             ) -> tuple[str, list[str], list[dict], str]:
     """(primary key, alternative keys, [{'name','reason'}] to avoid, stand-aside reason).
 
@@ -818,6 +877,15 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
     # Two legs max when depth is thin: every extra leg crosses another spread.
     two_leg_only = view.liquidity in ("fair", "unknown")
 
+    # Straddles and strangles are a bet that the move beats what the options
+    # charge. When the record does not show that on this setup, they are not
+    # offered — not as the primary, not as an alternative — and the card says
+    # why. A directional debit spread is a different bet (on direction, with
+    # the long vol mostly paid for by the short leg), so it is still allowed.
+    no_long_vol = [] if long_vol_ok else [{
+        "name": "Long straddles / strangles",
+        "reason": "Not supported by the backtest: " + (long_vol_note or "no evidence it pays.")}]
+
     if state == "cheap":
         avoid = [{"name": "Selling premium (condors, credit spreads)",
                   "reason": f"IV rank {view.iv_rank:.0f} — you'd collect too little for the risk."
@@ -825,13 +893,19 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
                             "Options are cheap here — selling them collects too little for the risk."}]
         if strength == "strong":
             primary = "bull_call_spread" if bullish else "bear_put_spread"
-            alts = ["long_straddle", "long_strangle"]
-        else:
-            primary = "long_straddle"
+            alts = ["long_straddle", "long_strangle"] if long_vol_ok else []
+            return primary, alts, avoid + no_long_vol, ""
+        if long_vol_ok:
             alts = ["long_strangle"]
             if bias != "neutral":
                 alts.append("bull_call_spread" if bullish else "bear_put_spread")
-        return primary, alts, avoid, ""
+            return "long_straddle", alts, avoid, ""
+        if directional:
+            return ("bull_call_spread" if bullish else "bear_put_spread"), [], avoid + no_long_vol, ""
+        return "stand_aside", [], avoid + no_long_vol, (
+            "Options are cheap, but with no directional read the only trade is a straddle, and "
+            "the backtest does not support buying premium on this setup: "
+            + (long_vol_note or "no evidence it pays."))
 
     if state == "rich":
         avoid = [{"name": "Long straddles / strangles",
@@ -875,10 +949,14 @@ def _choose(view: OptionView, row: dict, bias: str, strength: str,
     if strength == "strong":
         primary = "bull_call_spread" if bullish else "bear_put_spread"
         return primary, ["bull_put_spread" if bullish else "bear_call_spread"], [], ""
-    if score >= MIN_SCORE_FOR_FAIR_IV and row.get("squeeze_on"):
+    if score >= MIN_SCORE_FOR_FAIR_IV and row.get("squeeze_on") and long_vol_ok:
         return ("long_strangle", ["long_straddle"],
                 [{"name": "Selling premium",
                   "reason": "A squeeze this tight can expand fast — bad time to be short vega."}], "")
+    if score >= MIN_SCORE_FOR_FAIR_IV and row.get("squeeze_on"):
+        return "stand_aside", [], no_long_vol, (
+            "The squeeze is tight, but premium is fairly priced and the backtest does not support "
+            "buying it on this setup: " + (long_vol_note or "no evidence it pays."))
     return "stand_aside", [], [], (
         "Premium is fairly priced and the chart isn't coiled enough to pay for a position.")
 
@@ -1018,7 +1096,7 @@ def _headline(plan: Plan, view: OptionView, ticker: str) -> str:
 # ------------------------------------------------------------------ entry point
 
 def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
-              allow_undefined_risk: bool = False) -> Recommendation:
+              allow_undefined_risk: bool = False, long_vol: dict | None = None) -> Recommendation:
     """The single instruction for one ticker: what to do, and with which legs."""
     ticker = str(row.get("ticker", "?"))
 
@@ -1039,8 +1117,13 @@ def recommend(row: dict, view: OptionView | None, risk_budget: float = 500.0,
     sigma = sigma_to_expiry(view, view.days_to_expiry)
     earnings_inside = _earnings_inside(row, view.days_to_expiry)
 
+    # `long_vol` is `long_vol_evidence(...)`; None means "not gated" (library
+    # callers and tests). run.py always passes it.
+    long_vol_ok = True if long_vol is None else bool(long_vol.get("supported"))
+    long_vol_note = "" if long_vol is None else str(long_vol.get("text") or "")
     primary_key, alt_keys, avoid, aside_reason = _choose(view, row, bias, strength,
-                                                         earnings_inside, allow_undefined_risk)
+                                                         earnings_inside, allow_undefined_risk,
+                                                         long_vol_ok, long_vol_note)
 
     def build(key: str) -> Plan | None:
         builder = _BUILDERS.get(key)
@@ -1096,7 +1179,8 @@ def _no_data_headline(ticker: str) -> str:
 
 def recommend_all(rows: list[dict], views: dict[str, OptionView],
                   risk_budget: float = 500.0,
-                  allow_undefined_risk: bool = False) -> dict[str, dict]:
+                  allow_undefined_risk: bool = False,
+                  long_vol: dict | None = None) -> dict[str, dict]:
     """{ticker: recommendation dict} for every scanned row."""
     out: dict[str, dict] = {}
     for row in rows:
@@ -1104,5 +1188,5 @@ def recommend_all(rows: list[dict], views: dict[str, OptionView],
         if not ticker:
             continue
         out[ticker] = recommend(row, views.get(ticker), risk_budget,
-                                allow_undefined_risk).as_dict()
+                                allow_undefined_risk, long_vol).as_dict()
     return out
