@@ -1,6 +1,6 @@
 {
   "schema_version": "2.10.0",
-  "generated_at": "2026-09-24T23:55:40Z",
+  "generated_at": "2026-09-25T23:59:30Z",
   "universe": 29,
   "history_years": 5,
   "horizon_days": 10,
@@ -16,7 +16,7 @@
     "in_sample": true
   },
   "ok": true,
-  "bars": 32844,
+  "bars": 32888,
   "coverage_pct": 65.9,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
@@ -24,17 +24,17 @@
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7094,
+      "bars": 7116,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.7,
       "coverage_pct": 56.3,
       "expansion": 1.11,
       "broke_band_pct": 43.7,
-      "broke_long_band_pct": 31.0
+      "broke_long_band_pct": 30.9
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 13270,
+      "bars": 13286,
       "avg_abs_move_pct": 5.6,
       "median_abs_move_pct": 4.0,
       "coverage_pct": 63.1,
@@ -44,7 +44,7 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 12480,
+      "bars": 12486,
       "avg_abs_move_pct": 6.1,
       "median_abs_move_pct": 4.3,
       "coverage_pct": 74.4,
@@ -56,17 +56,17 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2702,
+      "bars": 2707,
       "avg_abs_move_pct": 5.4,
       "median_abs_move_pct": 3.9,
       "coverage_pct": 58.9,
       "expansion": 1.05,
       "broke_band_pct": 41.1,
-      "broke_long_band_pct": 32.9
+      "broke_long_band_pct": 32.8
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 30142,
+      "bars": 30181,
       "avg_abs_move_pct": 5.8,
       "median_abs_move_pct": 4.1,
       "coverage_pct": 66.6,
@@ -185,7 +185,7 @@
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
   "caveat": "The bucket rows use every bar, and overlapping forward windows make those autocorrelated — read them as descriptive. The verdict and its interval use one bar per horizon per name and resample whole dates, so they are not. The universe is also whatever passes the screen *today*, measured backwards: names that would have dragged these numbers down are the ones no longer in it. And when the score being tested comes from calibrated weights, those weights were fitted on this same history — the honest out-of-sample separation is the one on the calibration panel, which holds a test split back. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results.",
   "implied": {
-    "logged_rows": 20,
+    "logged_rows": 40,
     "horizon_days": 10,
     "first_date": "2026-09-24",
     "min_matured": 60,
