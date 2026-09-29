@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-09-25",
+  "as_of": "2026-09-29",
   "screen_mode": "filter",
   "tickers": [
     "NVDA",
@@ -25,9 +25,9 @@
     "KO",
     "PANW",
     "HD",
-    "CRWD",
     "SNDK",
     "GEV",
+    "CRWD",
     "TMO",
     "TXN",
     "KLAC"
