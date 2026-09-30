@@ -10,8 +10,8 @@
     "AAPL",
     "MSFT",
     "GOOGL",
-    "META",
     "AVGO",
+    "META",
     "MU",
     "TSLA",
     "AMD",
@@ -31,10 +31,10 @@
     "HD",
     "CRWD",
     "GEV",
-    "TMO",
-    "SNDK",
-    "TXN",
     "KLAC",
+    "TXN",
+    "SNDK",
+    "TMO",
     "ORCL"
   ]
 }
