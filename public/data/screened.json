@@ -1,13 +1,13 @@
 {
-  "as_of": "2026-09-29",
+  "as_of": "2026-09-30",
   "screen_mode": "filter",
   "tickers": [
     "NVDA",
     "AAPL",
     "MSFT",
     "GOOGL",
-    "AVGO",
     "META",
+    "AVGO",
     "MU",
     "TSLA",
     "AMD",
@@ -25,10 +25,10 @@
     "KO",
     "PANW",
     "HD",
-    "SNDK",
-    "GEV",
     "CRWD",
+    "GEV",
     "TMO",
+    "SNDK",
     "TXN",
     "KLAC"
   ]
