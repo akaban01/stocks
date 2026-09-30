@@ -1,7 +1,7 @@
 {
   "schema_version": "2.10.0",
-  "generated_at": "2026-09-30T22:04:45Z",
-  "generated_at_utc": "2026-09-30 22:04 UTC",
+  "generated_at": "2026-09-30T22:32:06Z",
+  "generated_at_utc": "2026-09-30 22:32 UTC",
   "horizon_days": 10,
   "params": {
     "horizon_days": 10,
@@ -87,7 +87,7 @@
   "long_vol": {
     "supported": false,
     "source": "long_band",
-    "text": "Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge."
+    "text": "Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge."
   },
   "short_vol": {
     "supported": null,
@@ -333,8 +333,8 @@
       "recommendation": {
         "ticker": "KO",
         "action": "STAND_ASIDE",
-        "headline": "KO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+        "headline": "KO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 30.2,
@@ -345,7 +345,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -383,7 +383,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -2125,8 +2125,8 @@
       "recommendation": {
         "ticker": "MSFT",
         "action": "STAND_ASIDE",
-        "headline": "MSFT: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+        "headline": "MSFT: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 18.5,
@@ -2137,7 +2137,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -2175,7 +2175,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -3021,8 +3021,8 @@
       "recommendation": {
         "ticker": "NVDA",
         "action": "STAND_ASIDE",
-        "headline": "NVDA: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+        "headline": "NVDA: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 5.1,
@@ -3033,7 +3033,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -3071,7 +3071,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
@@ -6452,8 +6452,8 @@
       "recommendation": {
         "ticker": "AVGO",
         "action": "STAND_ASIDE",
-        "headline": "AVGO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
-        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+        "headline": "AVGO: stand aside — options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
+        "detail": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
         "confidence": 0.0,
         "premium_state": "cheap",
         "premium_score": 12.7,
@@ -6464,7 +6464,7 @@
           "name": "Stand aside",
           "action": "STAND_ASIDE",
           "bias": "neutral",
-          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge.",
+          "thesis": "Options are cheap, but with no directional read the only trade is a straddle, and the backtest does not support buying premium on this setup: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge.",
           "playbook": "No edge worth paying for. The best trade is often none.",
           "vega": "flat",
           "theta": "flat",
@@ -6502,7 +6502,7 @@
           },
           {
             "name": "Long straddles / strangles",
-            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by +2 pts (95% CI -4 to +7) — no evidence that the move beats what options charge."
+            "reason": "Not supported by the backtest: Against the 60-day realized-vol band, coiled names out-moved calm ones by -1 pts (95% CI -6 to +4) — no evidence that the move beats what options charge."
           }
         ],
         "why": [
