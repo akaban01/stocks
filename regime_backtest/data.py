@@ -207,6 +207,12 @@ def load_credit(refresh: bool = False, data_dir: Path = DATA_DIR) -> CreditData:
         s = _read_cache(manual)
         if s.empty:
             raise DataError(f"{manual} exists but has no rows (expected columns date,value)")
+        if s.index.min() > HY_MIN_START:
+            raise DataError(f"{manual.name} starts {s.index.min().date()}; "
+                            f"need history from {HY_MIN_START.date()} or earlier")
+        if not 0.5 < s.median() < 25:
+            raise DataError(f"{manual.name} median is {s.median():.1f}; expected percent "
+                            "(e.g. 4.5), not basis points (450)")
         log.append(f"1. {manual.name}: found, {len(s)} rows from {s.index.min().date()}")
         return CreditData(s, "hy", f"ICE BofA HY OAS from local file {manual.name}", log)
     log.append(f"1. {manual.name}: not present")

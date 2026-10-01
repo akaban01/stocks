@@ -255,6 +255,24 @@ def test_credit_source_order(tmp_path, monkeypatch):
     assert c.kind == "hy" and len(c.series) == 2 and len(c.log) == 1
 
 
+def _write_hy(path, start, value):
+    idx = pd.bdate_range(start, periods=300)
+    pd.DataFrame({"date": idx.strftime("%Y-%m-%d"), "value": value}).to_csv(
+        path / "hy_oas_full.csv", index=False)
+
+
+def test_a_hand_supplied_hy_file_must_reach_back_far_enough(tmp_path):
+    _write_hy(tmp_path, "2010-01-04", 4.5)
+    with pytest.raises(data.DataError, match="need history"):
+        data.load_credit(data_dir=tmp_path)
+
+
+def test_a_hand_supplied_hy_file_must_be_in_percent(tmp_path):
+    _write_hy(tmp_path, "1997-01-02", 450.0)
+    with pytest.raises(data.DataError, match="basis points"):
+        data.load_credit(data_dir=tmp_path)
+
+
 def test_fred_cache_is_reused_unless_refreshed(tmp_path, monkeypatch):
     calls = []
 
