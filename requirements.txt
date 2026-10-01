@@ -12,3 +12,4 @@ yfinance>=1.7,<2.0
 pandas>=3.0.6,<4.0      # pct_change(fill_method=None) — see seasonality.py
 numpy>=2.5.3,<3.0
 PyYAML>=6.0.3,<7.0
+matplotlib>=3.11,<4.0  # charts for regime_backtest/ only (run on demand, not by the daily job)
