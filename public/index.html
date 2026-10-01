@@ -42,6 +42,7 @@
     <button id="tab-repeat" data-tab="repeat" role="tab" aria-selected="false" aria-controls="panel-repeat">Repeat test</button>
     <button id="tab-backtest" data-tab="backtest" role="tab" aria-selected="false" aria-controls="panel-backtest">Backtest</button>
     <button id="tab-validation" data-tab="validation" role="tab" aria-selected="false" aria-controls="panel-validation">Does it work?</button>
+    <button id="tab-regime" data-tab="regime" role="tab" aria-selected="false" aria-controls="panel-regime">Market regime</button>
     <button id="tab-reference" data-tab="reference" role="tab" aria-selected="false" aria-controls="panel-reference">Reference</button>
   </nav>
 
@@ -373,6 +374,13 @@
       </div>
     </section>
 
+    <!-- --------------------------------------------------------- regime -->
+    <!-- Market-regime rules vs buy-and-hold SPY. Rendered from data/regime.json,
+         which .github/workflows/regime.yml rewrites weekly; see assets/regime.js. -->
+    <section id="panel-regime" class="panel" data-tab="regime" role="tabpanel" aria-labelledby="tab-regime" hidden>
+      <div id="regime-body"><p class="loading">Loading the regime backtest…</p></div>
+    </section>
+
     <!-- ------------------------------------------------------ reference -->
     <section id="panel-reference" class="panel" data-tab="reference" role="tabpanel" aria-labelledby="tab-reference" hidden>
       <div class="lede">
@@ -399,6 +407,7 @@
             <li><code>data/charts.json</code> — downsampled price history, and the same closes grouped by calendar month</li>
             <li><code>data/weekly.json</code> — the same history as one row per ISO week, which the Repeat test walks</li>
             <li><code>data/backtest.json</code> · <code>data/calibration.json</code></li>
+            <li><code>data/regime.json</code> — the Market regime tab, rewritten weekly by its own workflow</li>
             <li><code>data/signals.csv</code> — the flat table, for spreadsheets</li>
           </ul>
           <p>Python renders no HTML at all. Deciding what to trade got complicated enough that it
@@ -428,6 +437,9 @@
 <!-- The pure payload-to-HTML helpers the page is built with; its own file
      so tests/test_render_js.py can feed it hostile payloads under node. -->
 <script src="assets/render.js"></script>
+<!-- The Market regime tab's table and chart builders; needs render.js above.
+     Its own file so tests/test_regime_js.py can run it under node. -->
+<script src="assets/regime.js"></script>
 <!-- The page itself, one file per part of it, in this order: core.js first
      (shared helpers and state on window.SpreadApp), boot.js last (starts it). -->
 <script src="assets/app/core.js"></script>
@@ -438,6 +450,7 @@
 <script src="assets/app/repeat.js"></script>
 <script src="assets/app/backtest-tab.js"></script>
 <script src="assets/app/validation.js"></script>
+<script src="assets/app/regime-tab.js"></script>
 <script src="assets/app/boot.js"></script>
 </body>
 </html>
