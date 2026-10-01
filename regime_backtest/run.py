@@ -231,9 +231,13 @@ def verdict_parts(name: str, st: dict[str, dict], frames: dict[str, pd.DataFrame
     else:
         head += f"; no meaningful difference from {fname}."
     if m["max_dd"] > bh["max_dd"] + 0.10:
-        head += (f" Its real effect is a shallower worst drawdown ({report.pct(m['max_dd'], 0)} vs "
-                 f"{report.pct(bh['max_dd'], 0)}), paid for with "
-                 f"{report.pct(bh['cagr'] - m['cagr'])} a year of return.")
+        dd = (f"a shallower worst drawdown ({report.pct(m['max_dd'], 0)} vs "
+              f"{report.pct(bh['max_dd'], 0)})")
+        gap = bh["cagr"] - m["cagr"]
+        if gap > 0:
+            head += f" Its main effect is {dd}, paid for with {report.pct(gap)} a year of return."
+        else:
+            head += f" It also had {dd}, and returned {report.pct(-gap)} a year more."
     body = "\n".join(f"- {x}" for x in lines)
     if note:
         body = f"{note}\n\n{body}"

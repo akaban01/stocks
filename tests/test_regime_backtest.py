@@ -327,3 +327,32 @@ def test_report_has_bottom_line_glossary_and_embedded_charts(tmp_path):
     csv = pd.read_csv(tmp_path / "summary.csv")
     credit_rows = csv["strategy"].str.contains("redit velocity")
     assert csv.loc[credit_rows, "strategy"].str.contains(r"\(BAA10Y\)").all()
+
+
+def test_a_rule_that_out_returns_buy_and_hold_is_not_said_to_pay_for_it(tmp_path):
+    """A timing rule that sidesteps a slow crash has both a shallower drawdown
+    and a higher CAGR. The headline must say it returned more, not that it
+    "paid for" the drawdown with a negative cost."""
+    pytest.importorskip("matplotlib")
+    from regime_backtest import run
+
+    inputs = _synthetic_inputs()
+    n = len(inputs.spy)
+    rng = np.random.default_rng(5)
+    drift = np.full(n, 0.0006)
+    drift[1200:1600] = -0.0025                 # a slow ~63% bear market the SMA rules can exit
+    inputs.spy = pd.Series(100 * np.exp(np.cumsum(drift + rng.normal(0, 0.004, n))),
+                           index=inputs.spy.index)
+    study = run.build(inputs, cost_bp=5.0)
+
+    full = study.frames[study.cost_bp]
+    start, end = run.common_window(full)
+    common = run.slice_frames(full, start, end)
+    common20 = run.slice_frames(study.frames[20.0], start, end)
+    st = {k: metrics.summarize(f) for k, f in common.items()}
+    assert st[run.SMA200]["cagr"] > st[run.BH]["cagr"]
+    head, _ = run.verdict_parts(run.SMA200, st, common, common20)
+    assert "a year more" in head
+
+    text = run.write_report(study, tmp_path).read_text(encoding="utf-8")
+    assert "paid for with -" not in text
