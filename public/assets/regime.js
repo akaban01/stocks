@@ -125,25 +125,37 @@
   }
 
   // Diverging around buy-and-hold's Sharpe for the same period: blue better,
-  // orange worse, grey equal. Alpha carries the size, the value is printed in
-  // every cell, so the colour is never the only way to read it.
+  // red worse, the neutral grey equal. The poles are deeper steps than any line
+  // colour on the tab, so a cell never reads as belonging to one of the rules.
+  // The value is printed in every cell, so colour is never the only way to
+  // read it.
+  var HEAT_NEUTRAL = [56, 56, 53], HEAT_GOOD = [28, 92, 171], HEAT_BAD = [184, 59, 59];
+
   function heatStyle(v, bench, span) {
     if (!has(v) || isNaN(v)) return "";
     var t = Math.max(-1, Math.min(1, (v - bench) / (span || 1)));
-    var rgb = t >= 0 ? "57,135,229" : "217,89,38";
-    return "background:rgba(" + rgb + "," + (0.12 + 0.6 * Math.abs(t)).toFixed(2) + ")";
+    var pole = t >= 0 ? HEAT_GOOD : HEAT_BAD, a = Math.abs(t);
+    return "background:rgb(" + HEAT_NEUTRAL.map(function (n, i) {
+      return Math.round(n + (pole[i] - n) * a);
+    }).join(",") + ")";
   }
 
-  function heatSpan(panel) {
+  /* One scale for every panel. Each panel is coloured relative to its own
+     buy-and-hold Sharpe, but by the same Sharpe-gap-per-shade, so the first
+     half and the second half — the comparison the panels sit side by side
+     for — can be compared by eye. */
+  function heatSpan(panels) {
     var span = 0.05;
-    panel.grid.forEach(function (row) {
-      row.forEach(function (v) { if (has(v)) span = Math.max(span, Math.abs(v - panel.bh_sharpe)); });
+    panels.forEach(function (p) {
+      p.grid.forEach(function (row) {
+        row.forEach(function (v) { if (has(v)) span = Math.max(span, Math.abs(v - p.bh_sharpe)); });
+      });
     });
     return span;
   }
 
-  function heatmap(panel, rowLabels, colLabels, mark) {
-    var span = heatSpan(panel);
+  function heatmap(panel, rowLabels, colLabels, mark, span) {
+    span = span || heatSpan([panel]);
     return '<div class="rg-heat"><h4>' + esc(panel.title) + '</h4><p class="faint">' + esc(panel.start) +
       " → " + esc(panel.end) + " · buy-and-hold Sharpe " + num(panel.bh_sharpe, 2) + "</p>" +
       '<table class="stats rg-heattable"><thead><tr><th></th>' +
@@ -224,15 +236,19 @@
     return out;
   }
 
+  // 1-2-5 steps per decade; past seven ticks, the powers of ten only. The step
+  // is kept with each tick rather than read back off its string, which would
+  // miss 0.1 ("0.1" does not start with "1").
   function niceLogTicks(lo, hi) {
     var ticks = [], steps = [1, 2, 5];
     for (var e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) {
       for (var s = 0; s < steps.length; s++) {
-        var t = steps[s] * Math.pow(10, e);
-        if (t >= lo * 0.999 && t <= hi * 1.001) ticks.push(t);
+        var t = Number((steps[s] * Math.pow(10, e)).toPrecision(12));
+        if (t >= lo * 0.999 && t <= hi * 1.001) ticks.push({ t: t, step: steps[s] });
       }
     }
-    return ticks.length > 7 ? ticks.filter(function (t) { return /^1/.test(String(t)); }) : ticks;
+    if (ticks.length > 7) ticks = ticks.filter(function (k) { return k.step === 1; });
+    return ticks.map(function (k) { return k.t; });
   }
 
   // Drawdown axis: steps of 10% (20% past -60%), from 0 down to the floor.
@@ -357,7 +373,7 @@
     SCHEMA: SCHEMA, COLORS: COLORS, BENCH_COLOR: BENCH_COLOR, colorFor: colorFor,
     schemaOk: schemaOk, costKeys: costKeys, fpct: fpct, signed: signed,
     summaryTable: summaryTable, longestTable: longestTable, costTable: costTable, crisisTable: crisisTable,
-    heatmap: heatmap, heatStyle: heatStyle, defaultCell: defaultCell,
+    heatmap: heatmap, heatStyle: heatStyle, heatSpan: heatSpan, defaultCell: defaultCell,
     eventTable: eventTable, peakTroughTable: peakTroughTable,
     verdictTone: verdictTone, bottomLine: bottomLine, verdictDetails: verdictDetails,
     drawdowns: drawdowns, lineChart: lineChart, niceLogTicks: niceLogTicks, linearTicks: linearTicks,

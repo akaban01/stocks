@@ -43,9 +43,10 @@ def credit_label(base: str, kind: str) -> str:
 # for z, so the grid mirrors HY's (re-entry at, and a little above, "no change").
 HY_EXITS, HY_REENTRIES = [75, 100, 125, 150, 200], [0, 25, 50]
 Z_EXITS, Z_REENTRIES = [1.5, 2.0, 2.5, 3.0], [0.0, 0.5, 1.0]
-# The headline credit rule uses the middle of each grid, fixed before looking at
-# any result — not the sweep's winner. The sweep and the out-of-sample split are
-# where parameter choice is tested.
+# The headline credit rule uses an interior setting of each grid, fixed before
+# looking at any result — not the sweep's winner. (For HY it is the centre cell;
+# the z grid has four exits, so 2.0 is the second, the one the event study uses.)
+# The sweep and the out-of-sample split are where parameter choice is tested.
 HY_DEFAULT, Z_DEFAULT = (125, 25), (2.0, 0.5)
 HY_LEVEL_BP = 500
 CAPITULATION_HY_BP, CAPITULATION_Z = 125, 2.0
@@ -361,8 +362,8 @@ def write_report(study: Study, outdir: Path) -> Path:
                         [[n, uses[n], f.index[0].date(), f.index[-1].date(), f"{len(f):,}"]
                          for n, f in full.items()]))
     add(f"\nCommon window shared by all rules: **{cstart.date()} → {cend.date()}**.\n")
-    add(f"Credit-velocity rule in the headline tables: {credit_desc}. These are the middle of the "
-        "swept grid, fixed in advance — not the best cell of the sweep.\n")
+    add(f"Credit-velocity rule in the headline tables: {credit_desc}. This is an interior "
+        "setting of the swept grid, fixed in advance — not the best cell of the sweep.\n")
 
     add(f"## Summary — common window, {cost:g} bp per side\n")
     add(report.summary_table(st_common) + "\n")

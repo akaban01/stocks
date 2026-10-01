@@ -62,6 +62,7 @@
     var sw = d.sweep;
     var oos = d.oos;
     var ev = d.events;
+    var heatSpan = G.heatSpan(sw.panels);
 
     return '<div class="lede">Do common "get out of the market" rules beat simply holding the S&amp;P 500 ' +
         "(SPY) after trading costs? Each rule is either 100% SPY or 100% 3-month T-bills. Results through <b>" +
@@ -111,10 +112,10 @@
 
       "<h2>Credit rule: parameter sweep</h2>" +
       '<p class="faint" style="font-size:.85rem">Headline rule: ' + esc(credit.rule) +
-        " (outlined cell — the middle of the grid, fixed in advance). Each cell is a Sharpe ratio; blue beats " +
-        "buy-and-hold over the same span, orange trails it.</p>" +
+        " (outlined cell, fixed before any result was seen). Each cell is a Sharpe ratio; blue beats " +
+        "buy-and-hold over the same span, red trails it, on one colour scale across all three panels.</p>" +
       '<div class="rg-heats">' + sw.panels.map(function (p) {
-        return G.heatmap(p, sw.row_labels, sw.col_labels, G.defaultCell(sw));
+        return G.heatmap(p, sw.row_labels, sw.col_labels, G.defaultCell(sw), heatSpan);
       }).join("") + "</div>" +
       "<p>" + esc(sw.assessment) + "</p>" +
 
@@ -193,7 +194,7 @@
     drawnWidth = W;
     var chart = G.lineChart(dates, lines, { log: true, endLabels: true, width: W, height: W < 600 ? 260 : 340,
                                             label: "Growth of $1 for each rule, log scale" });
-    host.innerHTML = chart.svg + '<div class="rg-tip" hidden></div>';
+    host.innerHTML = chart.svg + tipBox(lines.length);
     hover(host, chart, dates, lines, function (v) { return App.num(v, 2) + "×"; });
     App.$("#rg-legend").innerHTML = names.map(function (n) {
       return '<span><span class="rg-swatch" style="background:' + G.colorFor(o[n]) + '"></span>' +
@@ -214,9 +215,18 @@
       var c = G.lineChart(dates, series, { width: W, height: W < 600 ? 110 : 120, padRight: 16,
                                            label: n + " drawdown vs buy-and-hold" });
       var wrap = document.querySelector('#rg-dd [data-dd="' + k + '"]');
-      wrap.innerHTML = c.svg + '<div class="rg-tip" hidden></div>';
+      wrap.innerHTML = c.svg + tipBox(series.length);
       hover(wrap, c, dates, series, function (v) { return G.fpct(v); });
     });
+  }
+
+  /* The tooltip box. Shown and hidden with `visibility`, never `hidden`, and
+     given its height up front: on a phone it sits under the chart (see
+     styles.css), and a box that appeared and vanished there would push the page
+     down and pull it back up every time a scroll began on a chart. --tip-rows
+     sizes it for the date line plus one line per series. */
+  function tipBox(rows) {
+    return '<div class="rg-tip" style="visibility:hidden;--tip-rows:' + (rows + 1) + '"></div>';
   }
 
   // Crosshair and tooltip. Hit target is the whole plot, not the 2px line.
@@ -235,11 +245,11 @@
       tip.innerHTML = G.tipHtml(dates[i], series.map(function (s) {
         return { name: s.name, color: s.fill ? "#9aa5b1" : s.color, value: s.values[i] };
       }), fmt);
-      tip.hidden = false;
+      tip.style.visibility = "visible";
       var left = (chart.xAt(i) / chart.W) * box.width;
       tip.style.left = Math.min(Math.max(0, left + 12), box.width - tip.offsetWidth) + "px";
     }
-    function leave() { tip.hidden = true; cross.setAttribute("visibility", "hidden"); }
+    function leave() { tip.style.visibility = "hidden"; cross.setAttribute("visibility", "hidden"); }
     svg.addEventListener("pointermove", move);
     svg.addEventListener("pointerdown", move);
     svg.addEventListener("pointerleave", leave);
