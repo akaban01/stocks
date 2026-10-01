@@ -27,6 +27,15 @@ REPORT_COSTS = (0.0, 5.0, 20.0)
 
 BH, SMA200, M10, CROSS = "Buy & hold", "SMA200 (daily)", "10-month SMA (monthly)", "Golden cross 50/200"
 CREDIT, LEVEL, COMBO = "Credit velocity", "HY OAS level ≤ 500 bp", "10-month SMA + credit velocity"
+CREDIT_SOURCE_LABEL = {"baa": "BAA10Y", "hy": "HY OAS"}
+BAA_VERDICT_NOTE = ("Tested on BAA10Y, an investment-grade spread, because the full HY OAS history "
+                    "isn't available. This verdict does not cover the high-yield version of the rule.")
+
+
+def credit_label(base: str, kind: str) -> str:
+    """A credit rule's display name carries the spread it was tested on, so a
+    BAA10Y result can never be read as the high-yield rule's."""
+    return f"{base} ({CREDIT_SOURCE_LABEL[kind]})"
 
 # The credit grid. HY: exit / re-entry on the 22-day change in basis points.
 # BAA10Y: exit on the z-score of that change; the brief gives no re-entry levels
@@ -51,6 +60,8 @@ class Study:
     frames: dict[float, dict[str, pd.DataFrame]]          # cost -> name -> frame
     grid_frames: dict[tuple[float, float], pd.DataFrame]  # (exit, reentry) -> frame at cost_bp
     kind: str
+    credit: str                                           # display name of the credit-velocity rule
+    combo: str                                            # display name of the combined rule
     notes: list[str] = field(default_factory=list)
 
 
@@ -75,13 +86,14 @@ def build(inputs: Inputs, cost_bp: float) -> Study:
     kind = inputs.credit.kind
     vel = credit_metric(inputs, idx)
     exits, reentries, default, _ = grid_axes(kind)
+    credit, combo = credit_label(CREDIT, kind), credit_label(COMBO, kind)
 
     sig = {
         BH: pd.Series(1.0, index=idx),
         SMA200: engine.sma_signal(close, 200),
         M10: engine.monthly_sma_signal(close),
         CROSS: engine.cross_signal(close, 50, 200),
-        CREDIT: engine.hysteresis(vel, *default),
+        credit: engine.hysteresis(vel, *default),
     }
     notes = []
     if kind == "hy" and inputs.credit.series.index.min() <= pd.Timestamp("1998-12-31"):
@@ -90,13 +102,13 @@ def build(inputs: Inputs, cost_bp: float) -> Study:
     else:
         notes.append(f"Strategy 6 ({LEVEL}) was not run: it needs the full ICE BofA HY OAS "
                      "history, and the credit source in use is not that.")
-    sig[COMBO] = engine.combine_all_in(sig[M10], sig[CREDIT])
+    sig[combo] = engine.combine_all_in(sig[M10], sig[credit])
 
     costs = sorted(set(REPORT_COSTS) | {cost_bp})
     frames = {c: {n: engine.run(s, spy_ret, cash, c) for n, s in sig.items()} for c in costs}
     grid_frames = {(e, r): engine.run(engine.hysteresis(vel, e, r), spy_ret, cash, cost_bp)
                    for e in exits for r in reentries}
-    return Study(inputs, cost_bp, sig, frames, grid_frames, kind, notes)
+    return Study(inputs, cost_bp, sig, frames, grid_frames, kind, credit, combo, notes)
 
 
 def slice_frames(frames: dict[str, pd.DataFrame], start, end) -> dict[str, pd.DataFrame]:
@@ -142,7 +154,7 @@ def spike_assessment(grid: pd.DataFrame) -> str:
 def oos(study: Study) -> dict:
     """Pick credit parameters on the first half of the credit rule's history
     only, then report the second half with them frozen."""
-    base = study.frames[study.cost_bp][CREDIT]
+    base = study.frames[study.cost_bp][study.credit]
     start, end = base.index[0], base.index[-1]
     mid = start + (end - start) / 2
     first = sweep_grid(study, start, mid)
@@ -180,7 +192,7 @@ _TAG_TEXT = {
 
 
 def verdict_for(name: str, st: dict[str, dict], frames: dict[str, pd.DataFrame],
-                frames20: dict[str, pd.DataFrame]) -> str:
+                frames20: dict[str, pd.DataFrame], note: str = "") -> str:
     m, bh = st[name], st[BH]
     lines, tags = [], {}
     for other in (BH, SMA200, M10):
@@ -220,7 +232,10 @@ def verdict_for(name: str, st: dict[str, dict], frames: dict[str, pd.DataFrame],
         head += (f" Its real effect is a shallower worst drawdown ({report.pct(m['max_dd'], 0)} vs "
                  f"{report.pct(bh['max_dd'], 0)}), paid for with "
                  f"{report.pct(bh['cagr'] - m['cagr'])} a year of return.")
-    return f"**{head}**\n\n" + "\n".join(f"- {x}" for x in lines)
+    body = "\n".join(f"- {x}" for x in lines)
+    if note:
+        body = f"{note}\n\n{body}"
+    return f"**{head}**\n\n{body}"
 
 
 def write_report(study: Study, outdir: Path) -> Path:
@@ -246,7 +261,7 @@ def write_report(study: Study, outdir: Path) -> Path:
             for n, f in frs.items():
                 rows.append({"strategy": n, "cost_bp": c, "window": label, **metrics.summarize(f)})
     for (e, r), f in study.grid_frames.items():
-        rows.append({"strategy": f"{CREDIT} exit {e}{unit} / re-enter {r}{unit}", "cost_bp": cost,
+        rows.append({"strategy": f"{study.credit} exit {e}{unit} / re-enter {r}{unit}", "cost_bp": cost,
                      "window": "longest", **metrics.summarize(f)})
     pd.DataFrame(rows).to_csv(outdir / "summary.csv", index=False)
 
@@ -257,7 +272,7 @@ def write_report(study: Study, outdir: Path) -> Path:
                           f"Drawdowns, {cstart.date()} → {cend.date()}, {cost:g} bp per side")
     o = oos(study)
     grid_full = sweep_grid(study)
-    bh_full = full[BH].loc[full[CREDIT].index[0]:]
+    bh_full = full[BH].loc[full[study.credit].index[0]:]
     bh_sh = lambda a, b: metrics.sharpe(bh_full.loc[a:b, "ret"], bh_full.loc[a:b, "cash"])  # noqa: E731
     report.plot_heatmaps(
         [(f"Full: {o['start'].date()} → {o['end'].date()}", grid_full, bh_sh(None, None)),
@@ -296,8 +311,8 @@ def write_report(study: Study, outdir: Path) -> Path:
                         [[n, s.index.min().date(), s.index.max().date(), f"{len(s):,}"] for n, s in cov]))
     add("")
     uses = {BH: "SPY", SMA200: "SPY", M10: "SPY", CROSS: "SPY",
-            CREDIT: f"SPY, {'HY OAS' if study.kind == 'hy' else 'BAA10Y'}",
-            LEVEL: "SPY, HY OAS", COMBO: "SPY, credit"}
+            study.credit: f"SPY, {CREDIT_SOURCE_LABEL[study.kind]}",
+            LEVEL: "SPY, HY OAS", study.combo: f"SPY, {CREDIT_SOURCE_LABEL[study.kind]}"}
     add("Each rule's history (first day a position is held → last day):\n")
     add(report.md_table(["Rule", "Inputs", "From", "To", "Trading days"],
                         [[n, uses[n], f.index[0].date(), f.index[-1].date(), f"{len(f):,}"]
@@ -342,7 +357,7 @@ def write_report(study: Study, outdir: Path) -> Path:
         rows.append(row)
     add(report.md_table(["Strategy"] + [w[0] for w in metrics.CRISIS_WINDOWS], rows) + "\n")
 
-    add("## Credit-velocity parameter sweep\n")
+    add(f"## Credit-velocity parameter sweep ({CREDIT_SOURCE_LABEL[study.kind]})\n")
     add(f"Sharpe at {cost:g} bp per side for every grid cell, over the credit rule's history "
         f"({o['start'].date()} → {o['end'].date()}). See `credit_heatmap.png`.\n")
     add(report.md_table([""] + list(grid_full.columns),
@@ -351,7 +366,7 @@ def write_report(study: Study, outdir: Path) -> Path:
         f"Cells beating it: {(grid_full.to_numpy() > bh_sh(None, None)).sum()} of {grid_full.size}.\n")
     add(spike_assessment(grid_full) + "\n")
 
-    add("## Out-of-sample check (credit velocity)\n")
+    add(f"## Out-of-sample check: {study.credit}\n")
     first_bh, second_bh = bh_sh(None, o["mid"]), bh_sh(o["mid"] + pd.Timedelta(days=1), None)
     add(f"Parameters chosen by the highest Sharpe in the first half only "
         f"({o['start'].date()} → {o['mid'].date()}): **{o['label'][0]}, {o['label'][1]}** "
@@ -359,10 +374,10 @@ def write_report(study: Study, outdir: Path) -> Path:
         f"Frozen and applied to the second half ({o['mid'].date()} → {o['end'].date()}):\n")
     s, e = o["mid"] + pd.Timedelta(days=1), o["end"]
     chosen = study.grid_frames[o["chosen"]].loc[s:e]
-    rows = [[f"{CREDIT} (chosen: {o['label'][0]}, {o['label'][1]})"] +
+    rows = [[f"{study.credit}, chosen: {o['label'][0]}, {o['label'][1]}"] +
             [f(metrics.summarize(chosen)) for _, f in report.SUMMARY_COLS]]
-    for n in (BH, SMA200, M10, CREDIT):
-        lab = n if n != CREDIT else f"{CREDIT} (default, not chosen)"
+    for n in (BH, SMA200, M10, study.credit):
+        lab = n if n != study.credit else f"{study.credit}, default (not chosen)"
         rows.append([lab] + [f(metrics.summarize(full[n].loc[s:e])) for _, f in report.SUMMARY_COLS])
     add(report.md_table(["Strategy"] + [c for c, _ in report.SUMMARY_COLS], rows))
     add(f"\nIn the second half the chosen cell ranks {o['rank_second']} of {o['cells']} grid cells by "
@@ -383,7 +398,8 @@ def write_report(study: Study, outdir: Path) -> Path:
         if n == BH:
             continue
         add(f"### {n}\n")
-        add(verdict_for(n, st_common, common, common20) + "\n")
+        note = BAA_VERDICT_NOTE if study.kind == "baa" and n in (study.credit, study.combo) else ""
+        add(verdict_for(n, st_common, common, common20, note) + "\n")
 
     add("## Caveats\n")
     add("- One market (US large caps), one ~30-year sample with a handful of bear markets. A rule "
