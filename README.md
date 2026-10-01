@@ -46,6 +46,7 @@ frontend (public/)       →  index.html + assets/    ← hand-written, never re
 | `public/data/charts.json` (on `site-data`) | `run.py` | downsampled closing-price history per ticker, plus the calendar-month record behind the Seasonality view |
 | `public/data/weekly.json` (on `site-data`) | `run.py` | the same history as one row per **ISO week** (high, low, close) — the bars the Repeat test and the Backtest tab walk |
 | `public/data/backtest.json` | `backtest.py` | does the score work — and does the move beat what options charged? |
+| `public/data/regime.json` | `python -m regime_backtest.run --json …` (weekly, `regime.yml`) | the Market regime tab: do trend and credit rules beat holding SPY? |
 | `public/data/calibration.json` | `calibrate.py` | how the score weights were set (and the fit reused between refits) |
 | `public/data/iv_history.csv` | `run.py` | each priced name's ATM implied vol, one row per day — **appended, never regenerated** |
 | `public/data/universe.json` | `run.py` | the last fund-holdings list fetched live, the fallback when a fetch fails |
@@ -1272,23 +1273,41 @@ spread_scanner/
   iv_history.py              the daily implied-vol log, and the backtest against it
   alerts.py                  Slack / Discord webhook (staged, then sent)
   net.py                     retry with backoff, for every network edge
-regime_backtest/             on-demand study: do market-regime rules beat holding SPY? (below)
+regime_backtest/             do market-regime rules beat holding SPY? -> regime.json, the Market regime tab (below)
 public/                      the frontend (hand-written) + data/ (generated)
   assets/render.js           pure payload -> HTML helpers, tested under node with hostile input
 ```
 
-## Regime backtest (local, on demand)
+## Regime backtest — the Market regime tab
 
-A separate study, not part of the scan, the workflow or the dashboard: do the
-common "get out of the market" rules (daily 200-day SMA, monthly 10-month SMA,
-50/200 golden cross, a credit-spread velocity rule, and the 10-month SMA combined
-with it) beat buy-and-hold SPY after costs? Each rule is 100% SPY or 100% T-bills.
+A separate study from the scan: do the common "get out of the market" rules
+(daily 200-day SMA, monthly 10-month SMA, 50/200 golden cross, a credit-spread
+velocity rule, and the 10-month SMA combined with it) beat buy-and-hold SPY after
+costs? Each rule is 100% SPY or 100% T-bills.
+
+**On the dashboard.** The **Market regime** tab shows the bottom line per rule,
+the summary table with a 0 / 5 / 20 bp cost switch, growth-of-$1 and drawdown
+charts, crisis windows, the credit parameter sweep and out-of-sample check, the
+event studies and the full verdicts. It renders `public/data/regime.json`, which
+its own workflow ([`regime.yml`](.github/workflows/regime.yml)) rewrites every
+Saturday and commits. Run it sooner from the Actions tab (**Regime backtest →
+Run workflow**). It is separate from the daily scan: that job never installs
+matplotlib or waits on this one, and a failed run here leaves the last good
+`regime.json` published.
+
+Daily data is the right granularity: the rules decide on daily and month-end
+closes, and every FRED input is published once a day. It needs SPY back to 1993,
+which is why it downloads its own history rather than reusing the scan's
+10-year, screened-names-only pool.
+
+**Locally**, for the full markdown report and PNG charts:
 
 ```bash
 pip install -r requirements-backtest.txt
 python -m regime_backtest.run             # uses the download cache
 python -m regime_backtest.run --refresh   # refetch SPY and the FRED series
 python -m regime_backtest.run --cost-bp 10
+python -m regime_backtest.run --json public/data/regime.json   # also the tab's payload
 ```
 
 It writes `regime_backtest/output/report.md` (summary and crisis-window tables,
