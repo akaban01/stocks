@@ -1272,9 +1272,41 @@ spread_scanner/
   iv_history.py              the daily implied-vol log, and the backtest against it
   alerts.py                  Slack / Discord webhook (staged, then sent)
   net.py                     retry with backoff, for every network edge
+regime_backtest/             on-demand study: do market-regime rules beat holding SPY? (below)
 public/                      the frontend (hand-written) + data/ (generated)
   assets/render.js           pure payload -> HTML helpers, tested under node with hostile input
 ```
+
+## Regime backtest (local, on demand)
+
+A separate study, not part of the scan, the workflow or the dashboard: do the
+common "get out of the market" rules (daily 200-day SMA, monthly 10-month SMA,
+50/200 golden cross, a credit-spread velocity rule, and the 10-month SMA combined
+with it) beat buy-and-hold SPY after costs? Each rule is 100% SPY or 100% T-bills.
+
+```bash
+python -m regime_backtest.run             # uses the download cache
+python -m regime_backtest.run --refresh   # refetch SPY and the FRED series
+python -m regime_backtest.run --cost-bp 10
+```
+
+It writes `regime_backtest/output/report.md` (summary and crisis-window tables,
+event studies, the data sources it used, and a verdict per rule),
+`summary.csv`, and `equity.png`, `drawdowns.png` and `credit_heatmap.png`.
+Downloads are cached in `regime_backtest/data/`. Both folders are gitignored.
+**Never commit the cache:** it can hold ICE BofA HY OAS data, which is licensed.
+
+Timing: a signal from day t's close applies from day t+1. FRED series get one
+more trading day of lag for publication. Monthly rules are decided on the month's
+last close and held for the whole next month. `tests/test_regime_backtest.py`
+pins each of these.
+
+Credit data: FRED cut ICE BofA HY OAS (`BAMLH0A0HYM2`) back to a rolling 3-year
+window in April 2026, and the old ALFRED vintages now start in 2023 too. The
+loader tries a local `regime_backtest/data/hy_oas_full.csv` (`date,value` in %),
+then an ALFRED vintage from before the cut (through the API if `FRED_API_KEY` is
+set), then falls back to `BAA10Y`. With BAA10Y, thresholds are z-scores of the
+22-day change rather than basis points. The report logs which source it used and why.
 
 ## License
 
