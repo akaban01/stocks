@@ -295,3 +295,35 @@ def test_run_stops_with_install_hint_when_matplotlib_is_missing(monkeypatch, cap
     monkeypatch.setattr(run, "load_all", lambda **k: pytest.fail("must stop before loading data"))
     assert run.main([]) == 2
     assert "pip install -r requirements-backtest.txt" in capsys.readouterr().err
+
+
+def _synthetic_inputs(n=2600):
+    idx = pd.bdate_range("2000-01-03", periods=n)
+    rng = np.random.default_rng(3)
+    spy = pd.Series(100 * np.exp(np.cumsum(rng.normal(0.0003, 0.012, n))), index=idx)
+    curve = pd.Series(np.where((np.arange(n) > 800) & (np.arange(n) < 900), -0.2, 0.8), index=idx)
+    baa = pd.Series(2 + np.cumsum(rng.normal(0, 0.02, n)), index=idx)
+    vix = pd.Series(18 + rng.normal(0, 3, n), index=idx)
+    return data.Inputs(
+        spy=spy, tbill=pd.Series(2.0, index=idx), vix=vix, vix3m=vix + rng.normal(0, 2, n),
+        t10y2y=curve, credit=data.CreditData(baa, "baa", "synthetic BAA10Y", ["3. synthetic"]))
+
+
+def test_report_has_bottom_line_glossary_and_embedded_charts(tmp_path):
+    pytest.importorskip("matplotlib")
+    from regime_backtest import run
+
+    study = run.build(_synthetic_inputs(), cost_bp=5.0)
+    text = run.write_report(study, tmp_path).read_text(encoding="utf-8")
+    for needle in ("## Bottom line", "## How to read this", "(equity.png)", "(drawdowns.png)",
+                   "(credit_heatmap.png)"):
+        assert needle in text
+    assert text.index("Bottom line") < text.index("Data sources and coverage")
+    for png in ("equity.png", "drawdowns.png", "credit_heatmap.png"):
+        assert (tmp_path / png).exists()
+    # The credit rules carry the spread they were tested on, everywhere.
+    assert "### Credit velocity (BAA10Y)" in text
+    assert text.count(run.BAA_VERDICT_NOTE) == 2
+    csv = pd.read_csv(tmp_path / "summary.csv")
+    credit_rows = csv["strategy"].str.contains("redit velocity")
+    assert csv.loc[credit_rows, "strategy"].str.contains(r"\(BAA10Y\)").all()

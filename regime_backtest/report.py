@@ -3,10 +3,48 @@ formats what ``run.py`` produced."""
 
 from __future__ import annotations
 
+import datetime as dt
+import subprocess
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+HOW_TO_READ = """\
+- **CAGR**: compound annual growth rate, the steady yearly return that turns the starting value into the ending value.
+- **Vol**: annualized standard deviation of daily returns; how bumpy the ride is.
+- **Sharpe**: return above T-bills divided by volatility. Higher means more return per unit of risk. Differences under 0.03 are treated as no difference.
+- **Sortino**: like Sharpe, but only downside moves count as risk.
+- **Max DD**: the largest peak-to-trough fall in the strategy's value.
+- **Calmar**: CAGR divided by the size of the max drawdown.
+- **Worst 12m**: the worst return over any rolling 12-month (252 trading day) stretch.
+- **% invested**: the share of days holding SPY rather than T-bills.
+- **Switches**: moves between SPY and T-bills. Each one costs the stated basis points.
+- **Avg hold**: the average length of an in-market stretch, in trading days.
+- **bp per side**: cost per switch in basis points (1 bp = 0.01%).
+- **90% interval**: the range the Sharpe difference falls in across 2,000 bootstrap resamples. If it includes zero, the difference can't be told apart from luck.
+- **Common window vs longest history**: the common window uses the same dates for every rule, so rows are directly comparable. Longest history runs each rule from its own first usable day, so rows are not directly comparable."""
+
+
+def utc_stamp() -> str:
+    return dt.datetime.now(dt.UTC).strftime("%Y-%m-%d %H:%M")
+
+
+def git_commit(cwd: Path = REPO_ROOT) -> str:
+    """Short HEAD hash, "-dirty" when the working tree has changes, "unknown"
+    when git is unavailable or this is not a checkout."""
+    try:
+        sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=cwd, capture_output=True,
+                             text=True, check=True, timeout=10).stdout.strip()
+        dirty = subprocess.run(["git", "status", "--porcelain"], cwd=cwd, capture_output=True,
+                               text=True, check=True, timeout=10).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+    if not sha:
+        return "unknown"
+    return f"{sha}-dirty" if dirty else sha
 
 # Fixed categorical order — a strategy keeps its colour on every chart.
 COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
