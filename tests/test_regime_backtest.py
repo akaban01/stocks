@@ -356,3 +356,68 @@ def test_a_rule_that_out_returns_buy_and_hold_is_not_said_to_pay_for_it(tmp_path
 
     text = run.write_report(study, tmp_path).read_text(encoding="utf-8")
     assert "paid for with -" not in text
+
+
+# --- the dashboard payload ---------------------------------------------------------
+
+def test_dashboard_payload_matches_the_report_and_is_strict_json(tmp_path):
+    import json
+
+    from regime_backtest import export, run
+
+    study = run.build(_synthetic_inputs(), cost_bp=5.0)
+    path = export.write_payload(study, tmp_path / "regime.json")
+    text = path.read_text(encoding="utf-8")
+    d = json.loads(text)                      # write_payload used allow_nan=False, so this is real JSON
+
+    assert d["regime_schema"] == export.REGIME_SCHEMA
+    assert d["credit"]["label"] == "BAA10Y" and d["credit"]["is_proxy"] is True
+    assert set(d["summary"]) == set(d["series"]["equity"]) == {"0", "5", "20"}
+
+    # Every rule's curve sits on the one shared date axis.
+    n = len(d["series"]["dates"])
+    assert n > 100
+    for cost in d["series"]["equity"].values():
+        assert all(len(v) == n for v in cost.values())
+
+    # The headlines are the report's, word for word.
+    report_md = run.write_report(study, tmp_path).read_text(encoding="utf-8")
+    for v in d["verdicts"]:
+        assert f"- {v['rule']}: **{v['headline']}**" in report_md
+    credit = [v for v in d["verdicts"] if "(BAA10Y)" in v["rule"]]
+    assert len(credit) == 2 and all(v["note"] == run.BAA_VERDICT_NOTE for v in credit)
+
+    # No credit-spread series is published (ICE licence, when HY OAS is in use):
+    # the payload carries results and coverage counts, never the series itself.
+    assert all(set(r) == {"series", "first", "last", "rows"} for r in d["coverage"])
+    n_spread = len(study.inputs.credit.series)
+
+    def list_lengths(x):
+        if isinstance(x, dict):
+            for v in x.values():
+                yield from list_lengths(v)
+        elif isinstance(x, list):
+            yield len(x)
+            for v in x:
+                yield from list_lengths(v)
+    assert n_spread not in set(list_lengths(d))
+
+
+def test_run_writes_the_payload_when_asked(tmp_path, monkeypatch):
+    pytest.importorskip("matplotlib")
+    from regime_backtest import run
+
+    monkeypatch.setattr(run, "load_all", lambda **k: _synthetic_inputs())
+    out = tmp_path / "regime.json"
+    assert run.main(["--outdir", str(tmp_path), "--json", str(out)]) == 0
+    assert out.exists() and (tmp_path / "report.md").exists()
+
+
+def test_weekly_equity_samples_each_weeks_last_day():
+    from regime_backtest import export
+
+    idx = pd.bdate_range("2024-01-01", periods=12)          # Mon 1 Jan .. Tue 16 Jan
+    f = pd.DataFrame({"ret": 0.01, "pos": 1.0, "cash": 0.0}, index=idx)
+    out = export.weekly_equity({"5": {"A": f}})
+    assert out["dates"] == ["2024-01-05", "2024-01-12", "2024-01-16"]
+    assert out["equity"]["5"]["A"] == [pytest.approx(1.01 ** k, rel=1e-3) for k in (5, 10, 12)]
