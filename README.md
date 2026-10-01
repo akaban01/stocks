@@ -1285,6 +1285,7 @@ common "get out of the market" rules (daily 200-day SMA, monthly 10-month SMA,
 with it) beat buy-and-hold SPY after costs? Each rule is 100% SPY or 100% T-bills.
 
 ```bash
+pip install -r requirements-backtest.txt
 python -m regime_backtest.run             # uses the download cache
 python -m regime_backtest.run --refresh   # refetch SPY and the FRED series
 python -m regime_backtest.run --cost-bp 10

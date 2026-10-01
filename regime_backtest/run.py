@@ -465,6 +465,13 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     try:
+        import matplotlib  # noqa: F401 — the charts need it; fail before any work
+    except ImportError:
+        print("STOPPED: matplotlib is not installed. Run: pip install -r requirements-backtest.txt",
+              file=sys.stderr)
+        return 2
+
+    try:
         inputs = load_all(refresh=args.refresh, data_dir=args.data_dir)
     except DataError as exc:
         print(f"STOPPED: {exc}", file=sys.stderr)

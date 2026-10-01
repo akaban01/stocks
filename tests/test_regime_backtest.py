@@ -267,3 +267,13 @@ def test_fred_cache_is_reused_unless_refreshed(tmp_path, monkeypatch):
     assert len(calls) == 1
     data.load_fred("VIXCLS", refresh=True, data_dir=tmp_path)
     assert len(calls) == 2
+
+
+def test_run_stops_with_install_hint_when_matplotlib_is_missing(monkeypatch, capsys):
+    import sys
+
+    from regime_backtest import run
+    monkeypatch.setitem(sys.modules, "matplotlib", None)     # makes `import matplotlib` raise
+    monkeypatch.setattr(run, "load_all", lambda **k: pytest.fail("must stop before loading data"))
+    assert run.main([]) == 2
+    assert "pip install -r requirements-backtest.txt" in capsys.readouterr().err
