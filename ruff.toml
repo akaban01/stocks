@@ -19,4 +19,4 @@ ignore = [
 "tests/*" = ["I001"]
 
 [lint.isort]
-known-first-party = ["spread_scanner", "run", "backtest", "calibrate"]
+known-first-party = ["spread_scanner", "run", "backtest", "calibrate", "regime_backtest"]

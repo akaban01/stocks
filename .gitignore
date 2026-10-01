@@ -24,3 +24,9 @@ alert.json
 # scripts/fetch_site_data.py` does the same for a local checkout.
 public/data/charts.json
 public/data/weekly.json
+
+# regime_backtest/ (python -m regime_backtest.run): the download cache and the
+# generated report. Never commit the cache — it can hold ICE BofA HY OAS data,
+# which is licensed, and this repository may be public.
+regime_backtest/data/
+regime_backtest/output/
