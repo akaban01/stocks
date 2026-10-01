@@ -61,7 +61,8 @@
   // checked, which is how weekly.json came to be read by a page that had no way
   // of noticing it was reading a stale one.
   var SCHEMA_MAJOR = "2"; App.SCHEMA_MAJOR = SCHEMA_MAJOR;
-  var store = { scan: null, charts: null, weekly: null, backtest: null, calibration: null }; App.store = store;
+  var store = { scan: null, charts: null, weekly: null, backtest: null, calibration: null, regime: null };
+  App.store = store;
   var filters = { actions: new Set(), query: "" }; App.filters = filters;
 
   // ------------------------------------------------------------- utilities
@@ -182,7 +183,7 @@
   // Two segments rather than a query string because a fragment never leaves the
   // browser, which is the only option on Pages: there is no server to read one.
   var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "repeat", "backtest",
-                   "validation", "reference"];
+                   "validation", "regime", "reference"];
   var CHART_VIEWS = ["prices", "seasonality"]; App.CHART_VIEWS = CHART_VIEWS;
   /* The Backtest tab's four views. Same idea as the Charts tab's, and they
      share the fragment's view segment — the lists must not collide, because a
@@ -339,6 +340,7 @@
     if (name === "repeat") App.renderRepeat();
     if (name === "backtest") App.renderBacktest();
     if (name === "validation") App.renderValidation();
+    if (name === "regime") App.renderRegime();
     if (name === "reference") App.renderReference();
     writeHash();
   }

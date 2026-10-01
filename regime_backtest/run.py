@@ -3,6 +3,7 @@
     python -m regime_backtest.run                 # cached data, 5 bp per side
     python -m regime_backtest.run --refresh       # refetch every source
     python -m regime_backtest.run --cost-bp 10
+    python -m regime_backtest.run --json public/data/regime.json   # + the dashboard payload
 
 Writes regime_backtest/output/{report.md, summary.csv, equity.png,
 drawdowns.png, credit_heatmap.png}. Exits non-zero, with the reason, if a data
@@ -42,14 +43,28 @@ def credit_label(base: str, kind: str) -> str:
 # for z, so the grid mirrors HY's (re-entry at, and a little above, "no change").
 HY_EXITS, HY_REENTRIES = [75, 100, 125, 150, 200], [0, 25, 50]
 Z_EXITS, Z_REENTRIES = [1.5, 2.0, 2.5, 3.0], [0.0, 0.5, 1.0]
-# The headline credit rule uses the middle of each grid, fixed before looking at
-# any result — not the sweep's winner. The sweep and the out-of-sample split are
-# where parameter choice is tested.
+# The headline credit rule uses an interior setting of each grid, fixed before
+# looking at any result — not the sweep's winner. (For HY it is the centre cell;
+# the z grid has four exits, so 2.0 is the second, the one the event study uses.)
+# The sweep and the out-of-sample split are where parameter choice is tested.
 HY_DEFAULT, Z_DEFAULT = (125, 25), (2.0, 0.5)
 HY_LEVEL_BP = 500
 CAPITULATION_HY_BP, CAPITULATION_Z = 125, 2.0
 MATERIAL = 0.03      # Sharpe; a smaller difference is reported as "about equal"
 SPIKE_TOL = 0.05     # Sharpe; a neighbour within this of the best is "the same region"
+
+
+CAVEATS = [
+    "One market (US large caps), one ~30-year sample with a handful of bear markets. A rule that "
+    "sidestepped 2008 once has one data point, not a track record.",
+    "The 200-day and 10-month rules are not out-of-sample here: they were popularised after the "
+    "decades they are tested on, and their parameters were chosen with that history known.",
+    "Trades are assumed filled at the signal day's close. Costs are a flat per-side charge; taxes on "
+    "switching in a taxable account are ignored and would hurt the switching rules.",
+    "T-bill cash uses DTB3's discount rate on a 360-day basis, slightly understating the investment yield.",
+    "VIX and VIX3M come from FRED and are lagged a day like every FRED series, so the capitulation "
+    "screen uses the prior day's VIX against the current SPY close.",
+]
 
 
 @dataclass
@@ -347,8 +362,8 @@ def write_report(study: Study, outdir: Path) -> Path:
                         [[n, uses[n], f.index[0].date(), f.index[-1].date(), f"{len(f):,}"]
                          for n, f in full.items()]))
     add(f"\nCommon window shared by all rules: **{cstart.date()} → {cend.date()}**.\n")
-    add(f"Credit-velocity rule in the headline tables: {credit_desc}. These are the middle of the "
-        "swept grid, fixed in advance — not the best cell of the sweep.\n")
+    add(f"Credit-velocity rule in the headline tables: {credit_desc}. This is an interior "
+        "setting of the swept grid, fixed in advance — not the best cell of the sweep.\n")
 
     add(f"## Summary — common window, {cost:g} bp per side\n")
     add(report.summary_table(st_common) + "\n")
@@ -431,22 +446,15 @@ def write_report(study: Study, outdir: Path) -> Path:
         add(f"**{head}**\n\n{body}\n")
 
     add("## Caveats\n")
-    add("- One market (US large caps), one ~30-year sample with a handful of bear markets. A rule "
-        "that sidestepped 2008 once has one data point, not a track record.\n"
-        "- The 200-day and 10-month rules are not out-of-sample here: they were popularised after "
-        "the decades they are tested on, and their parameters were chosen with that history known.\n"
-        "- Trades are assumed filled at the signal day's close. Costs are a flat per-side charge; "
-        "taxes on switching in a taxable account are ignored and would hurt the switching rules.\n"
-        "- T-bill cash uses DTB3's discount rate on a 360-day basis, slightly understating the "
-        "investment yield.\n"
-        "- VIX and VIX3M come from FRED and are lagged a day like every FRED series, so the "
-        "capitulation screen uses the prior day's VIX against the current SPY close.\n")
+    add("\n".join(f"- {c}" for c in CAVEATS) + "\n")
     path = outdir / "report.md"
     path.write_text("\n".join(md), encoding="utf-8")
     return path
 
 
-def event_section(study: Study) -> str:
+def event_data(study: Study) -> dict:
+    """Both event studies as tables plus the sentences that explain them, so
+    report.md and the dashboard's JSON describe them in the same words."""
     inp = study.inputs
     close = inp.spy
     idx = close.index
@@ -457,31 +465,46 @@ def event_section(study: Study) -> str:
     thr = CAPITULATION_HY_BP if study.kind == "hy" else CAPITULATION_Z
     cond_txt = (f"HY OAS 22-day change > {thr} bp" if study.kind == "hy"
                 else f"BAA10Y 22-day-change z-score > {thr}")
-    out = []
     caps = events.capitulation_dates(close, sma200, vix, vix3m, vel > thr)
-    out.append("### Capitulation\n")
-    out.append(f"SPY close < SMA200, VIX > VIX3M, and {cond_txt}; first day of each cluster "
-               f"(clusters ≥ {events.CLUSTER_GAP} trading days apart). VIX3M starts "
-               f"{inp.vix3m.index.min().date()}, so nothing earlier can qualify. "
-               f"**{len(caps)} events.** Forward returns are SPY total return from the signal "
-               "day's close. *Below peak* is how far SPY already was under its prior all-time high on the "
-               "signal day; *Max DD before recovery* is the worst later close relative to the signal "
-               "close, until SPY regains that prior all-time high.\n")
-    out.append(_fwd_md(events.forward_table(close, caps)))
     res = events.resteepening_dates(engine.align_fred(inp.t10y2y, idx))
-    out.append("\n### Yield-curve re-steepening\n")
-    out.append(f"T10Y2Y turns positive after ≥ {events.MIN_INVERSION} consecutive trading days at or "
-               f"below zero (with at least one day inverted). SPY data starts {idx[0].date()}, so "
-               f"earlier re-steepenings are not covered. **{len(res)} events.**\n")
-    out.append(_fwd_md(events.forward_table(close, res)))
-    pt = events.peak_trough(close, res)
-    out.append(f"\nNext peak and trough: the trough is the lowest SPY close in the "
-               f"{events.PEAK_TROUGH_WINDOW} trading days (~3 years) after the signal; the peak is the "
-               "highest close between the signal and that trough. A peak of 0 days means SPY never "
-               "closed above the signal day's level before the trough.\n")
+    return {
+        "capitulation": {
+            "table": events.forward_table(close, caps),
+            "text": (f"SPY close < SMA200, VIX > VIX3M, and {cond_txt}; first day of each cluster "
+                     f"(clusters ≥ {events.CLUSTER_GAP} trading days apart). VIX3M starts "
+                     f"{inp.vix3m.index.min().date()}, so nothing earlier can qualify."),
+        },
+        "resteepening": {
+            "table": events.forward_table(close, res),
+            "peak_trough": events.peak_trough(close, res),
+            "text": (f"T10Y2Y turns positive after ≥ {events.MIN_INVERSION} consecutive trading days "
+                     f"at or below zero (with at least one day inverted). SPY data starts "
+                     f"{idx[0].date()}, so earlier re-steepenings are not covered."),
+        },
+        "forward_note": ("Forward returns are SPY total return from the signal day's close. Below peak "
+                         "is how far SPY already was under its prior all-time high on the signal day; "
+                         "max DD before recovery is the worst later close relative to the signal close, "
+                         "until SPY regains that prior all-time high."),
+        "peak_trough_note": (f"The trough is the lowest SPY close in the {events.PEAK_TROUGH_WINDOW} "
+                             "trading days (~3 years) after the signal; the peak is the highest close "
+                             "between the signal and that trough. A peak of 0 days means SPY never "
+                             "closed above the signal day's level before the trough."),
+    }
+
+
+def event_section(study: Study) -> str:
+    ev = event_data(study)
+    cap, res = ev["capitulation"], ev["resteepening"]
+    out = ["### Capitulation\n",
+           f"{cap['text']} **{len(cap['table'])} events.** {ev['forward_note']}\n",
+           _fwd_md(cap["table"]),
+           "\n### Yield-curve re-steepening\n",
+           f"{res['text']} **{len(res['table'])} events.**\n",
+           _fwd_md(res["table"]),
+           f"\nNext peak and trough. {ev['peak_trough_note']}\n"]
     rows = [[r.date, r.days_to_peak, r.peak_date, r.days_to_trough, r.trough_date,
              report.pct(r.peak_to_trough), "yes" if r.window_complete else "no — data ends first"]
-            for r in pt.itertuples()]
+            for r in res["peak_trough"].itertuples()]
     out.append(report.md_table(["Signal", "Days to peak", "Peak", "Days to trough", "Trough",
                                 "Peak→trough", "Full 3y window"], rows) if rows else "_No events._")
     return "\n".join(out)
@@ -507,6 +530,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cost-bp", type=float, default=5.0, help="cost per side per switch (default 5)")
     ap.add_argument("--outdir", type=Path, default=OUT_DIR)
     ap.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    ap.add_argument("--json", type=Path, default=None,
+                    help="also write the dashboard payload here (e.g. public/data/regime.json)")
     args = ap.parse_args(argv)
 
     try:
@@ -527,6 +552,10 @@ def main(argv: list[str] | None = None) -> int:
     study = build(inputs, args.cost_bp)
     path = write_report(study, args.outdir)
     print(f"Wrote {path} and charts/summary.csv in {args.outdir}")
+    if args.json:
+        from .export import write_payload  # imports this module; deferred to avoid a cycle
+        path, written = write_payload(study, args.json)
+        print(f"Wrote {path}" if written else f"{path} already holds these results; left unchanged")
     return 0
 
 

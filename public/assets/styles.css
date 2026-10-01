@@ -592,3 +592,43 @@ table.stats td.r { text-align: right; font-variant-numeric: tabular-nums; }
 .disclaimer p:last-child { margin: 0; }
 .empty { color: var(--text-dim); padding: 30px 4px; text-align: center; font-size: .92rem; }
 .loading { color: var(--text-faint); padding: 30px 4px; text-align: center; font-size: .9rem; }
+
+/* ---------------------------------------------------- Market regime tab */
+#regime-body h2 { margin-top: 30px; }
+#regime-body h3 { margin-top: 20px; }
+.rg-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: baseline; }
+.rg-bottom { list-style: none; padding: 0; margin: 10px 0; }
+.rg-bottom li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; margin: 8px 0; font-size: .9rem; color: var(--text-body); }
+.rg-table td { white-space: nowrap; }
+table.stats.rg-heattable th { text-transform: none; letter-spacing: 0; font-size: .74rem; }
+.rg-ret.up { color: var(--up); }
+.rg-ret.down { color: var(--down); }
+.rg-chartwrap { position: relative; }
+.rg-chart { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.rg-grid { stroke: var(--line-soft); stroke-width: 1; }
+.rg-axis, .rg-endlabel { fill: var(--text-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+.rg-endlabel { fill: var(--text-dim); }
+.rg-cross { stroke: var(--text-dim); stroke-width: 1; stroke-dasharray: 3 3; }
+.rg-tip { position: absolute; top: 6px; pointer-events: none; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 10px; font-size: .78rem; min-width: 210px; z-index: 2; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+.rg-tip b, .rg-tiprow { line-height: 1.45em; }
+.rg-tiprow { display: flex; align-items: center; gap: 2px; white-space: nowrap; color: var(--text-body); }
+.rg-tiprow .r { margin-left: auto; padding-left: 12px; font-variant-numeric: tabular-nums; color: var(--text); }
+.rg-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .8rem; color: var(--text-dim); margin: 6px 0 4px; }
+.rg-ddrow { margin: 6px 0 2px; }
+.rg-ddlabel { font-size: .8rem; color: var(--text-dim); margin-bottom: 2px; }
+.rg-heats { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rg-heat h4 { margin: 0 0 2px; font-size: .88rem; }
+.rg-heat p { margin: 0 0 6px; font-size: .78rem; }
+.rg-heattable td.rg-mark { outline: 2px solid var(--text); outline-offset: -2px; }
+.rg-verdict { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 8px 14px; margin: 8px 0; background: var(--surface); }
+.rg-verdict summary { cursor: pointer; }
+.rg-verdict li { font-size: .86rem; color: var(--text-body); margin: 4px 0; }
+.rg-note { font-size: .86rem; color: var(--warn); margin: 6px 0; }
+.rg-glossary li { font-size: .88rem; color: var(--text-body); margin: 4px 0; }
+/* On a phone the tooltip would cover the chart it explains; put it under it. */
+@media (max-width: 600px) {
+  /* Under the chart, with its space reserved (regime-tab.js toggles visibility,
+     not display), so a touch that starts a scroll does not shift the page. */
+  .rg-tip { position: static; margin-top: 6px; box-shadow: none; box-sizing: content-box;
+            height: calc(var(--tip-rows, 2) * 1.45em); overflow: hidden; }
+}
