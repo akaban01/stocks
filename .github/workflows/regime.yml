@@ -1,0 +1,91 @@
+name: Regime backtest
+
+# Reruns regime_backtest/ and publishes public/data/regime.json, which the
+# dashboard's Market regime tab renders. Separate from update.yml on purpose:
+# the daily scan never installs matplotlib or waits on this, and a failure here
+# leaves the scan alone (and the last good regime.json published).
+#
+# Weekly is enough: the rules decide on daily and monthly closes over 30 years
+# of history, so one more week moves the statistics in the second decimal.
+
+on:
+  schedule:
+    # Saturday 13:17 UTC — Friday's close and Friday's FRED prints are both in.
+    # Off the hour for the same reason update.yml's is: scheduled runs queue
+    # behind everything else at :00 and :30.
+    - cron: "17 13 * * 6"
+  workflow_dispatch:          # run it now from the Actions tab
+
+permissions:
+  contents: write             # commit public/data/regime.json
+
+concurrency:
+  # Shared with update.yml: both commit to master, so they take turns rather
+  # than racing each other's push.
+  group: spread-scanner
+  cancel-in-progress: false
+
+jobs:
+  regime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: .python-version
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-backtest.txt -r requirements-dev.txt
+
+      - name: Test the backtest
+        run: python -m pytest -q tests/test_regime_backtest.py tests/test_regime_js.py
+
+      - name: Run the backtest
+        # --refresh: a runner starts with no cache, but say so rather than rely
+        # on it. Exits non-zero, with the reason, if a source fails beyond the
+        # fallbacks data.py allows — and then nothing below runs.
+        run: python -m regime_backtest.run --refresh --json public/data/regime.json
+
+      - name: Check the payload
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from regime_backtest.export import REGIME_SCHEMA
+          d = json.loads(Path("public/data/regime.json").read_text(encoding="utf-8"))
+          assert d["regime_schema"] == REGIME_SCHEMA, d["regime_schema"]
+          assert d["verdicts"], "no verdicts"
+          n = len(d["series"]["dates"])
+          assert n > 1000, f"only {n} weekly points — the history came back short"
+          for cost, curves in d["series"]["equity"].items():
+              for rule, values in curves.items():
+                  assert len(values) == n, f"{rule} @ {cost}bp has {len(values)} points, axis has {n}"
+          print(f"regime.json OK — data through {d['data_through']}, credit source "
+                f"{d['credit']['label']}, {len(d['verdicts'])} verdicts, {n} weekly points")
+          if d["credit"]["is_proxy"]:
+              print(f"::notice::credit rules tested on {d['credit']['label']}, not HY OAS")
+          PY
+
+      - name: Commit regime.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/regime.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Update regime backtest ($(date -u +'%Y-%m-%d %H:%M UTC'))"
+          # Same retry as update.yml: rebase onto anything that landed meanwhile.
+          for attempt in 1 2 3 4; do
+            if git push; then
+              exit 0
+            fi
+            echo "push rejected (attempt $attempt) — rebasing onto origin and retrying"
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" || true
+            sleep $((2 ** attempt))
+          done
+          echo "::error::could not push regime.json after 4 attempts"
+          exit 1
