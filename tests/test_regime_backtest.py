@@ -380,10 +380,6 @@ def test_dashboard_payload_matches_the_report_and_is_strict_json(tmp_path):
     for cost in d["series"]["equity"].values():
         assert all(len(v) == n for v in cost.values())
 
-    # The headlines are the report's, word for word.
-    report_md = run.write_report(study, tmp_path).read_text(encoding="utf-8")
-    for v in d["verdicts"]:
-        assert f"- {v['rule']}: **{v['headline']}**" in report_md
     credit = [v for v in d["verdicts"] if "(BAA10Y)" in v["rule"]]
     assert len(credit) == 2 and all(v["note"] == run.BAA_VERDICT_NOTE for v in credit)
 
@@ -401,6 +397,17 @@ def test_dashboard_payload_matches_the_report_and_is_strict_json(tmp_path):
             for v in x:
                 yield from list_lengths(v)
     assert n_spread not in set(list_lengths(d))
+
+
+def test_dashboard_headlines_are_the_reports_word_for_word(tmp_path):
+    pytest.importorskip("matplotlib")
+    from regime_backtest import export, run
+
+    study = run.build(_synthetic_inputs(), cost_bp=5.0)
+    d = export.build_payload(study, "2026-01-01T00:00:00Z", "test")
+    report_md = run.write_report(study, tmp_path).read_text(encoding="utf-8")
+    for v in d["verdicts"]:
+        assert f"- {v['rule']}: **{v['headline']}**" in report_md
 
 
 def test_run_writes_the_payload_when_asked(tmp_path, monkeypatch):
