@@ -219,11 +219,59 @@ def build_payload(study: R.Study, generated_at: str, commit: str) -> dict:
     return _clean(payload)
 
 
-def write_payload(study: R.Study, path: Path) -> Path:
+# Provenance, not results: a rerun that changes only these has nothing new to publish.
+VOLATILE = ("generated_at", "commit")
+
+# How stale the published data may be before the workflow refuses to commit it.
+# SPY's last close vs the day of the run: a Saturday run sees Friday (1 day), a
+# manual run after a long weekend about 4. Each other series vs SPY's last close:
+# FRED posts the H.15 series (DTB3, T10Y2Y, BAA10Y) a business day late, so 1–3
+# days behind is normal and a week is a feed that stopped.
+MAX_SPY_AGE_DAYS = 5
+MAX_SERIES_LAG_DAYS = 7
+
+
+def staleness(payload: dict, today: dt.date) -> list[str]:
+    """Why this payload should not be published, or [] if it is fresh.
+
+    A history that ends weeks ago, or a FRED series that stopped updating (and
+    is then forward-filled by the alignment), produces a perfectly well-formed
+    payload — so shape checks pass it. This is the check that does not."""
+    problems = []
+    through = dt.date.fromisoformat(payload["data_through"])
+    age = (today - through).days
+    if age > MAX_SPY_AGE_DAYS:
+        problems.append(f"SPY ends {through}, {age} days before {today}")
+    for c in payload["coverage"]:
+        last = dt.date.fromisoformat(c["last"])
+        lag = (through - last).days
+        if lag > MAX_SERIES_LAG_DAYS:
+            problems.append(f"{c['series']} stops at {last}, {lag} days before SPY's last close")
+    return problems
+
+
+def _same_results(a: dict, b: dict) -> bool:
+    strip = lambda d: {k: v for k, v in d.items() if k not in VOLATILE}  # noqa: E731
+    return strip(a) == strip(b)
+
+
+def write_payload(study: R.Study, path: Path) -> tuple[Path, bool]:
+    """Write the payload, unless the file already holds the same results.
+
+    Returns (path, written). Leaving an unchanged file alone is what makes
+    "commit only if it changed" true in the workflow: generated_at and commit
+    differ on every run, and a commit that only moves a timestamp still
+    triggers a production deploy."""
     now = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
     payload = build_payload(study, now, report.git_commit())
+    if path.exists():
+        try:
+            if _same_results(json.loads(path.read_text(encoding="utf-8")), payload):
+                return path, False
+        except (OSError, ValueError):
+            pass                              # unreadable: overwrite it
     path.parent.mkdir(parents=True, exist_ok=True)
     # Compact: the equity curves are most of the file, and it is committed weekly.
     path.write_text(json.dumps(payload, separators=(",", ":"), ensure_ascii=False, allow_nan=False),
                     encoding="utf-8")
-    return path
+    return path, True

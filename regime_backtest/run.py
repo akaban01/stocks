@@ -553,7 +553,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Wrote {path} and charts/summary.csv in {args.outdir}")
     if args.json:
         from .export import write_payload  # imports this module; deferred to avoid a cycle
-        print(f"Wrote {write_payload(study, args.json)}")
+        path, written = write_payload(study, args.json)
+        print(f"Wrote {path}" if written else f"{path} already holds these results; left unchanged")
     return 0
 
 

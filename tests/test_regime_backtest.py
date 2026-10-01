@@ -366,7 +366,8 @@ def test_dashboard_payload_matches_the_report_and_is_strict_json(tmp_path):
     from regime_backtest import export, run
 
     study = run.build(_synthetic_inputs(), cost_bp=5.0)
-    path = export.write_payload(study, tmp_path / "regime.json")
+    path, written = export.write_payload(study, tmp_path / "regime.json")
+    assert written
     text = path.read_text(encoding="utf-8")
     d = json.loads(text)                      # write_payload used allow_nan=False, so this is real JSON
 
@@ -428,3 +429,48 @@ def test_weekly_equity_samples_each_weeks_last_day():
     out = export.weekly_equity({"5": {"A": f}})
     assert out["dates"] == ["2024-01-05", "2024-01-12", "2024-01-16"]
     assert out["equity"]["5"]["A"] == [pytest.approx(1.01 ** k, rel=1e-3) for k in (5, 10, 12)]
+
+
+def test_a_rerun_with_the_same_results_leaves_the_file_alone(tmp_path, monkeypatch):
+    import json
+
+    from regime_backtest import export, report, run
+
+    study = run.build(_synthetic_inputs(), cost_bp=5.0)
+    path = tmp_path / "regime.json"
+    monkeypatch.setattr(report, "git_commit", lambda cwd=None: "aaaaaaa")
+    assert export.write_payload(study, path)[1] is True
+    before = path.read_text(encoding="utf-8")
+
+    # Only the provenance differs: a new commit, a later timestamp. Nothing to publish.
+    monkeypatch.setattr(report, "git_commit", lambda cwd=None: "bbbbbbb")
+    assert export.write_payload(study, path)[1] is False
+    assert path.read_text(encoding="utf-8") == before
+
+    # A result that moves is written.
+    d = json.loads(before)
+    d["verdicts"][0]["headline"] = "something else"
+    path.write_text(json.dumps(d), encoding="utf-8")
+    assert export.write_payload(study, path)[1] is True
+    assert json.loads(path.read_text(encoding="utf-8"))["commit"] == "bbbbbbb"
+
+
+def test_staleness_catches_an_old_history_and_a_stopped_series():
+    import datetime as dt
+
+    from regime_backtest import export
+
+    payload = {"data_through": "2026-10-02", "coverage": [
+        {"series": "SPY", "last": "2026-10-02"},
+        {"series": "DTB3", "last": "2026-10-01"},          # H.15 posts a day late: fine
+        {"series": "BAA10Y", "last": "2026-09-30"},
+    ]}
+    assert export.staleness(payload, dt.date(2026, 10, 3)) == []          # the Saturday run
+    assert export.staleness(payload, dt.date(2026, 10, 6)) == []          # Tuesday after a weekend
+
+    old = export.staleness(payload, dt.date(2026, 10, 20))
+    assert len(old) == 1 and "SPY ends 2026-10-02" in old[0]
+
+    payload["coverage"][2]["last"] = "2026-09-01"                          # the feed stopped
+    stopped = export.staleness(payload, dt.date(2026, 10, 3))
+    assert len(stopped) == 1 and "BAA10Y stops at 2026-09-01" in stopped[0]

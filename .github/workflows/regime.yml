@@ -10,7 +10,9 @@ name: Regime backtest
 
 on:
   schedule:
-    # Saturday 13:17 UTC — Friday's close and Friday's FRED prints are both in.
+    # Saturday 13:17 UTC — Friday's SPY close is in. FRED's H.15 series (DTB3,
+    # T10Y2Y, BAA10Y) post Friday's value on Monday, so they end on Thursday
+    # here; every FRED series is lagged a day anyway, so nothing is lost.
     # Off the hour for the same reason update.yml's is: scheduled runs queue
     # behind everything else at :00 and :30.
     - cron: "17 13 * * 6"
@@ -51,11 +53,17 @@ jobs:
       - name: Check the payload
         run: |
           python - <<'PY'
+          import datetime as dt
           import json
           from pathlib import Path
-          from regime_backtest.export import REGIME_SCHEMA
+          from regime_backtest.export import REGIME_SCHEMA, staleness
           d = json.loads(Path("public/data/regime.json").read_text(encoding="utf-8"))
           assert d["regime_schema"] == REGIME_SCHEMA, d["regime_schema"]
+          # Shape is not enough: a history that ends weeks ago, or a FRED series
+          # that stopped updating (and is forward-filled), is well-formed too.
+          # Refuse to publish it and leave the last good file live.
+          stale = staleness(d, dt.datetime.now(dt.timezone.utc).date())
+          assert not stale, "stale data, not publishing: " + "; ".join(stale)
           assert d["verdicts"], "no verdicts"
           n = len(d["series"]["dates"])
           assert n > 1000, f"only {n} weekly points — the history came back short"
