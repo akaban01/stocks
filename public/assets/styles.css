@@ -632,3 +632,27 @@ table.stats.rg-heattable th { text-transform: none; letter-spacing: 0; font-size
   .rg-tip { position: static; margin-top: 6px; box-shadow: none; box-sizing: content-box;
             height: calc(var(--tip-rows, 2) * 1.45em); overflow: hidden; }
 }
+
+/* ---------------------------------------------------------- Spread pricer tab */
+#panel-pricer h2 { margin-top: 26px; }
+.pr-chainctl textarea {
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--text); border-radius: var(--radius-sm);
+  padding: 8px 10px; font: .85rem/1.5 var(--mono); width: 100%; resize: vertical; min-height: 120px;
+}
+.pr-chainctl textarea:focus { outline: none; border-color: var(--link); }
+.pr-chainctl { grid-column: 1 / -1; }
+.pr-vol { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.pr-volnote { font-size: .76rem; }
+.pr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 6px 0 4px; }
+.pr-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; }
+.pr-card span { display: block; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 700; }
+.pr-card b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.pr-table td { white-space: nowrap; }
+.pr-table th.r { text-align: right; }
+.pr-table tr.pr-planned td { background: var(--surface-2); }
+.pr-ev.up { color: var(--up); } .pr-ev.down { color: var(--down); }
+.pr-bad { color: var(--warn); font-size: .78rem; }
+.pr-note { font-size: .86rem; color: var(--warn); }
+.pr-small { font-size: .82rem; }
+.pr-errors { font-size: .82rem; color: var(--warn); margin: 0 0 10px; }
+.pr-use { padding: 3px 10px; font-size: .78rem; }

@@ -182,7 +182,7 @@
   //
   // Two segments rather than a query string because a fragment never leaves the
   // browser, which is the only option on Pages: there is no server to read one.
-  var TAB_NAMES = ["playbook", "spreads", "scanner", "charts", "repeat", "backtest",
+  var TAB_NAMES = ["playbook", "spreads", "pricer", "scanner", "charts", "repeat", "backtest",
                    "validation", "regime", "reference"];
   var CHART_VIEWS = ["prices", "seasonality"]; App.CHART_VIEWS = CHART_VIEWS;
   /* The Backtest tab's four views. Same idea as the Charts tab's, and they
@@ -336,6 +336,7 @@
     for (var j = 0; j < panels.length; j++) panels[j].hidden = panels[j].dataset.tab !== name;
     try { localStorage.setItem("tab", name); } catch (e) { /* private mode */ }
     if (name === "spreads") App.renderSpreads();
+    if (name === "pricer") App.renderPricer();
     if (name === "charts") App.renderCharts();
     if (name === "repeat") App.renderRepeat();
     if (name === "backtest") App.renderBacktest();
