@@ -383,6 +383,40 @@ worth placing on a direction read the backtest has shown to work. The yearly
 return column is left out here: annualising a three-week trade gives a
 four-figure percentage that compares with nothing.
 
+## The Spread pricer tab — what limit to put on the order
+
+A calculator for one vertical spread, over quotes you paste from your broker —
+nothing is fetched and nothing leaves the browser (the form is kept in
+`localStorage`). Enter the underlying price, days to expiry, the rate and
+dividend yield, and one expiry's chain for calls or puts, a line per strike:
+`strike, bid, ask[, IV %]`. A header line is skipped; `$` and `%` are ignored;
+an IV above 3 is read as a percent. Missing IVs are solved from each mid, and a
+quote no volatility can produce (below intrinsic) is shown but never priced.
+
+Pick the strike to sell and the strike to buy, and the tab gives:
+
+- **A limit-price ladder** from mid to natural — mid, 10%, 20%, the scanner's
+  planned fill (⅓), 50%, 75%, natural — with the credit or debit, max profit and
+  loss, breakeven, credit-to-width or return on risk, probability of profit and
+  expected value at every rung.
+- **A model fair value**: both legs by Black-Scholes at one volatility — yours if
+  you enter one, else the chain's at-the-money IV. The fair value is the
+  walk-away price: past it the expected value turns negative, and the tab says
+  where on the ladder that falls.
+- **Probabilities and expected value** at expiry, lognormal, same volatility.
+  Expected value is zero at fair value by construction, so it measures what a
+  limit gives away against the model — and is never more trustworthy than the
+  volatility it is fed. With the default ATM vol, a credit spread on skewed
+  strikes shows an "edge" that is mostly the market's price for tail risk; the
+  tab says so.
+- **Every strike pair in the chain, ranked** (credit or debit spreads) by
+  expected value per dollar at risk at the planned fill, each one a click away
+  from the ladder.
+
+The maths is `public/assets/pricer.js`; `tests/test_pricer_js.py` runs it under
+node and checks it against the Python Black-Scholes in `tests/conftest.py`,
+textbook values, put-call parity and hand-worked payoffs for all four verticals.
+
 ## The Charts tab — when in the year, not just how much
 
 The **Price history** view is the closing line for every screened name over the

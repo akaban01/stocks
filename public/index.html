@@ -37,6 +37,7 @@
   <nav class="tabs" role="tablist" aria-label="Views">
     <button id="tab-playbook" data-tab="playbook" role="tab" aria-selected="true" aria-controls="panel-playbook">What to do</button>
     <button id="tab-spreads" data-tab="spreads" role="tab" aria-selected="false" aria-controls="panel-spreads">Spreads</button>
+    <button id="tab-pricer" data-tab="pricer" role="tab" aria-selected="false" aria-controls="panel-pricer">Spread pricer</button>
     <button id="tab-scanner" data-tab="scanner" role="tab" aria-selected="false" aria-controls="panel-scanner">Scanner</button>
     <button id="tab-charts" data-tab="charts" role="tab" aria-selected="false" aria-controls="panel-charts">Charts</button>
     <button id="tab-repeat" data-tab="repeat" role="tab" aria-selected="false" aria-controls="panel-repeat">Repeat test</button>
@@ -96,6 +97,55 @@
         Long-dated options are listed on January cycles, so the expiry nearest 13 months out can sit
         anywhere from ~9 to ~18 months away. The real days-to-expiry is in every row.
       </p>
+    </section>
+
+    <!-- ---------------------------------------------------------- pricer -->
+    <!-- A calculator over quotes the reader pastes; nothing is fetched and nothing
+         leaves the browser. Maths in assets/pricer.js, wiring in app/pricer-tab.js. -->
+    <section id="panel-pricer" class="panel" data-tab="pricer" role="tabpanel" aria-labelledby="tab-pricer" hidden>
+      <div class="lede">
+        Price a vertical spread from your broker's live quotes. Paste one expiry's chain — calls or puts —
+        and pick two strikes: you get a <b>ladder of limit prices</b> from mid to natural, a <b>model fair
+        value</b> that says how far down the ladder is still worth going, the <b>probabilities and expected
+        value</b> at every rung, and every strike pair in the chain <b>ranked</b>. Nothing is sent anywhere;
+        what you type is kept in this browser only.
+      </div>
+      <div class="controls">
+        <label class="ctl"><span>Underlying price</span>
+          <input id="pr-spot" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <label class="ctl"><span>Days to expiry</span>
+          <input id="pr-days" type="number" min="1" step="1" inputmode="numeric"></label>
+        <label class="ctl"><span>Interest rate, %</span>
+          <input id="pr-rate" type="number" step="0.1" value="4" inputmode="decimal"></label>
+        <label class="ctl"><span>Dividend yield, %</span>
+          <input id="pr-div" type="number" step="0.1" value="0" inputmode="decimal"></label>
+        <div class="ctl"><span>Options</span>
+          <div class="filters" role="group" aria-label="Calls or puts" id="pr-right">
+            <button class="chip" data-right="put" aria-pressed="true">Puts</button>
+            <button class="chip" data-right="call" aria-pressed="false">Calls</button>
+          </div>
+        </div>
+        <label class="ctl"><span>Your volatility, % (optional)</span>
+          <input id="pr-vol" type="number" min="0" step="0.5" placeholder="chain ATM IV" inputmode="decimal"></label>
+        <label class="ctl wide pr-chainctl"><span>Chain — one strike per line: strike, bid, ask, IV % (IV optional)</span>
+          <textarea id="pr-chain" rows="7" spellcheck="false"
+            placeholder="95, 1.70, 1.85&#10;100, 3.30, 3.45&#10;105, 5.85, 6.10, 31.5"></textarea></label>
+        <div class="ctl"><span>&nbsp;</span><button class="chip" id="pr-example" type="button">Load an example</button></div>
+      </div>
+      <div id="pr-out" aria-live="polite"></div>
+      <h2>How it works</h2>
+      <div class="panelcard">
+        <p><b>Ladder.</b> Mid is halfway between bid and ask on each leg — the price a screen shows and nobody
+        is promised. Natural is selling every bid and buying every ask — the price you can always get. The
+        planned fill, a third of the way from mid to natural, is what the scanner assumes everywhere else.</p>
+        <p><b>Fair value.</b> Both legs priced by Black-Scholes at one volatility: yours if you enter it,
+        otherwise the chain's at-the-money IV. Where the chain gives no IV, it is solved from each strike's
+        mid. A strike whose price no volatility can produce is shown and left out.</p>
+        <p><b>Expected value</b> is fair value against the price you trade at, per spread. It is zero at fair
+        value by construction, so it measures how much a given limit gives away (or gains) against the model —
+        never more trustworthy than the volatility you feed it. Probabilities are at expiry, lognormal, same
+        volatility; early exits and assignment are not modelled.</p>
+      </div>
     </section>
 
     <!-- -------------------------------------------------------- scanner -->
@@ -440,12 +490,16 @@
 <!-- The Market regime tab's table and chart builders; needs render.js above.
      Its own file so tests/test_regime_js.py can run it under node. -->
 <script src="assets/regime.js"></script>
+<!-- The Spread pricer's maths; needs render.js above. Its own file so
+     tests/test_pricer_js.py can run it under node. -->
+<script src="assets/pricer.js"></script>
 <!-- The page itself, one file per part of it, in this order: core.js first
      (shared helpers and state on window.SpreadApp), boot.js last (starts it). -->
 <script src="assets/app/core.js"></script>
 <script src="assets/app/playbook.js"></script>
 <script src="assets/app/scanner.js"></script>
 <script src="assets/app/spreads.js"></script>
+<script src="assets/app/pricer-tab.js"></script>
 <script src="assets/app/charts.js"></script>
 <script src="assets/app/repeat.js"></script>
 <script src="assets/app/backtest-tab.js"></script>
