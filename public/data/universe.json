@@ -4,7 +4,7 @@
     "SPUS"
   ],
   "max_holdings": 30,
-  "as_of": "2026-10-02",
+  "as_of": "2026-10-03",
   "tickers": [
     "NVDA",
     "AAPL",
@@ -30,10 +30,10 @@
     "PANW",
     "HD",
     "CRWD",
-    "KLAC",
     "GEV",
-    "TXN",
+    "KLAC",
     "SNDK",
+    "TXN",
     "TMO",
     "MRVL"
   ]
