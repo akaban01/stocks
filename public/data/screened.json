@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-06",
+  "as_of": "2026-10-07",
   "screen_mode": "filter",
   "tickers": [
     "NVDA",
@@ -22,14 +22,14 @@
     "CVX",
     "MRK",
     "PG",
-    "KO",
     "PANW",
+    "KO",
     "HD",
     "CRWD",
+    "TXN",
     "KLAC",
     "GEV",
-    "TXN",
-    "SNDK",
-    "TMO"
+    "TMO",
+    "SNDK"
   ]
 }
