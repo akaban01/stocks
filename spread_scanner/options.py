@@ -471,7 +471,7 @@ SESSION_CLOSE = dt.time(16, 0)
 
 def quote_session(now: dt.datetime | None = None) -> str:
     """"regular" while US options trade, "closed" otherwise."""
-    now = (now or dt.datetime.now(dt.timezone.utc)).astimezone(_NEW_YORK)
+    now = (now or dt.datetime.now(dt.UTC)).astimezone(_NEW_YORK)
     if now.weekday() >= 5:
         return "closed"
     return "regular" if SESSION_OPEN <= now.time() < SESSION_CLOSE else "closed"

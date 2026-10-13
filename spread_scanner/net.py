@@ -16,16 +16,13 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import TypeVar
-
-T = TypeVar("T")
 
 ATTEMPTS = 3
 BASE_DELAY = 1.5      # seconds; doubles each attempt (1.5s, 3s)
 
 
-def retry(fn: Callable[[], T], *, attempts: int = ATTEMPTS, base_delay: float = BASE_DELAY,
-          label: str = "", sleep: Callable[[float], None] | None = None) -> T:
+def retry[T](fn: Callable[[], T], *, attempts: int = ATTEMPTS, base_delay: float = BASE_DELAY,
+             label: str = "", sleep: Callable[[float], None] | None = None) -> T:
     """Call `fn`, retrying on any exception with exponential backoff.
 
     Re-raises the final exception, so a caller that already swallows failures
