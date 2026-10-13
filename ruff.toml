@@ -4,6 +4,11 @@
 # What is enabled is the part a reader cannot check by eye — unused imports and
 # names, undefined names, obvious bugs, and import order.
 line-length = 110
+# Stated rather than inferred. With no target-version and no pyproject.toml,
+# ruff falls back to its own default, and that default moves: 0.17.0 raised it
+# from 3.10 to 3.11, which switched UP017 on and failed the scheduled scan's
+# Lint step on code that had not changed. Keep this in step with .python-version.
+target-version = "py312"
 
 [lint]
 select = ["E4", "E7", "E9", "F", "I", "B", "UP"]

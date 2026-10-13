@@ -209,7 +209,7 @@ def test_live_quotes_get_their_own_iv_and_stale_ones_keep_yahoos():
 # ------------------------------------------------------ after-hours quotes
 
 def test_quote_session_follows_new_york_hours_across_daylight_saving():
-    utc = dt.timezone.utc
+    utc = dt.UTC
     # Summer (EDT, UTC-4): 19:39 UTC is 15:39 in New York, 20:47 is after the close.
     assert options.quote_session(dt.datetime(2026, 9, 24, 19, 39, tzinfo=utc)) == "regular"
     assert options.quote_session(dt.datetime(2026, 9, 24, 20, 47, tzinfo=utc)) == "closed"

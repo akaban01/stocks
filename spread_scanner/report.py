@@ -255,7 +255,7 @@ def write_json(path: Path, payload: dict, compact: bool = False) -> Path:
 
 
 def _now() -> tuple[str, str]:
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     return now.strftime("%Y-%m-%dT%H:%M:%SZ"), now.strftime("%Y-%m-%d %H:%M UTC")
 
 

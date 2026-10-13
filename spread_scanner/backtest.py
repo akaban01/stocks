@@ -411,7 +411,7 @@ def calibration_payload(c: dict, years: int, universe: int,
 
     base = {
         "schema_version": SCHEMA_VERSION,
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "as_of": as_of or dt.date.today().isoformat(),
         "history_years": years,
         "universe": universe,
@@ -476,7 +476,7 @@ def backtest_payload(stats: dict, p: dict, n_tickers: int, years: int,
 
     base = {
         "schema_version": SCHEMA_VERSION,
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "universe": n_tickers,
         "history_years": years,
         "horizon_days": int(p["horizon_days"]),

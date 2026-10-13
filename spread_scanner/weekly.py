@@ -193,7 +193,7 @@ def build_weekly(data: dict[str, pd.DataFrame], period_label: str = "",
         if len(weekly) >= MIN_WEEKS:
             bars[ticker] = weekly
 
-    generated = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    generated = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     base = {"schema_version": SCHEMA_VERSION, "generated_at": generated,
             "period": period_label, "min_weeks": MIN_WEEKS, "min_years": MIN_YEARS,
             "reference": REFERENCE}

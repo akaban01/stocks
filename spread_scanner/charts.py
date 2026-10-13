@@ -146,7 +146,7 @@ def build_charts(data: dict[str, pd.DataFrame], period_label: str = "",
 
     return {
         "schema_version": SCHEMA_VERSION,
-        "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         # What the price cards show, and what was downloaded behind them.
         "period": f"{display_years}y" if display_years else period_label,
         "history_period": period_label,
