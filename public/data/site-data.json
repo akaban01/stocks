@@ -1,8 +1,8 @@
 {
-  "sha": "10a2d7cee628f6d5b28150af5ef7f27da4a97fa0",
+  "sha": "1ddfcfad38c53569d0c71ff86c5b1eae983172f7",
   "branch": "site-data",
   "files": {
-    "charts.json": 1041641,
-    "weekly.json": 303739
+    "charts.json": 1041636,
+    "weekly.json": 303735
   }
 }
