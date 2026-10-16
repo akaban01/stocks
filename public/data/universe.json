@@ -4,7 +4,7 @@
     "SPUS"
   ],
   "max_holdings": 30,
-  "as_of": "2026-10-15",
+  "as_of": "2026-10-16",
   "tickers": [
     "NVDA",
     "AAPL",
@@ -19,22 +19,22 @@
     "XOM",
     "JNJ",
     "ABBV",
-    "CSCO",
     "INTC",
+    "CSCO",
     "CVX",
-    "MRK",
     "PG",
     "LRCX",
+    "MRK",
     "AMAT",
     "KO",
-    "PANW",
     "HD",
+    "PANW",
+    "TMO",
     "GEV",
     "TXN",
     "CRWD",
-    "TMO",
     "KLAC",
     "LIN",
-    "MRVL"
+    "ORCL"
   ]
 }
