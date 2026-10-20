@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-16",
+  "as_of": "2026-10-20",
   "screen_mode": "filter",
   "tickers": [
     "NVDA",
@@ -15,21 +15,22 @@
     "XOM",
     "JNJ",
     "ABBV",
-    "INTC",
     "CSCO",
+    "INTC",
     "CVX",
     "PG",
-    "LRCX",
     "MRK",
-    "AMAT",
     "KO",
+    "LRCX",
+    "AMAT",
     "HD",
     "PANW",
     "TMO",
-    "GEV",
     "TXN",
+    "GEV",
     "CRWD",
+    "LIN",
     "KLAC",
-    "LIN"
+    "IBM"
   ]
 }
