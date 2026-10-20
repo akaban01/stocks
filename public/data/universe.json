@@ -20,11 +20,11 @@
     "JNJ",
     "ABBV",
     "CSCO",
-    "INTC",
     "CVX",
+    "INTC",
     "PG",
-    "MRK",
     "KO",
+    "MRK",
     "LRCX",
     "AMAT",
     "HD",
@@ -32,9 +32,9 @@
     "TMO",
     "TXN",
     "GEV",
-    "CRWD",
     "LIN",
-    "KLAC",
-    "IBM"
+    "CRWD",
+    "IBM",
+    "ORCL"
   ]
 }
