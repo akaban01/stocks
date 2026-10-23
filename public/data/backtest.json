@@ -1,6 +1,6 @@
 {
   "schema_version": "2.10.0",
-  "generated_at": "2026-10-23T00:02:45Z",
+  "generated_at": "2026-10-23T23:54:09Z",
   "universe": 29,
   "history_years": 5,
   "horizon_days": 10,
@@ -16,35 +16,35 @@
     "in_sample": true
   },
   "ok": true,
-  "bars": 33699,
+  "bars": 33757,
   "coverage_pct": 65.9,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
-  "score_move_corr": -0.05,
+  "score_move_corr": -0.04,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7533,
+      "bars": 7560,
       "avg_abs_move_pct": 5.2,
-      "median_abs_move_pct": 3.6,
-      "coverage_pct": 55.7,
+      "median_abs_move_pct": 3.7,
+      "coverage_pct": 55.6,
       "expansion": 1.12,
-      "broke_band_pct": 44.3,
-      "broke_long_band_pct": 31.3
+      "broke_band_pct": 44.4,
+      "broke_long_band_pct": 31.4
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 13670,
+      "bars": 13699,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.8,
-      "coverage_pct": 63.3,
+      "coverage_pct": 63.2,
       "expansion": 0.93,
-      "broke_band_pct": 36.7,
-      "broke_long_band_pct": 31.6
+      "broke_band_pct": 36.8,
+      "broke_long_band_pct": 31.7
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 12496,
+      "bars": 12498,
       "avg_abs_move_pct": 5.8,
       "median_abs_move_pct": 4.1,
       "coverage_pct": 75.0,
@@ -56,23 +56,23 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2952,
+      "bars": 2963,
       "avg_abs_move_pct": 5.1,
       "median_abs_move_pct": 3.6,
-      "coverage_pct": 59.1,
+      "coverage_pct": 59.0,
       "expansion": 1.04,
-      "broke_band_pct": 40.9,
-      "broke_long_band_pct": 31.8
+      "broke_band_pct": 41.0,
+      "broke_long_band_pct": 32.0
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 30747,
+      "bars": 30794,
       "avg_abs_move_pct": 5.5,
       "median_abs_move_pct": 3.9,
-      "coverage_pct": 66.6,
+      "coverage_pct": 66.5,
       "expansion": 0.88,
-      "broke_band_pct": 33.4,
-      "broke_long_band_pct": 30.9
+      "broke_band_pct": 33.5,
+      "broke_long_band_pct": 31.0
     }
   },
   "independent": {
@@ -185,61 +185,61 @@
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
   "caveat": "The bucket rows use every bar, and overlapping forward windows make those autocorrelated — read them as descriptive. The verdict and its interval use one bar per horizon per name and resample whole dates, so they are not. The universe is also whatever passes the screen *today*, measured backwards: names that would have dragged these numbers down are the ones no longer in it. And when the score being tested comes from calibrated weights, those weights were fitted on this same history — the honest out-of-sample separation is the one on the calibration panel, which holds a test split back. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results.",
   "implied": {
-    "logged_rows": 403,
+    "logged_rows": 423,
     "horizon_days": 10,
     "first_date": "2026-09-24",
     "min_matured": 60,
     "ok": true,
-    "matured": 193,
+    "matured": 211,
     "buckets": {
       "all": {
-        "n": 193,
-        "beat_implied_pct": 33.7,
-        "avg_straddle_return_pct": 0.1,
-        "avg_realized_pct": 5.92,
-        "avg_implied_pct": 7.58
+        "n": 211,
+        "beat_implied_pct": 35.5,
+        "avg_straddle_return_pct": 3.4,
+        "avg_realized_pct": 6.24,
+        "avg_implied_pct": 7.64
       },
       "coiled": {
         "label": "Score ≥ 60",
-        "n": 142,
-        "beat_implied_pct": 35.2,
-        "avg_straddle_return_pct": 1.2,
-        "avg_realized_pct": 5.07,
-        "avg_implied_pct": 6.63
+        "n": 155,
+        "beat_implied_pct": 36.1,
+        "avg_straddle_return_pct": 2.7,
+        "avg_realized_pct": 5.22,
+        "avg_implied_pct": 6.69
       },
       "calm": {
         "label": "Score < 30",
-        "n": 23,
-        "beat_implied_pct": 8.7,
-        "avg_straddle_return_pct": -36.9,
-        "avg_realized_pct": 4.88,
-        "avg_implied_pct": 9.69
+        "n": 24,
+        "beat_implied_pct": 12.5,
+        "avg_straddle_return_pct": -33.9,
+        "avg_realized_pct": 5.09,
+        "avg_implied_pct": 9.68
       },
       "cheap": {
         "label": "Premium cheap",
-        "n": 92,
-        "beat_implied_pct": 32.6,
-        "avg_straddle_return_pct": 0.3,
-        "avg_realized_pct": 6.1,
-        "avg_implied_pct": 7.46
+        "n": 95,
+        "beat_implied_pct": 33.7,
+        "avg_straddle_return_pct": 2.3,
+        "avg_realized_pct": 6.3,
+        "avg_implied_pct": 7.52
       },
       "rich": {
         "label": "Premium rich",
-        "n": 52,
-        "beat_implied_pct": 38.5,
-        "avg_straddle_return_pct": 5.1,
-        "avg_realized_pct": 5.32,
-        "avg_implied_pct": 7.08
+        "n": 61,
+        "beat_implied_pct": 41.0,
+        "avg_straddle_return_pct": 10.1,
+        "avg_realized_pct": 5.67,
+        "avg_implied_pct": 7.1
       },
       "coiled_cheap": {
         "label": "Coiled and cheap (the buy-premium setup)",
-        "n": 69,
-        "beat_implied_pct": 33.3,
-        "avg_straddle_return_pct": -1.5,
-        "avg_realized_pct": 5.17,
-        "avg_implied_pct": 6.65
+        "n": 71,
+        "beat_implied_pct": 35.2,
+        "avg_straddle_return_pct": 0.9,
+        "avg_realized_pct": 5.42,
+        "avg_implied_pct": 6.73
       }
     },
-    "text": "34% of 193 matured readings moved more than the option market's implied move; a model straddle bought at that price returned +0% on average. Coiled names beat their implied move 35% of the time (142 readings) against 9% for calm ones (23). Readings on consecutive days overlap, so treat this as descriptive until the history is long."
+    "text": "36% of 211 matured readings moved more than the option market's implied move; a model straddle bought at that price returned +3% on average. Coiled names beat their implied move 36% of the time (155 readings) against 12% for calm ones (24). Readings on consecutive days overlap, so treat this as descriptive until the history is long."
   }
 }
