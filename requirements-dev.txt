@@ -4,4 +4,4 @@ pytest>=9.1.1,<10.0
 # newly stabilised rules), so its "next major" is the next minor. 0.17.0 arrived
 # through `<1.0` and failed the scheduled scan's Lint step; Dependabot proposes
 # 0.18 as a pull request instead.
-ruff>=0.17.0,<0.18
+ruff>=0.17.1,<0.18
