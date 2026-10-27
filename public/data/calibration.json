@@ -1,28 +1,28 @@
 {
-  "schema_version": "2.8.0",
-  "generated_at": "2026-09-24T17:16:31Z",
-  "as_of": "2026-09-24",
+  "schema_version": "2.10.0",
+  "generated_at": "2026-10-27T00:36:38Z",
+  "as_of": "2026-10-27",
   "history_years": 5,
-  "universe": 30,
+  "universe": 29,
   "method_version": 2,
   "ok": true,
   "weights": {
-    "compression": 0.29,
-    "vol_room": 0.51,
+    "compression": 0.28,
+    "vol_room": 0.52,
     "squeeze": 0.2
   },
   "lift": {
-    "compression": 0.1109,
-    "vol_room": 0.1943,
-    "squeeze": 0.0745
+    "compression": 0.1062,
+    "vol_room": 0.2016,
+    "squeeze": 0.0758
   },
   "bars": {
-    "total": 34056,
-    "train": 23847,
-    "test": 9915,
-    "embargoed": 294,
-    "cutoff": "2025-05-01",
-    "test_start": "2025-05-16"
+    "total": 33701,
+    "train": 23609,
+    "test": 9802,
+    "embargoed": 290,
+    "cutoff": "2025-05-21",
+    "test_start": "2025-06-06"
   },
   "separation_basis": "quintile",
   "separation": {
@@ -32,19 +32,19 @@
         "vol_room": 0.2,
         "squeeze": 0.45
       },
-      "high_break_pct": 42.2,
-      "low_break_pct": 26.1,
-      "separation_pts": 16.1
+      "high_break_pct": 41.5,
+      "low_break_pct": 24.5,
+      "separation_pts": 17.0
     },
     "calibrated": {
       "weights": {
-        "compression": 0.28,
-        "vol_room": 0.51,
-        "squeeze": 0.21
+        "compression": 0.27,
+        "vol_room": 0.5,
+        "squeeze": 0.23
       },
-      "high_break_pct": 43.0,
-      "low_break_pct": 24.7,
-      "separation_pts": 18.3
+      "high_break_pct": 44.0,
+      "low_break_pct": 23.7,
+      "separation_pts": 20.2
     }
   },
   "verdict": {
