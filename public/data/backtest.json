@@ -1,6 +1,6 @@
 {
   "schema_version": "2.10.0",
-  "generated_at": "2026-10-27T00:37:25Z",
+  "generated_at": "2026-10-28T00:35:01Z",
   "universe": 29,
   "history_years": 5,
   "horizon_days": 10,
@@ -16,17 +16,17 @@
     "in_sample": true
   },
   "ok": true,
-  "bars": 33701,
-  "coverage_pct": 65.9,
+  "bars": 33702,
+  "coverage_pct": 65.8,
   "coverage_theory_pct": 68.0,
   "coverage_ok": true,
   "score_move_corr": -0.04,
   "buckets": {
     "high": {
       "label": "Score ≥ 60 (coiled)",
-      "bars": 7612,
+      "bars": 7634,
       "avg_abs_move_pct": 5.2,
-      "median_abs_move_pct": 3.6,
+      "median_abs_move_pct": 3.7,
       "coverage_pct": 55.5,
       "expansion": 1.12,
       "broke_band_pct": 44.5,
@@ -34,7 +34,7 @@
     },
     "mid": {
       "label": "Score 30 – 60",
-      "bars": 13614,
+      "bars": 13610,
       "avg_abs_move_pct": 5.3,
       "median_abs_move_pct": 3.8,
       "coverage_pct": 63.2,
@@ -44,7 +44,7 @@
     },
     "low": {
       "label": "Score < 30 (calm)",
-      "bars": 12475,
+      "bars": 12458,
       "avg_abs_move_pct": 5.8,
       "median_abs_move_pct": 4.1,
       "coverage_pct": 75.0,
@@ -56,17 +56,17 @@
   "squeeze": {
     "on": {
       "label": "Squeeze ON",
-      "bars": 2962,
+      "bars": 2965,
       "avg_abs_move_pct": 5.1,
       "median_abs_move_pct": 3.6,
       "coverage_pct": 58.9,
       "expansion": 1.04,
       "broke_band_pct": 41.1,
-      "broke_long_band_pct": 32.0
+      "broke_long_band_pct": 32.1
     },
     "off": {
       "label": "Squeeze OFF",
-      "bars": 30739,
+      "bars": 30737,
       "avg_abs_move_pct": 5.5,
       "median_abs_move_pct": 3.9,
       "coverage_pct": 66.5,
@@ -79,93 +79,93 @@
     "bars": 3390,
     "step_days": 10,
     "own_band": {
-      "edge_pts": 20.6,
+      "edge_pts": 21.4,
       "ci95_pts": [
-        16.0,
-        25.4
+        16.2,
+        26.6
       ],
       "dates": 177
     },
     "long_band": {
-      "edge_pts": 0.6,
+      "edge_pts": 3.3,
       "ci95_pts": [
-        -4.4,
-        6.1
+        -1.7,
+        8.1
       ],
       "dates": 177
     }
   },
   "ex_earnings": {
-    "bars": 2848,
+    "bars": 2844,
     "names_with_dates": 29,
     "names": 29,
     "share_of_bars_with_earnings_pct": 15.8,
     "own_band": {
-      "edge_pts": 19.5,
+      "edge_pts": 20.0,
       "ci95_pts": [
-        13.5,
-        24.9
+        14.4,
+        25.6
       ],
       "dates": 168
     },
     "long_band": {
-      "edge_pts": -0.7,
+      "edge_pts": 1.6,
       "ci95_pts": [
-        -6.3,
-        5.1
+        -3.7,
+        6.9
       ],
       "dates": 168
     },
-    "text": "With every window holding an earnings report removed (16% of bars; dates for 29 of 29 names), the own-band edge is +20 pts (95% CI +14 to +25) and the 60-day-band edge -1 pts (95% CI -6 to +5)."
+    "text": "With every window holding an earnings report removed (16% of bars; dates for 29 of 29 names), the own-band edge is +20 pts (95% CI +14 to +26) and the 60-day-band edge +2 pts (95% CI -4 to +7)."
   },
   "direction": {
     "horizon_days": 10,
     "reads": {
       "lean_bullish": {
         "label": "Bullish lean",
-        "n": 1568,
-        "hit_pct": 54.5,
-        "base_pct": 55.0,
-        "edge_pts": -0.5,
+        "n": 1583,
+        "hit_pct": 54.8,
+        "base_pct": 55.6,
+        "edge_pts": -0.8,
         "ci95_pts": [
-          -3.2,
-          2.3
+          -3.6,
+          2.0
         ],
         "proven": false
       },
       "lean_bearish": {
         "label": "Bearish lean",
-        "n": 1173,
-        "hit_pct": 43.1,
-        "base_pct": 45.0,
-        "edge_pts": -2.0,
+        "n": 1193,
+        "hit_pct": 43.2,
+        "base_pct": 44.3,
+        "edge_pts": -1.2,
         "ci95_pts": [
-          -5.5,
-          1.6
+          -4.5,
+          2.5
         ],
         "proven": false
       },
       "fired_bullish": {
         "label": "Squeeze fired up",
-        "n": 49,
-        "hit_pct": 57.1,
-        "base_pct": 55.0,
-        "edge_pts": 2.2,
+        "n": 35,
+        "hit_pct": 40.0,
+        "base_pct": 55.6,
+        "edge_pts": -15.6,
         "ci95_pts": [
-          -12.8,
-          16.6
+          -32.0,
+          0.4
         ],
         "proven": false
       },
       "fired_bearish": {
         "label": "Squeeze fired down",
-        "n": 50,
-        "hit_pct": 36.0,
-        "base_pct": 45.0,
-        "edge_pts": -9.0,
+        "n": 55,
+        "hit_pct": 40.0,
+        "base_pct": 44.3,
+        "edge_pts": -4.3,
         "ci95_pts": [
-          -22.0,
-          4.5
+          -16.6,
+          10.7
         ],
         "proven": false
       }
@@ -174,38 +174,38 @@
   },
   "verdict": {
     "holds": true,
-    "edge_pts": 20.6,
+    "edge_pts": 21.4,
     "ci95_pts": [
-      16.0,
-      25.4
+      16.2,
+      26.6
     ],
-    "text": "Coiled bars broke their own ±1σ band 44% of the time against 25% for calm bars. On non-overlapping windows the gap is +21 pts (95% CI +16 to +25), so the expansion is real — relative to each name's own quiet band.",
-    "long_band_text": "Against the 60-day realized-vol band — the nearest free stand-in for what options would have charged — the edge is +1 pts (95% CI -4 to +6): coiled names do not out-move a longer-run vol estimate, so buying premium on the score alone is not supported. The own-band edge is mostly volatility returning to normal."
+    "text": "Coiled bars broke their own ±1σ band 44% of the time against 25% for calm bars. On non-overlapping windows the gap is +21 pts (95% CI +16 to +27), so the expansion is real — relative to each name's own quiet band.",
+    "long_band_text": "Against the 60-day realized-vol band — the nearest free stand-in for what options would have charged — the edge is +3 pts (95% CI -2 to +8): coiled names do not out-move a longer-run vol estimate, so buying premium on the score alone is not supported. The own-band edge is mostly volatility returning to normal."
   },
   "explainer": "The honest test is not whether high scores move more in absolute percent — the score deliberately selects low-volatility names, which always move less in raw terms. The thesis is expansion: does the move break out beyond the stock's own compressed band? That is the expansion multiple (realized ÷ expected) and the band-break rate.",
   "caveat": "The bucket rows use every bar, and overlapping forward windows make those autocorrelated — read them as descriptive. The verdict and its interval use one bar per horizon per name and resample whole dates, so they are not. The universe is also whatever passes the screen *today*, measured backwards: names that would have dragged these numbers down are the ones no longer in it. And when the score being tested comes from calibrated weights, those weights were fitted on this same history — the honest out-of-sample separation is the one on the calibration panel, which holds a test split back. The score flags where a relative expansion is likelier — never its direction. Past behaviour does not guarantee future results.",
   "implied": {
-    "logged_rows": 443,
+    "logged_rows": 463,
     "horizon_days": 10,
     "first_date": "2026-09-24",
     "min_matured": 60,
     "ok": true,
-    "matured": 211,
+    "matured": 229,
     "buckets": {
       "all": {
-        "n": 211,
-        "beat_implied_pct": 35.5,
-        "avg_straddle_return_pct": 3.4,
-        "avg_realized_pct": 6.24,
-        "avg_implied_pct": 7.64
+        "n": 229,
+        "beat_implied_pct": 35.4,
+        "avg_straddle_return_pct": 3.6,
+        "avg_realized_pct": 6.3,
+        "avg_implied_pct": 7.66
       },
       "coiled": {
         "label": "Score ≥ 60",
-        "n": 155,
-        "beat_implied_pct": 36.1,
-        "avg_straddle_return_pct": 2.7,
-        "avg_realized_pct": 5.22,
-        "avg_implied_pct": 6.69
+        "n": 168,
+        "beat_implied_pct": 35.1,
+        "avg_straddle_return_pct": 2.1,
+        "avg_realized_pct": 5.36,
+        "avg_implied_pct": 6.84
       },
       "calm": {
         "label": "Score < 30",
@@ -217,29 +217,29 @@
       },
       "cheap": {
         "label": "Premium cheap",
-        "n": 95,
-        "beat_implied_pct": 33.7,
-        "avg_straddle_return_pct": 2.3,
-        "avg_realized_pct": 6.3,
-        "avg_implied_pct": 7.52
+        "n": 100,
+        "beat_implied_pct": 32.0,
+        "avg_straddle_return_pct": 1.4,
+        "avg_realized_pct": 6.24,
+        "avg_implied_pct": 7.54
       },
       "rich": {
         "label": "Premium rich",
-        "n": 61,
-        "beat_implied_pct": 41.0,
-        "avg_straddle_return_pct": 10.1,
-        "avg_realized_pct": 5.67,
-        "avg_implied_pct": 7.1
+        "n": 68,
+        "beat_implied_pct": 41.2,
+        "avg_straddle_return_pct": 9.6,
+        "avg_realized_pct": 5.75,
+        "avg_implied_pct": 7.11
       },
       "coiled_cheap": {
         "label": "Coiled and cheap (the buy-premium setup)",
-        "n": 71,
-        "beat_implied_pct": 35.2,
-        "avg_straddle_return_pct": 0.9,
-        "avg_realized_pct": 5.42,
-        "avg_implied_pct": 6.73
+        "n": 75,
+        "beat_implied_pct": 33.3,
+        "avg_straddle_return_pct": -0.1,
+        "avg_realized_pct": 5.41,
+        "avg_implied_pct": 6.81
       }
     },
-    "text": "36% of 211 matured readings moved more than the option market's implied move; a model straddle bought at that price returned +3% on average. Coiled names beat their implied move 36% of the time (155 readings) against 12% for calm ones (24). Readings on consecutive days overlap, so treat this as descriptive until the history is long."
+    "text": "35% of 229 matured readings moved more than the option market's implied move; a model straddle bought at that price returned +4% on average. Coiled names beat their implied move 35% of the time (168 readings) against 12% for calm ones (24). Readings on consecutive days overlap, so treat this as descriptive until the history is long."
   }
 }

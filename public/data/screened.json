@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-10-27",
+  "as_of": "2026-10-28",
   "screen_mode": "filter",
   "tickers": [
     "NVDA",
@@ -25,8 +25,8 @@
     "PANW",
     "AMAT",
     "LRCX",
-    "CRWD",
     "TXN",
+    "CRWD",
     "TMO",
     "IBM",
     "LIN",
