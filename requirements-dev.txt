@@ -1,7 +1,7 @@
 -r requirements.txt
-pytest>=9.1.1,<10.0
+pytest>=9.2.0,<10.0
 # Ruff makes breaking changes in minor releases (new default target-version,
 # newly stabilised rules), so its "next major" is the next minor. 0.17.0 arrived
 # through `<1.0` and failed the scheduled scan's Lint step; Dependabot proposes
 # 0.18 as a pull request instead.
-ruff>=0.17.0,<0.18
+ruff>=0.17.3,<0.18
